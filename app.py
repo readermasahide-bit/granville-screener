@@ -7,10 +7,10 @@ import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# ★ 設定パラメータ（クラウド専用にローカルパスを廃止）
+# ★ 設定パラメータ
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
-html_output_path = "index.html" # ホームページとして公開するため index.html に固定
+html_output_path = "index.html" 
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -25,7 +25,7 @@ else:
     long_window = 75
     system_title = "中期（25日線/75日線）"
 
-# 1. JPX（日本取引所グループ）から東証全銘柄のエクセルを直接ダウンロード
+# 1. JPXから上場銘柄一覧をダウンロード
 jpx_url = "https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xls"
 print("JPXから銘柄一覧をダウンロード中...")
 response = requests.get(jpx_url)
@@ -41,23 +41,40 @@ ticker_to_market = dict(zip(df_tse['ticker'], df_tse['市場・商品区分']))
 ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 
 tickers = list(df_tse['ticker'])
-print(f"東証3市場 合計 {len(tickers)} 銘柄のスキャンを開始します。")
+print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. 全銘柄のデータをブロック分けして一括ダウンロード
-print("株価データ(2年分)を一括ダウンロード中...")
+# 2. GitHub ActionsのIP規制を回避するためのUser-Agent（ブラウザ偽装）セッション作成
+session = requests.Session()
+session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+})
+
+# 3. 全銘柄のデータをブロック分けして一括ダウンロード
+print("Yahoo! Financeから株価データ(過去2年分)を一括ダウンロード中...")
 bulk_data = {}
 chunk_size = 200
 for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     try:
-        data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", progress=False)
-        for ticker in chunk:
-            if ticker in data.columns.levels[0]:
-                bulk_data[ticker] = data[ticker].dropna(subset=['Close'])
+        # ブラウザ偽装セッションを渡してダウンロードを実行
+        data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", progress=False, session=session)
+        
+        # シングル/マルチインデックス両対応の堅牢なデータ抽出処理
+        if isinstance(data.columns, pd.MultiIndex):
+            for ticker in chunk:
+                if ticker in data.columns.levels[0]:
+                    df_single = data[ticker].dropna(subset=['Close'])
+                    if not df_single.empty:
+                        bulk_data[ticker] = df_single
+        else:
+            for ticker in chunk:
+                df_single = data.dropna(subset=['Close'])
+                if not df_single.empty:
+                    bulk_data[ticker] = df_single
     except Exception as e:
-        print(f" -> ブロック取得でエラーが発生しました: {e}")
+        print(f" -> ブロック取得でエラーが発生しました(スキップします): {e}")
 
-# 3. 判定ロジック関数
+# 4. 判定ロジック関数
 def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -72,7 +89,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
             "diffRate": 0.0, "reason": "データが不足しています。",
-            "ma_short": 0.0, "ma_long": 0.0, "score": 1
+            "ma_short": 0.0, "ma_long": 0.0, "score": 1, "stars": "☆☆☆☆☆"
         }
         
     today = df_temp.iloc[-1]
@@ -207,6 +224,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             if candle_body_pct < 0.5: score -= 1
             
     score = max(1, min(5, score))
+    stars_str = "★" * score + "☆" * (5 - score)
 
     return {
         "category": category,
@@ -216,10 +234,11 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "reason": reason,
         "ma_short": round(short_ma_today, 1),
         "ma_long": round(long_ma_today, 1),
-        "score": int(score)
+        "score": int(score),
+        "stars": stars_str
     }
 
-# 4. 全データの判定実行
+# 5. 全データの判定実行
 results_list = []
 print("各銘柄の判定ロジックを実行しています...")
 
@@ -235,6 +254,7 @@ for ticker, df_stock in bulk_data.items():
     change = price_today - price_yesterday
     change_rate = (change / price_yesterday) * 100
     
+    # 市場マッピング
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
         market_short = "東Ｐ"
@@ -481,7 +501,7 @@ html_template = """<!doctype html>
               <strong>[検証設定値]</strong><br>
               ・長期線(<span class="exp-long"></span>)がしっかり上昇傾向であること<br>
               ・調整の確認: 過去15日以内に長期線から <span class="font-mono">+4.0%</span> 以上上に離れた山を作っていること<br>
-              ・反発条件:長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)まで接近後、本日「前日比プラス」かつ「陽線」で反発
+              ・反発条件: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)まで接近後、本日「前日比プラス」かつ「陽線」で反発
             </p>
           </div>
           <div class="bg-slate-900/80 border border-purple-500/20 rounded-xl p-4 relative overflow-hidden shadow-md">
@@ -563,7 +583,6 @@ html_template = """<!doctype html>
         renderTable();
       }
 
-      // 期待度ソート状態のトグル
       function toggleScoreSort() {
         state.sortOrder = 'none';
         document.getElementById('sortIcon').textContent = '↕';
@@ -581,7 +600,6 @@ html_template = """<!doctype html>
         renderTable();
       }
 
-      // 結果CSVダウンロード機能
       function exportCSV() {
         const sys = state.currentSystem;
         let filtered = [...state.results];
@@ -740,7 +758,10 @@ html_template = """<!doctype html>
                 <a href="https://jp.tradingview.com/chart/?symbol=TSE%3A${item.ticker}" target="_blank" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-indigo-600 text-[10px]" title="TradingView">C</a>
               </div>
             </td>
-            <td class="p-3 font-bold">${item.name}</td>
+            <td class="p-3">
+              <div class="font-bold text-slate-100 text-sm">${item.name}</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">${item.sector}</div>
+            </td>
             <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
             <td class="p-3 text-right font-mono ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${item.change.toLocaleString()} (${isPlus ? '+' : ''}${item.changeRate}%)</td>
             <td class="p-3 text-right font-mono text-slate-300">
