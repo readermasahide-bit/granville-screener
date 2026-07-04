@@ -7,18 +7,27 @@ import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# ★ 設定パラメータ（抽出した値を設定しました）
+# ★ 設定パラメータ（取得いただいた2つのフォームURL・IDを完全適用済みです）
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
 html_output_path = "index.html"
 
-# 【Googleフォーム自動入力設定】
-FORM_CONFIG = {
+# 【Googleフォーム1：判定カテゴリ改善用】（適用済み）
+FORM_CONFIG_CAT = {
     "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
     "entryCode": "entry.1616153480",
     "entryName": "entry.639288663",
     "entrySys":  "entry.1292630960",
     "entryCat":  "entry.432445345"
+}
+
+# 【Googleフォーム2：期待度改善用】（適用済み）
+FORM_CONFIG_SCORE = {
+    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
+    "entryCode": "entry.1616153480",
+    "entryName": "entry.639288663",
+    "entrySys":  "entry.1292630960",
+    "entryScore": "entry.432445345"
 }
 # ==========================================
 
@@ -58,7 +67,7 @@ session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 })
 
-print("Yahoo! Financeから株価データ(過去2年分)を一括ダウンロード中...")
+print("Yahoo! Financeから株価データをダウンロード中...")
 bulk_data = {}
 chunk_size = 200
 for i in range(0, len(tickers), chunk_size):
@@ -77,9 +86,9 @@ for i in range(0, len(tickers), chunk_size):
                 if not df_single.empty:
                     bulk_data[ticker] = df_single
     except Exception as e:
-        print(f" -> ブロック取得でエラーが発生しました(スキップ): {e}")
+        print(f" -> ブロック取得エラー: {e}")
 
-# 3. 判定ロジック関数
+# 3. 判定および採点ロジック関数
 def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -89,7 +98,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    if len(df_temp) < 45:
+    if len(df_temp) < 130:
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
@@ -219,6 +228,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             if candle_body_pct < 0.5: score -= 1
             
     score = max(1, min(5, score))
+    stars_str = "★" * score + "☆" * (5 - score)
 
     return {
         "category": category,
@@ -228,12 +238,13 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "reason": reason,
         "ma_short": round(short_ma_today, 1),
         "ma_long": round(long_ma_today, 1),
-        "score": int(score)
+        "score": int(score),
+        "stars": stars_str
     }
 
-# 4. 全データの判定実行
+# 5. 全データの判定実行
 results_list = []
-print("各銘柄の判定ロジックを実行しています...")
+print("判定ロジックを実行しています...")
 
 for ticker, df_stock in bulk_data.items():
     if df_stock.empty or len(df_stock) < 130:
@@ -274,9 +285,11 @@ for ticker, df_stock in bulk_data.items():
     results_list.append(stock_info)
 
 json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
-form_config_str = json.dumps(FORM_CONFIG, ensure_ascii=False)
 
-# フィードバック報告ボタンを搭載した最新HTMLテンプレート
+form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
+form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
+
+# 報告ボタン順序(期待度 ➔ 判定カテゴリ)修正済みテンプレート
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -318,6 +331,7 @@ html_template = """<!doctype html>
   </head>
   <body class="min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-16">
     
+    <!-- ヘッダー -->
     <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur sticky top-0 z-30">
       <div class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div class="flex items-center space-x-3">
@@ -325,12 +339,13 @@ html_template = """<!doctype html>
           <div>
             <h1 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
               グランビル法則スクリーナー
-              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.7_FEEDBACK</span>
+              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.7_FULL_FEEDBACK</span>
             </h1>
-            <p class="text-xs text-slate-400 hidden sm:block">東証3市場（プライム・スタンダード・グロース）全自動解析・フィードバック連動モデル</p>
+            <p class="text-xs text-slate-400 hidden sm:block">東証3市場（プライム・スタンダード・グロース）自動解析・高精度ロジック</p>
           </div>
         </div>
         
+        <!-- 短期・中期切り替え -->
         <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex gap-1 text-xs">
           <button id="btnSystemShort" class="px-4 py-1.5 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-100 cursor-pointer">
             短期 (5日/25日線)
@@ -342,8 +357,10 @@ html_template = """<!doctype html>
       </div>
     </header>
 
+    <!-- メイン -->
     <main class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
       
+      <!-- サマリーカード -->
       <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
           <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">東証判定対象数</span>
@@ -370,10 +387,14 @@ html_template = """<!doctype html>
         </div>
       </section>
 
+      <!-- メインタスクエリア -->
       <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col">
         
+        <!-- 複合コントロールバー -->
         <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          
           <div class="flex flex-wrap items-center gap-3">
+            <!-- 判定タブ -->
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
               <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
               <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
@@ -382,6 +403,7 @@ html_template = """<!doctype html>
               <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-500 hover:text-slate-300 cursor-pointer">すべて</button>
             </div>
 
+            <!-- 市場フィルターボタン -->
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
               <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
               <button data-market="ALL" class="market-btn px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-white cursor-pointer">すべて</button>
@@ -391,15 +413,22 @@ html_template = """<!doctype html>
             </div>
           </div>
 
+          <!-- 検索 ＆ エクスポート ＆ 解説トグルスイッチ -->
           <div class="flex items-center gap-3 w-full xl:w-auto">
             <div class="relative flex-1 xl:w-72">
               <input type="text" id="searchInput" placeholder="コード、銘柄名、業種で検索..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
               <span class="absolute left-2.5 top-2 text-slate-500 text-xs">🔍</span>
             </div>
+            
+            <button id="btnToggleExplanation" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-4 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer">
+              📖 解説を表示
+            </button>
+            
             <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer">📥 結果CSV出力</button>
           </div>
         </div>
 
+        <!-- パフォーマンス警告バナー -->
         <div id="performanceWarning" class="mt-4 hidden bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] p-2.5 rounded-xl">
           ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンや検索窓を使って絞り込むとスムーズに閲覧できます。
         </div>
@@ -409,15 +438,15 @@ html_template = """<!doctype html>
           <table class="w-full text-left">
             <thead>
               <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
-                <th class="p-3 w-28">判定カテゴリ</th>
-                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-20 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
-                  <div class="flex items-center justify-center gap-1">
+                <th class="p-3 w-32">判定カテゴリ</th>
+                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-28 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
+                  <div class="flex items-center justify-center gap-1.5">
                     <span>期待度</span>
                     <span id="sortScoreIcon" class="text-cyan-400 font-mono text-[11px] w-3 text-center">↕</span>
                   </div>
                 </th>
                 <th class="p-3 w-28">コード</th>
-                <th class="p-3 min-w-[180px]">銘柄名 / 業種</th>
+                <th class="p-3 min-w-[200px]">銘柄名 / 業種</th>
                 <th class="p-3 cursor-pointer select-none hover:text-cyan-400 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
                   <div class="flex items-center justify-end gap-1.5">
                     <span>株価</span>
@@ -428,8 +457,7 @@ html_template = """<!doctype html>
                 <th class="p-3 text-right w-44" id="thma">5日線 / 25日線</th>
                 <th class="p-3 text-right w-20">乖離率</th>
                 <th class="p-3 text-center w-20">市場</th>
-                <!-- ★【新設】市場欄と判定理由欄の間にフィードバック報告ボタン列を配置 -->
-                <th class="p-3 text-center w-20">改善報告</th>
+                <th class="p-3 text-center w-32">改善報告</th>
                 <th class="p-3">判定理由</th>
               </tr>
             </thead>
@@ -437,6 +465,7 @@ html_template = """<!doctype html>
           </table>
         </div>
 
+        <!-- テーブルフッター -->
         <div class="mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
           <span id="displayCountLabel" class="font-medium text-slate-300">表示中: 0 件</span>
           <div class="flex items-center gap-3 text-slate-500 font-mono text-[10px]">
@@ -449,56 +478,88 @@ html_template = """<!doctype html>
       </section>
 
       <!-- 解説小窓 -->
-      <section id="explanationSection" class="pt-6 border-t border-slate-800/60">
-        <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
-          <span>📖</span> グランビルの法則：本システムにおける詳細判定要件（見える化）
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          <div class="bg-slate-900/80 border border-emerald-500/20 rounded-xl p-4 relative overflow-hidden shadow-md">
-            <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
-            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-2">買い1：新規買い初動</span>
-            <p class="text-slate-300 text-[11px] leading-relaxed">
-              相場が底這いから脱却するゴールデンクロス(GC)を検出します。<br>
-              <strong>[検証設定値]</strong><br>
-              ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で平ら〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
-              ・底這い確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
-              ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
-            </p>
+      <section id="explanationSection" class="pt-6 border-t border-slate-800/60 hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- 左側：期待度マニュアル -->
+          <div class="space-y-4">
+            <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+              <span>⭐</span> 期待度（1〜5）の評価要件マニュアル
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                <span class="font-bold text-slate-200 block mb-1">基本採点（スタート値）</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  いずれかの買いシグナルが点灯した銘柄は、すべて初期値<strong>「3」</strong>として採点されます。
+                </p>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                <span class="font-bold text-emerald-400 block mb-1">出来高急増ボーナス (+1)</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  本日の出来高が、過去25日間の移動平均出来高に対して <strong>1.5倍以上</strong> に急増している場合、大口の介入とみなし、星を加算。
+                </p>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                <span class="font-bold text-cyan-400 block mb-1">相対的変化率ボーナス (+1)</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  本日の長期線の変化率が、過去半年間（120日）の平均変化スピードを上回っている（＝上昇トレンドが加速している）場合に星を加算。
+                </p>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                <span class="font-bold text-purple-400 block mb-1">個別ローソク足補正 (+1 / -1)</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  ・(買い3) 線に極近(1.5%以下)で綺麗に反発 ➔ <strong>+1</strong><br>
+                  ・(買い4) 3%以上の大陽線で反発 ➔ <strong>+1</strong><br>
+                  ・(全共通) 上髭割合が40%以上 ➔ <strong>-1</strong><br>
+                  ・(全共通) 反発時の実体が極小 ➔ <strong>-1</strong>
+                </p>
+              </div>
+            </div>
           </div>
-          <div class="bg-slate-900/80 border border-sky-500/20 rounded-xl p-4 relative overflow-hidden shadow-md">
-            <div class="absolute top-0 left-0 w-1 h-full bg-sky-500"></div>
-            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 mb-2">買い2：一時下抜け復帰</span>
-            <p class="text-slate-300 text-[11px] leading-relaxed">
-              良好な上昇トレンド中の、一瞬の「ふるい落とし」からの復活を狙います。<br>
-              <strong>[検証設定値]</strong><br>
-              ・長期線(<span class="exp-long"></span>)が右肩上がりであること<br>
-              ・一時性の証明: 過去10日で長期線の下に沈んだのが「1〜4日のみ」<br>
-              ・本日、価格が長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+5.0%</span> 以内
-            </p>
+
+          <!-- 右側：グランビル判定条件マニュアル -->
+          <div class="space-y-4">
+            <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+              <span>📖</span> グランビル買いシグナル（1〜4）詳細判定要件
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
+                <span class="font-bold text-slate-200 block mb-1">買い1：新規買い初動</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
+                  ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
+                  ・乖離率: 長期線から <span class="font-mono">+5.0%</span> 以内
+                </p>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                <span class="font-bold text-slate-200 block mb-1">買い2：一時下抜け復帰</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  ・長期線(<span class="exp-long"></span>)が右肩上がり<br>
+                  ・一時性: 過去10日で長期線の下に沈んだのが「1〜4日のみ」<br>
+                  ・本日、再度長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+5.0%</span> 以内
+                </p>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  ・長期線(<span class="exp-long"></span>)が右肩上がり<br>
+                  ・調整: 過去15日以内に長期線から <span class="font-mono">+4.0%</span> 以上上に離れた山を作っていること<br>
+                  ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日「前日比プラス」かつ「陽線」反発
+                </p>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                <span class="font-bold text-slate-200 block mb-1">買い4：逆張り下方乖離</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  下げ止まり(陽線または前日比プラス)を条件にリバウンド抽出。<br>
+                  ・東Ｐ（通常）: <span id="expPNormal" class="font-mono"></span> 以下<br>
+                  ・東Ｐ（急騰例外）: <span id="expPSurge" class="font-mono"></span> 以下<br>
+                  ・東Ｓ: <span id="expS" class="font-mono"></span> 以下<br>
+                  ・東Ｇ: <span id="expG" class="font-mono"></span> 以下
+                </p>
+              </div>
+            </div>
           </div>
-          <div class="bg-slate-900/80 border border-amber-500/20 rounded-xl p-4 relative overflow-hidden shadow-md">
-            <div class="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
-            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-2">買い3：押し目反発</span>
-            <p class="text-slate-300 text-[11px] leading-relaxed">
-              上昇トレンド中の長期線を支持線とした、押し目買いです。<br>
-              <strong>[検証設定値]</strong><br>
-              ・長期線(<span class="exp-long"></span>)がしっかり上昇傾向であること<br>
-              ・調整の確認: 過去15日以内に長期線から <span class="font-mono">+4.0%</span> 以上上に離れた山を作っていること<br>
-              ・反発条件: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)まで接近後、本日「前日比プラス」かつ「陽線」で反発
-            </p>
-          </div>
-          <div class="bg-slate-900/80 border border-purple-500/20 rounded-xl p-4 relative overflow-hidden shadow-md">
-            <div class="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
-            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 mb-2">買い4：逆張り下方乖離</span>
-            <p class="text-slate-300 text-[11px] leading-relaxed">
-              売られすぎからの短期自律反発狙いです。陽線または前日比プラスで「下げ止まり」を確認した銘柄のみを抽出します。<br>
-              <strong>[市場別の下落しきい値]</strong><br>
-              ・東Ｐ（通常）: <span id="expPNormal" class="font-mono"></span> 以下<br>
-              ・東Ｐ（急騰例外）: <span id="expPSurge" class="font-mono"></span> 以下<br>
-              ・東Ｓ: <span id="expS" class="font-mono"></span> 以下<br>
-              ・東Ｇ: <span id="expG" class="font-mono"></span> 以下
-            </p>
-          </div>
+
         </div>
       </section>
 
@@ -515,7 +576,8 @@ html_template = """<!doctype html>
         sortScoreOrder: 'none'
       };
       
-      const FORM_CFG = /* PLACEHOLDER_FORM_CONFIG */ {};
+      const FORM_CAT_CFG = /* PLACEHOLDER_FORM_CAT */ {};
+      const FORM_SCORE_CFG = /* PLACEHOLDER_FORM_SCORE */ {};
       const MAX_RENDER_ROWS = 150;
 
       document.addEventListener('DOMContentLoaded', () => {
@@ -528,6 +590,7 @@ html_template = """<!doctype html>
         document.getElementById('thPrice').addEventListener('click', togglePriceSort);
         document.getElementById('thScore').addEventListener('click', toggleScoreSort);
         document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
+        document.getElementById('btnToggleExplanation').addEventListener('click', toggleExplanation);
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -550,14 +613,31 @@ html_template = """<!doctype html>
         switchSystem('mid');
       });
 
-      // ★ フィードバック用Googleフォームをポップアップで開く関数
-      function openFeedback(ticker, name, category) {
-        if (!FORM_CFG.baseUrl || FORM_CFG.baseUrl === "YOUR_GOOGLE_FORM_URL_HERE") {
-          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG」にご自身のGoogleフォームのURLとIDを設定すると、自動入力されたフィードバック画面が開くようになります。");
+      function toggleExplanation() {
+        const expSec = document.getElementById('explanationSection');
+        const btn = document.getElementById('btnToggleExplanation');
+        if (expSec.classList.contains('hidden')) {
+          expSec.classList.remove('hidden');
+          btn.textContent = '📖 解説を隠す';
+        } else {
+          expSec.classList.add('hidden');
+          btn.textContent = '📖 解説を表示';
+        }
+      }
+
+      function openCatFeedback(ticker, name, category) {
+        const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
+        const targetUrl = `${FORM_CAT_CFG.baseUrl}?viewform&${FORM_CAT_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_CAT_CFG.entryName}=${encodeURIComponent(name)}&${FORM_CAT_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_CAT_CFG.entryCat}=${encodeURIComponent(category)}`;
+        window.open(targetUrl, '_blank', 'width=620,height=750');
+      }
+
+      function openScoreFeedback(ticker, name, score) {
+        if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
+          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
-        const targetUrl = `${FORM_CFG.baseUrl}?viewform&${FORM_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_CFG.entryName}=${encodeURIComponent(name)}&${FORM_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_CFG.entryCat}=${encodeURIComponent(category)}`;
+        const targetUrl = `${FORM_SCORE_CFG.baseUrl}?viewform&${FORM_SCORE_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_SCORE_CFG.entryName}=${encodeURIComponent(name)}&${FORM_SCORE_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_SCORE_CFG.entryScore}=${encodeURIComponent(score)}`;
         window.open(targetUrl, '_blank', 'width=620,height=750');
       }
 
@@ -744,6 +824,7 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
+          // ★【改善】期待度が左、判定が右の順にボタンを物理的に並び替えます
           tr.innerHTML = `
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span></td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
@@ -768,10 +849,13 @@ html_template = """<!doctype html>
             <td class="p-3 text-right font-mono ${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'}">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</td>
             <td class="p-3 text-center"><span class="${marketBadgeClass} px-2 py-0.5 rounded text-[10px] font-bold">${item.market}</span></td>
             
-            <!-- ★【新設】フィードバック報告ボタン -->
-            <td class="p-3 text-center">
-              <button onclick="openFeedback('${item.ticker}', '${item.name}', '${categoryShortName}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="この判定に対するフィードバックを送る">
-                ✍️ 報告
+            <!-- ★【並び替え対応】左に「期待度」、右に「判定」の報告ボタンを並び替え -->
+            <td class="p-3 text-center space-x-1 whitespace-nowrap">
+              <button onclick="openScoreFeedback('${item.ticker}', '${item.name}', '${sysData.score}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="期待度スコアの妥当性に対して報告">
+                ⭐ 期待度
+              </button>
+              <button onclick="openCatFeedback('${item.ticker}', '${item.name}', '${categoryShortName}')" class="px-2 py-1 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="シグナルの判定カテゴリに対して報告">
+                ✍️ 判定
               </button>
             </td>
             
@@ -785,9 +869,10 @@ html_template = """<!doctype html>
 </html>"""
 
 html_content = html_template.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
-html_content = html_content.replace("/* PLACEHOLDER_FORM_CONFIG */ {}", form_config_str)
+html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
+html_content = html_content.replace("/* PLACEHOLDER_FORM_SCORE */ {}", form_score_str)
 
 with open(html_output_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
-print("コミットと上書き保存が完了しました。Actionsの実行をお試しください！")
+print("コミットおよびWフィードバック＆解説トグル版HTMLの書き出しが正常に完了しました！")
