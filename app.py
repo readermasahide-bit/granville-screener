@@ -7,12 +7,12 @@ import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# ★ 設定パラメータ（取得いただいた2つのフォームURL・IDを完全適用済みです）
+# ★ 設定パラメータ（Wフォーム設定済み）
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
 html_output_path = "index.html"
 
-# 【Googleフォーム1：判定カテゴリ改善用】（適用済み）
+# 【Googleフォーム1：判定カテゴリ改善用】
 FORM_CONFIG_CAT = {
     "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
     "entryCode": "entry.1616153480",
@@ -21,7 +21,7 @@ FORM_CONFIG_CAT = {
     "entryCat":  "entry.432445345"
 }
 
-# 【Googleフォーム2：期待度改善用】（適用済み）
+# 【Googleフォーム2：期待度改善用】
 FORM_CONFIG_SCORE = {
     "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
     "entryCode": "entry.1616153480",
@@ -32,7 +32,8 @@ FORM_CONFIG_SCORE = {
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
-today_str = datetime.now(JST).strftime("%Y%m%d")
+# ファイル名用ではなく、画面表示用に日本時間の綺麗な現在時刻を作成します
+current_time_str = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")
 
 if SYSTEM_TYPE == "short":
     short_window = 5
@@ -205,6 +206,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
+    if category == "NONE" and is_long_ma_rising_strong && has_pulled_back and is_close_to_ma and is_rebound:
+        # 変なシンタックスエラーを防止
+        pass
+        
     if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
         category = "BUY3"
         category_name = "買い3：押し目反発"
@@ -258,6 +263,7 @@ for ticker, df_stock in bulk_data.items():
     change = price_today - price_yesterday
     change_rate = (change / price_yesterday) * 100
     
+    # 市場マッピング
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
         market_short = "東Ｐ"
@@ -289,7 +295,7 @@ json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
-# 報告ボタン順序(期待度 ➔ 判定カテゴリ)修正済みテンプレート
+# 最終更新日時（__LAST_UPDATE__）を埋め込むHTMLテンプレート
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -341,7 +347,8 @@ html_template = """<!doctype html>
               グランビル法則スクリーナー
               <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.7_FULL_FEEDBACK</span>
             </h1>
-            <p class="text-xs text-slate-400 hidden sm:block">東証3市場（プライム・スタンダード・グロース）自動解析・高精度ロジック</p>
+            <!-- ★【改善】ここに日本時間の自動更新日時が毎回自動で刻印されます -->
+            <p class="text-xs text-slate-400 hidden sm:block">東証3市場全自動解析・高精度モデル（最終更新：__LAST_UPDATE__）</p>
           </div>
         </div>
         
@@ -824,7 +831,7 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
-          // ★【改善】期待度が左、判定が右の順にボタンを物理的に並び替えます
+          // ★【並び替え対応】左に「期待度」、右に「判定」の報告ボタンを並び替え
           tr.innerHTML = `
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span></td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
@@ -851,7 +858,7 @@ html_template = """<!doctype html>
             
             <!-- ★【並び替え対応】左に「期待度」、右に「判定」の報告ボタンを並び替え -->
             <td class="p-3 text-center space-x-1 whitespace-nowrap">
-              <button onclick="openScoreFeedback('${item.ticker}', '${item.name}', '${sysData.score}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="期待度スコアの妥当性に対して報告">
+              <button onclick="openScoreFeedback('${item.ticker}', '../../../', '${sysData.score}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="期待度スコアの妥当性に対して報告">
                 ⭐ 期待度
               </button>
               <button onclick="openCatFeedback('${item.ticker}', '${item.name}', '${categoryShortName}')" class="px-2 py-1 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="シグナルの判定カテゴリに対して報告">
@@ -868,11 +875,13 @@ html_template = """<!doctype html>
   </body>
 </html>"""
 
-html_content = html_template.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
+# 自動更新時刻をHTMLテンプレートに動的注入
+html_content = html_template.replace("__LAST_UPDATE__", current_time_str)
+html_content = html_content.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_SCORE */ {}", form_score_str)
 
 with open(html_output_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
-print("コミットおよびWフィードバック＆解説トグル版HTMLの書き出しが正常に完了しました！")
+print(f"自動更新刻印「{current_time_str}」入りHTMLを index.html として上書き書き出し完了しました！")
