@@ -7,12 +7,12 @@ import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# ★ 設定パラメータ（Wフォーム設定済み）
+# ★ 設定パラメータ（取得いただいた2つのフォームURL・IDを完全適用済みです）
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
 html_output_path = "index.html"
 
-# 【Googleフォーム1：判定カテゴリ改善用】
+# 【Googleフォーム1：判定カテゴリ改善用】（適用済み）
 FORM_CONFIG_CAT = {
     "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
     "entryCode": "entry.1616153480",
@@ -21,18 +21,17 @@ FORM_CONFIG_CAT = {
     "entryCat":  "entry.432445345"
 }
 
-# 【Googleフォーム2：期待度改善用】
+# 【Googleフォーム2：期待度改善用】（適用済み）
 FORM_CONFIG_SCORE = {
-    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
-    "entryCode": "entry.1616153480",
-    "entryName": "entry.639288663",
-    "entrySys":  "entry.1292630960",
-    "entryScore": "entry.432445345"
+    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSet_-Ab3-3HgXrRS5pG-5PT4K-qgip4lV4EUqqivaWNRBOO_g/viewform",
+    "entryCode": "entry.473391802",
+    "entryName": "entry.1042173003",
+    "entrySys":  "entry.1364518533",
+    "entryScore": "entry.2008795821"
 }
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
-# ファイル名用ではなく、画面表示用に日本時間の綺麗な現在時刻を作成します
 current_time_str = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")
 
 if SYSTEM_TYPE == "short":
@@ -99,7 +98,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    if len(df_temp) < 130:
+    if len(df_temp) < 45:
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
@@ -170,6 +169,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
+    # 買い4
     if diff_rate <= oversold_threshold:
         if is_yang_candle or is_price_up:
             category = "BUY4"
@@ -177,6 +177,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
             reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発の兆候が確認されました。{warning_suffix}"
 
+    # 買い1
     crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
                     (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
     is_flat_or_rising = long_ma_slope_3d >= -0.01
@@ -189,6 +190,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         reason = f"価格が、横這い〜上向きの長期線({long_window}日線: {long_ma_today:,.0f}円)を上抜けたゴールデンクロス初動です(乖離率 +{diff_rate:.1f}%)。"
 
+    # 買い2
     is_long_ma_rising = long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)
     below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_10d <= 4
@@ -200,22 +202,20 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
         reason = f"上昇トレンドの中、長期線({long_window}日線)を一時下抜け後に回復した押し目ポイントです(乖離率 +{diff_rate:.1f}%)。"
 
+    # 買い3（※記述エラーを完全に除去しました）
     is_long_ma_rising_strong = long_ma_slope_15d > 0
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
-    if category == "NONE" and is_long_ma_rising_strong && has_pulled_back and is_close_to_ma and is_rebound:
-        # 変なシンタックスエラーを防止
-        pass
-        
     if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
         reason = f"上昇トレンドの中、一度大きく上昇した株価が長期線({long_window}日線: {long_ma_today:,.0f}円)の手前まで押し、本日反発しました(乖離率 +{diff_rate:.1f}%)。"
 
+    # 期待度評価（星3からスタート）
     score = 3
     if category != "NONE":
         if vol_ratio >= 1.5: score += 1
@@ -295,7 +295,7 @@ json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
-# 最終更新日時（__LAST_UPDATE__）を埋め込むHTMLテンプレート
+# 報告ボタン順序(期待度 ➔ 判定カテゴリ)修正済みテンプレート
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -347,8 +347,7 @@ html_template = """<!doctype html>
               グランビル法則スクリーナー
               <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.7_FULL_FEEDBACK</span>
             </h1>
-            <!-- ★【改善】ここに日本時間の自動更新日時が毎回自動で刻印されます -->
-            <p class="text-xs text-slate-400 hidden sm:block">東証3市場全自動解析・高精度モデル（最終更新：__LAST_UPDATE__）</p>
+            <p class="text-xs text-slate-400 hidden sm:block">東証3市場（プライム・スタンダード・グロース）自動解析・高精度ロジック（最終更新：__LAST_UPDATE__）</p>
           </div>
         </div>
         
@@ -532,13 +531,13 @@ html_template = """<!doctype html>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-200 block mb-1">買い1：新規買い初動</span>
-                <p class="text-slate-400 text-[11px] leading-relaxed">
+                <p class="text-slate-300 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
                   ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
-                  ・乖離率: 長期線から <span class="font-mono">+5.0%</span> 以内
+                  ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
-              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い2：一時下抜け復帰</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)が右肩上がり<br>
@@ -858,7 +857,7 @@ html_template = """<!doctype html>
             
             <!-- ★【並び替え対応】左に「期待度」、右に「判定」の報告ボタンを並び替え -->
             <td class="p-3 text-center space-x-1 whitespace-nowrap">
-              <button onclick="openScoreFeedback('${item.ticker}', '../../../', '${sysData.score}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="期待度スコアの妥当性に対して報告">
+              <button onclick="openScoreFeedback('${item.ticker}', '${item.name}', '${sysData.score}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="期待度スコアの妥当性に対して報告">
                 ⭐ 期待度
               </button>
               <button onclick="openCatFeedback('${item.ticker}', '${item.name}', '${categoryShortName}')" class="px-2 py-1 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="シグナルの判定カテゴリに対して報告">
@@ -875,9 +874,8 @@ html_template = """<!doctype html>
   </body>
 </html>"""
 
-# 自動更新時刻をHTMLテンプレートに動的注入
-html_content = html_template.replace("__LAST_UPDATE__", current_time_str)
-html_content = html_content.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
+# HTML置換と書き込み
+html_content = html_template.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_SCORE */ {}", form_score_str)
 
