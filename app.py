@@ -7,10 +7,19 @@ import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# ★ 設定パラメータ
+# ★ 設定パラメータ（抽出した値を設定しました）
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
-html_output_path = "index.html" 
+html_output_path = "index.html"
+
+# 【Googleフォーム自動入力設定】
+FORM_CONFIG = {
+    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
+    "entryCode": "entry.1616153480",
+    "entryName": "entry.639288663",
+    "entrySys":  "entry.1292630960",
+    "entryCat":  "entry.432445345"
+}
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -43,23 +52,19 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. GitHub ActionsのIP規制を回避するためのUser-Agent（ブラウザ偽装）セッション作成
+# 2. User-Agent設定とバルクダウンロード
 session = requests.Session()
 session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 })
 
-# 3. 全銘柄のデータをブロック分けして一括ダウンロード
 print("Yahoo! Financeから株価データ(過去2年分)を一括ダウンロード中...")
 bulk_data = {}
 chunk_size = 200
 for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     try:
-        # ブラウザ偽装セッションを渡してダウンロードを実行
         data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", progress=False, session=session)
-        
-        # シングル/マルチインデックス両対応の堅牢なデータ抽出処理
         if isinstance(data.columns, pd.MultiIndex):
             for ticker in chunk:
                 if ticker in data.columns.levels[0]:
@@ -72,9 +77,9 @@ for i in range(0, len(tickers), chunk_size):
                 if not df_single.empty:
                     bulk_data[ticker] = df_single
     except Exception as e:
-        print(f" -> ブロック取得でエラーが発生しました(スキップします): {e}")
+        print(f" -> ブロック取得でエラーが発生しました(スキップ): {e}")
 
-# 4. 判定ロジック関数
+# 3. 判定ロジック関数
 def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -89,7 +94,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
             "diffRate": 0.0, "reason": "データが不足しています。",
-            "ma_short": 0.0, "ma_long": 0.0, "score": 1, "stars": "☆☆☆☆☆"
+            "ma_short": 0.0, "ma_long": 0.0, "score": 1
         }
         
     today = df_temp.iloc[-1]
@@ -115,14 +120,12 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_yang_candle = price_today > open_today
     is_price_up = price_today > price_yesterday
     
-    # 急騰判定
     df_recent_40d = df_temp.tail(40)
     max_price_40d = df_recent_40d['Close'].max()
     min_price_40d = df_recent_40d['Close'].min()
     price_surge_ratio = max_price_40d / min_price_40d if min_price_40d > 0 else 1.0
     is_surged_stock = price_surge_ratio >= 1.50
     
-    # 乖離率しきい値
     warning_suffix = ""
     if market_type == "東Ｐ":
         if is_surged_stock:
@@ -137,18 +140,15 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     else:
         oversold_threshold = -10.0 if long_window <= 25 else -15.0
     
-    # 出来高25日平均比
     recent_volumes = df_temp['Volume'].iloc[-26:-1]
     vol_ma25 = recent_volumes.mean() if len(recent_volumes) > 0 else 0
     vol_ratio = today['Volume'] / vol_ma25 if vol_ma25 > 0 else 1.0
     
-    # 相対長期線変化率
     ma_change_series = df_temp['long_ma'].pct_change()
     ma_change_today = ma_change_series.iloc[-1]
     baseline_change_120d = ma_change_series.abs().tail(120).mean()
     is_slope_strong_relative = (ma_change_today > 0) and (ma_change_today > baseline_change_120d)
     
-    # ローソク足形状
     candle_body_pct = ((price_today - open_today) / open_today) * 100 if open_today > 0 else 0.0
     max_body = max(price_today, open_today)
     upper_shadow = high_today - max_body
@@ -160,7 +160,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
-    # 買い4
     if diff_rate <= oversold_threshold:
         if is_yang_candle or is_price_up:
             category = "BUY4"
@@ -168,7 +167,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
             reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発の兆候が確認されました。{warning_suffix}"
 
-    # 買い1
     crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
                     (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
     is_flat_or_rising = long_ma_slope_3d >= -0.01
@@ -181,7 +179,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         reason = f"価格が、横這い〜上向きの長期線({long_window}日線: {long_ma_today:,.0f}円)を上抜けたゴールデンクロス初動です(乖離率 +{diff_rate:.1f}%)。"
 
-    # 買い2
     is_long_ma_rising = long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)
     below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_10d <= 4
@@ -193,7 +190,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
         reason = f"上昇トレンドの中、長期線({long_window}日線)を一時下抜け後に回復した押し目ポイントです(乖離率 +{diff_rate:.1f}%)。"
 
-    # 買い3
     is_long_ma_rising_strong = long_ma_slope_15d > 0
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
@@ -206,7 +202,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
         reason = f"上昇トレンドの中、一度大きく上昇した株価が長期線({long_window}日線: {long_ma_today:,.0f}円)の手前まで押し、本日反発しました(乖離率 +{diff_rate:.1f}%)。"
 
-    # 期待度スコア
     score = 3
     if category != "NONE":
         if vol_ratio >= 1.5: score += 1
@@ -224,7 +219,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             if candle_body_pct < 0.5: score -= 1
             
     score = max(1, min(5, score))
-    stars_str = "★" * score + "☆" * (5 - score)
 
     return {
         "category": category,
@@ -234,11 +228,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "reason": reason,
         "ma_short": round(short_ma_today, 1),
         "ma_long": round(long_ma_today, 1),
-        "score": int(score),
-        "stars": stars_str
+        "score": int(score)
     }
 
-# 5. 全データの判定実行
+# 4. 全データの判定実行
 results_list = []
 print("各銘柄の判定ロジックを実行しています...")
 
@@ -254,7 +247,6 @@ for ticker, df_stock in bulk_data.items():
     change = price_today - price_yesterday
     change_rate = (change / price_yesterday) * 100
     
-    # 市場マッピング
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
         market_short = "東Ｐ"
@@ -282,8 +274,9 @@ for ticker, df_stock in bulk_data.items():
     results_list.append(stock_info)
 
 json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
+form_config_str = json.dumps(FORM_CONFIG, ensure_ascii=False)
 
-# HTMLテンプレート
+# フィードバック報告ボタンを搭載した最新HTMLテンプレート
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -325,7 +318,6 @@ html_template = """<!doctype html>
   </head>
   <body class="min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-16">
     
-    <!-- ヘッダー -->
     <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur sticky top-0 z-30">
       <div class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div class="flex items-center space-x-3">
@@ -333,13 +325,12 @@ html_template = """<!doctype html>
           <div>
             <h1 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
               グランビル法則スクリーナー
-              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.6_ALL_TSE</span>
+              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.7_FEEDBACK</span>
             </h1>
-            <p class="text-xs text-slate-400 hidden sm:block">東証3市場（プライム・スタンダード・グロース）全自動解析・高精度ロジック</p>
+            <p class="text-xs text-slate-400 hidden sm:block">東証3市場（プライム・スタンダード・グロース）全自動解析・フィードバック連動モデル</p>
           </div>
         </div>
         
-        <!-- 短期・中期切り替え -->
         <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex gap-1 text-xs">
           <button id="btnSystemShort" class="px-4 py-1.5 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-100 cursor-pointer">
             短期 (5日/25日線)
@@ -351,10 +342,8 @@ html_template = """<!doctype html>
       </div>
     </header>
 
-    <!-- メイン -->
     <main class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
       
-      <!-- サマリーカード -->
       <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
           <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">東証判定対象数</span>
@@ -381,14 +370,10 @@ html_template = """<!doctype html>
         </div>
       </section>
 
-      <!-- メインタスクエリア -->
       <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col">
         
-        <!-- 複合コントロールバー -->
         <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          
           <div class="flex flex-wrap items-center gap-3">
-            <!-- 判定タブ -->
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
               <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
               <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
@@ -397,7 +382,6 @@ html_template = """<!doctype html>
               <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-500 hover:text-slate-300 cursor-pointer">すべて</button>
             </div>
 
-            <!-- 市場フィルターボタン -->
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
               <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
               <button data-market="ALL" class="market-btn px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-white cursor-pointer">すべて</button>
@@ -407,7 +391,6 @@ html_template = """<!doctype html>
             </div>
           </div>
 
-          <!-- 検索 ＆ エクスポート -->
           <div class="flex items-center gap-3 w-full xl:w-auto">
             <div class="relative flex-1 xl:w-72">
               <input type="text" id="searchInput" placeholder="コード、銘柄名、業種で検索..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
@@ -417,7 +400,6 @@ html_template = """<!doctype html>
           </div>
         </div>
 
-        <!-- パフォーマンス警告バナー -->
         <div id="performanceWarning" class="mt-4 hidden bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] p-2.5 rounded-xl">
           ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンや検索窓を使って絞り込むとスムーズに閲覧できます。
         </div>
@@ -427,15 +409,15 @@ html_template = """<!doctype html>
           <table class="w-full text-left">
             <thead>
               <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
-                <th class="p-3 w-32">判定カテゴリ</th>
-                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-28 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
-                  <div class="flex items-center justify-center gap-1.5">
+                <th class="p-3 w-28">判定カテゴリ</th>
+                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-20 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
+                  <div class="flex items-center justify-center gap-1">
                     <span>期待度</span>
                     <span id="sortScoreIcon" class="text-cyan-400 font-mono text-[11px] w-3 text-center">↕</span>
                   </div>
                 </th>
-                <th class="p-3 w-32">コード</th>
-                <th class="p-3 min-w-[200px]">銘柄名 / 業種</th>
+                <th class="p-3 w-28">コード</th>
+                <th class="p-3 min-w-[180px]">銘柄名 / 業種</th>
                 <th class="p-3 cursor-pointer select-none hover:text-cyan-400 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
                   <div class="flex items-center justify-end gap-1.5">
                     <span>株価</span>
@@ -444,8 +426,10 @@ html_template = """<!doctype html>
                 </th>
                 <th class="p-3 text-right">前日比</th>
                 <th class="p-3 text-right w-44" id="thma">5日線 / 25日線</th>
-                <th class="p-3 text-right w-24">乖離率</th>
-                <th class="p-3 text-center w-24">市場</th>
+                <th class="p-3 text-right w-20">乖離率</th>
+                <th class="p-3 text-center w-20">市場</th>
+                <!-- ★【新設】市場欄と判定理由欄の間にフィードバック報告ボタン列を配置 -->
+                <th class="p-3 text-center w-20">改善報告</th>
                 <th class="p-3">判定理由</th>
               </tr>
             </thead>
@@ -453,7 +437,6 @@ html_template = """<!doctype html>
           </table>
         </div>
 
-        <!-- テーブルフッター -->
         <div class="mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
           <span id="displayCountLabel" class="font-medium text-slate-300">表示中: 0 件</span>
           <div class="flex items-center gap-3 text-slate-500 font-mono text-[10px]">
@@ -532,6 +515,7 @@ html_template = """<!doctype html>
         sortScoreOrder: 'none'
       };
       
+      const FORM_CFG = /* PLACEHOLDER_FORM_CONFIG */ {};
       const MAX_RENDER_ROWS = 150;
 
       document.addEventListener('DOMContentLoaded', () => {
@@ -565,6 +549,17 @@ html_template = """<!doctype html>
 
         switchSystem('mid');
       });
+
+      // ★ フィードバック用Googleフォームをポップアップで開く関数
+      function openFeedback(ticker, name, category) {
+        if (!FORM_CFG.baseUrl || FORM_CFG.baseUrl === "YOUR_GOOGLE_FORM_URL_HERE") {
+          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG」にご自身のGoogleフォームのURLとIDを設定すると、自動入力されたフィードバック画面が開くようになります。");
+          return;
+        }
+        const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
+        const targetUrl = `${FORM_CFG.baseUrl}?viewform&${FORM_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_CFG.entryName}=${encodeURIComponent(name)}&${FORM_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_CFG.entryCat}=${encodeURIComponent(category)}`;
+        window.open(targetUrl, '_blank', 'width=620,height=750');
+      }
 
       function togglePriceSort() {
         state.sortScoreOrder = 'none';
@@ -730,7 +725,7 @@ html_template = """<!doctype html>
         if (filtered.length === 0) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td colspan="10" class="py-14 text-center text-slate-500">
+            <td colspan="11" class="py-14 text-center text-slate-500">
               <p class="text-sm">該当する銘柄がありません</p>
             </td>
           `;
@@ -747,8 +742,10 @@ html_template = """<!doctype html>
           if (item.market === "東Ｓ") marketBadgeClass = "bg-cyan-950/80 text-cyan-300 border border-cyan-800/40";
           if (item.market === "東Ｇ") marketBadgeClass = "bg-purple-950/80 text-purple-300 border border-purple-800/40";
 
+          const categoryShortName = sysData.categoryName.split('：')[0];
+
           tr.innerHTML = `
-            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${sysData.categoryName.split('：')[0]}</span></td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span></td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
             <td class="p-3 font-mono font-bold text-white">
               <div class="flex items-center gap-1.5">
@@ -770,6 +767,14 @@ html_template = """<!doctype html>
             </td>
             <td class="p-3 text-right font-mono ${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'}">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</td>
             <td class="p-3 text-center"><span class="${marketBadgeClass} px-2 py-0.5 rounded text-[10px] font-bold">${item.market}</span></td>
+            
+            <!-- ★【新設】フィードバック報告ボタン -->
+            <td class="p-3 text-center">
+              <button onclick="openFeedback('${item.ticker}', '${item.name}', '${categoryShortName}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="この判定に対するフィードバックを送る">
+                ✍️ 報告
+              </button>
+            </td>
+            
             <td class="p-3 text-slate-300">${sysData.reason}</td>
           `;
           tbody.appendChild(tr);
@@ -779,10 +784,10 @@ html_template = """<!doctype html>
   </body>
 </html>"""
 
-# HTML置換と書き込み
 html_content = html_template.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
+html_content = html_content.replace("/* PLACEHOLDER_FORM_CONFIG */ {}", form_config_str)
+
 with open(html_output_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
-print(f"\n--- HTML生成が完了しました ---")
-print(f"👉 生成されたファイル: {html_output_path}")
+print("コミットと上書き保存が完了しました。Actionsの実行をお試しください！")
