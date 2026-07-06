@@ -2,8 +2,8 @@ name: Daily Granville Screener Auto Update
 
 on:
   schedule:
-    # 毎日 日本時間17:00 (世界標準時 08:00 UTC) に自動実行
-    - cron: '0 8 * * 1-5'
+    # 毎日 日本時間18:00 (世界標準時 09:00 UTC) に自動実行
+    - cron: '0 9 * * 1-5'
   workflow_dispatch:
     # 手動で「今すぐ実行」ボタンを押すことも可能にする設定
 
