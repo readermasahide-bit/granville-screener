@@ -1,6 +1,7 @@
 import io
 import os
 import json
+import time
 import requests
 import pandas as pd
 import yfinance as yf
@@ -36,7 +37,7 @@ JST = timezone(timedelta(hours=+9))
 now_jst = datetime.now(JST)
 current_time_str = now_jst.strftime("%Y-%m-%d %H:%M:%S")
 
-# ★【改善】時差ボケによる「最新日データ漏れ」を防ぐため、開始日と終了日（明日）を明示的に算出します
+# 時差ボケによる「最新日データ漏れ」を防ぐため、開始日と終了日（明日）を算出
 tomorrow_jst = now_jst + timedelta(days=1)
 start_date_str = (now_jst - timedelta(days=740)).strftime("%Y-%m-%d") # 過去2年分(約740日)
 tomorrow_date_str = tomorrow_jst.strftime("%Y-%m-%d")
@@ -49,6 +50,19 @@ else:
     short_window = 25
     long_window = 75
     system_title = "中期（25日線/75日線）"
+
+# NumPyの独自型やbytesを標準のPythonデータ型にクレンジングする関数
+def clean_val(val):
+    if isinstance(val, bytes):
+        try:
+            return val.decode('utf-8')
+        except Exception:
+            return str(val)
+    elif hasattr(val, 'item'):  # numpy scalar (int64, float64等)
+        return val.item()
+    elif pd.isna(val):
+        return None
+    return val
 
 # 1. JPXから上場銘柄一覧をダウンロード
 jpx_url = "https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xls"
@@ -68,7 +82,7 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. User-Agent設定とバルクダウンロード
+# 2. User-Agent設定と安全なバルクダウンロード（キーマッピング＆ディレイ挿入）
 session = requests.Session()
 session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -77,24 +91,50 @@ session.headers.update({
 print(f"Yahoo! Financeから株価データ({start_date_str} 〜 {tomorrow_date_str})を一括ダウンロード中...")
 bulk_data = {}
 chunk_size = 200
+
 for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
+    print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
+    
     try:
-        # ★【改善】曖昧な period 属性を廃止し、明示的な start と end (未来の日付) を指定して強制取得
-        data = yf.download(chunk, start=start_date_str, end=tomorrow_date_str, interval="1d", group_by="ticker", progress=False, session=session)
+        # 明示的な開始/終了日を指定して一括ダウンロードを実行
+        data = yf.download(
+            chunk, 
+            start=start_date_str, 
+            end=tomorrow_date_str, 
+            interval="1d", 
+            group_by="ticker", 
+            progress=False, 
+            session=session
+        )
+        
+        # 1. 戻り値がマルチインデックスの場合（group_by="ticker"が正常適用された場合）
         if isinstance(data.columns, pd.MultiIndex):
+            available_tickers = data.columns.levels[0]
             for ticker in chunk:
-                if ticker in data.columns.levels[0]:
+                if ticker in available_tickers:
+                    # 特定の銘柄コードの列のみを明示的に指定して抽出（列ズレは絶対に起きません）
                     df_single = data[ticker].dropna(subset=['Close'])
                     if not df_single.empty:
                         bulk_data[ticker] = df_single
+                        
+        # 2. 戻り値がシングルインデックスの場合（取得できたのが1銘柄のみで列名がそのまま['Close', etc]になった場合）
         else:
-            for ticker in chunk:
-                df_single = data.dropna(subset=['Close'])
-                if not df_single.empty:
-                    bulk_data[ticker] = df_single
+            required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+            if all(col in data.columns for col in required_cols):
+                # リクエストしたchunkに含まれるはずの、このデータが該当する「唯一の銘柄」に紐付け
+                if len(chunk) == 1:
+                    df_single = data.dropna(subset=['Close'])
+                    if not df_single.empty:
+                        bulk_data[chunk[0]] = df_single
+                        
     except Exception as e:
-        print(f" -> ブロック取得エラー: {e}")
+        print(f" -> チャンク({i+1}〜)のダウンロードに失敗（自動スキップ）: {e}")
+    
+    # ★ Yahoo! Financeへのアクセス集中を避けるため、各リクエスト間に4秒の待機時間を挿入
+    time.sleep(4)
+
+print(f"データのダウンロードが完了しました。正常に取得できた銘柄数: {len(bulk_data)}")
 
 # 3. 判定および採点ロジック関数
 def evaluate_logic(df_temp, short_window, long_window, market_type):
@@ -239,15 +279,15 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     stars_str = "★" * score + "☆" * (5 - score)
 
     return {
-        "category": category,
-        "categoryName": category_name,
-        "badgeClass": badge_class,
-        "diffRate": diff_rate,
-        "reason": reason,
-        "ma_short": round(short_ma_today, 1),
-        "ma_long": round(long_ma_today, 1),
-        "score": int(score),
-        "stars": stars_str
+        "category": clean_val(category),
+        "categoryName": clean_val(category_name),
+        "badgeClass": clean_val(badge_class),
+        "diffRate": clean_val(diff_rate),
+        "reason": clean_val(reason),
+        "ma_short": clean_val(round(short_ma_today, 1)),
+        "ma_long": clean_val(round(long_ma_today, 1)),
+        "score": clean_val(int(score)),
+        "stars": clean_val(stars_str)
     }
 
 # 5. 全データの判定実行
@@ -281,13 +321,13 @@ for ticker, df_stock in bulk_data.items():
     mid_res = evaluate_logic(df_stock, 25, 75, market_short)
     
     stock_info = {
-        "ticker": ticker.replace(".T", ""),
-        "name": ticker_to_name.get(ticker, "不明な銘柄"),
-        "market": market_short,
-        "sector": ticker_to_sector.get(ticker, "不明"),
-        "price": price_today,
-        "change": change,
-        "changeRate": round(change_rate, 2),
+        "ticker": clean_val(ticker.replace(".T", "")),
+        "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
+        "market": clean_val(market_short),
+        "sector": clean_val(ticker_to_sector.get(ticker, "不明")),
+        "price": clean_val(price_today),
+        "change": clean_val(change),
+        "changeRate": clean_val(round(change_rate, 2)),
         "short": short_res,
         "mid": mid_res
     }
@@ -538,7 +578,7 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横誰い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
                   ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
