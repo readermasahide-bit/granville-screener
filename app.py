@@ -3,15 +3,16 @@ import os
 import json
 import time
 import requests
+import re
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# ★ 設定パラメータ（Wフォーム設定済み）
+# ★ 設定パラメータ（Wフォーム設定＆クラウド対応）
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
-html_output_path = "index.html"
+html_output_path = "index.html" # ホームページとして公開するため index.html に固定
 
 # 【Googleフォーム1：判定カテゴリ改善用】
 FORM_CONFIG_CAT = {
@@ -37,11 +38,6 @@ JST = timezone(timedelta(hours=+9))
 now_jst = datetime.now(JST)
 current_time_str = now_jst.strftime("%Y-%m-%d %H:%M:%S")
 
-# 時差ボケによる「最新日データ漏れ」を防ぐため、開始日と終了日（明日）を算出
-tomorrow_jst = now_jst + timedelta(days=1)
-start_date_str = (now_jst - timedelta(days=740)).strftime("%Y-%m-%d") # 過去2年分(約740日)
-tomorrow_date_str = tomorrow_jst.strftime("%Y-%m-%d")
-
 if SYSTEM_TYPE == "short":
     short_window = 5
     long_window = 25
@@ -64,6 +60,37 @@ def clean_val(val):
         return None
     return val
 
+# ★【件数前日比ハック】既存の index.html から昨日の件数をパースして自動計算
+prev_counts = {
+    "short": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0},
+    "mid": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0}
+}
+
+if os.path.exists(html_output_path):
+    print("既存の index.html から前日の集計データを自動解析中...")
+    try:
+        with open(html_output_path, "r", encoding="utf-8") as f:
+            old_html = f.read()
+        
+        # 既存の results = [ ... ] の配列部分を正規表現で検出してパース
+        match = re.search(r"results:\s*(\[.*?\]),", old_html, re.DOTALL)
+        if match:
+            prev_results_json = match.group(1)
+            prev_results = json.loads(prev_results_json)
+            
+            # 各システムの昨日点灯数を集計
+            for item in prev_results:
+                for sys_key in ["short", "mid"]:
+                    cat = item.get(sys_key, {}).get("category", "NONE")
+                    if cat in prev_counts[sys_key]:
+                        prev_counts[sys_key][cat] += 1
+                        
+            prev_counts["short"]["TOTAL"] = len(prev_results)
+            prev_counts["mid"]["TOTAL"] = len(prev_results)
+            print(" -> 前日データのパースに成功しました。")
+    except Exception as e:
+        print(f" -> 前日データの読み込みに失敗（初回実行として無視します）: {e}")
+
 # 1. JPXから上場銘柄一覧をダウンロード
 jpx_url = "https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xls"
 print("JPXから銘柄一覧をダウンロード中...")
@@ -82,59 +109,38 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. User-Agent設定と安全なバルクダウンロード（キーマッピング＆ディレイ挿入）
+# 2. 全銘柄のデータをブロック分けして一括ダウンロード
 session = requests.Session()
 session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 })
 
-print(f"Yahoo! Financeから株価データ({start_date_str} 〜 {tomorrow_date_str})を一括ダウンロード中...")
+print("株価データ(2年分)を一括ダウンロード中...")
 bulk_data = {}
 chunk_size = 200
-
 for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
-    
     try:
-        # 明示的な開始/終了日を指定して一括ダウンロードを実行
-        data = yf.download(
-            chunk, 
-            start=start_date_str, 
-            end=tomorrow_date_str, 
-            interval="1d", 
-            group_by="ticker", 
-            progress=False, 
-            session=session
-        )
-        
-        # 1. 戻り値がマルチインデックスの場合（group_by="ticker"が正常適用された場合）
-        if isinstance(data.columns, pd.MultiIndex):
-            available_tickers = data.columns.levels[0]
-            for ticker in chunk:
-                if ticker in available_tickers:
-                    # 特定の銘柄コードの列のみを明示的に指定して抽出（列ズレは絶対に起きません）
-                    df_single = data[ticker].dropna(subset=['Close'])
-                    if not df_single.empty:
-                        bulk_data[ticker] = df_single
-                        
-        # 2. 戻り値がシングルインデックスの場合（取得できたのが1銘柄のみで列名がそのまま['Close', etc]になった場合）
-        else:
-            required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-            if all(col in data.columns for col in required_cols):
-                # リクエストしたchunkに含まれるはずの、このデータが該当する「唯一の銘柄」に紐付け
-                if len(chunk) == 1:
-                    df_single = data.dropna(subset=['Close'])
-                    if not df_single.empty:
-                        bulk_data[chunk[0]] = df_single
-                        
+        # 以前のバージョンと同じ period="2y" 方式
+        data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
+        for ticker in chunk:
+            if ticker in data.columns.levels[0]:
+                df_single = data[ticker].dropna(subset=['Close']).copy()
+                
+                # タイムゾーン情報を剥離して平坦化
+                if df_single.index.tz is not None:
+                    df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
+                else:
+                    df_single.index = df_single.index.tz_localize(None)
+                
+                bulk_data[ticker] = df_single
     except Exception as e:
-        print(f" -> チャンク({i+1}〜)のダウンロードに失敗（自動スキップ）: {e}")
+        print(f" -> ブロック取得でエラーが発生しました: {e}")
     
-    # ★ Yahoo! Financeへのアクセス集中を避けるため、各リクエスト間に4秒の待機時間を挿入
     time.sleep(4)
 
-print(f"データのダウンロードが完了しました。正常に取得できた銘柄数: {len(bulk_data)}")
+print(f"データのダウンロードが完了しました。正常取得銘柄数: {len(bulk_data)}")
 
 # 3. 判定および採点ロジック関数
 def evaluate_logic(df_temp, short_window, long_window, market_type):
@@ -146,7 +152,8 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    if len(df_temp) < 130:
+    min_len = 45 if long_window <= 25 else 130
+    if len(df_temp) < min_len:
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
@@ -177,12 +184,14 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_yang_candle = price_today > open_today
     is_price_up = price_today > price_yesterday
     
+    # 急騰判定
     df_recent_40d = df_temp.tail(40)
     max_price_40d = df_recent_40d['Close'].max()
     min_price_40d = df_recent_40d['Close'].min()
     price_surge_ratio = max_price_40d / min_price_40d if min_price_40d > 0 else 1.0
     is_surged_stock = price_surge_ratio >= 1.50
     
+    # 乖離率しきい値
     warning_suffix = ""
     if market_type == "東Ｐ":
         if is_surged_stock:
@@ -197,15 +206,18 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     else:
         oversold_threshold = -10.0 if long_window <= 25 else -15.0
     
+    # 出来高25日平均比
     recent_volumes = df_temp['Volume'].iloc[-26:-1]
     vol_ma25 = recent_volumes.mean() if len(recent_volumes) > 0 else 0
     vol_ratio = today['Volume'] / vol_ma25 if vol_ma25 > 0 else 1.0
     
+    # 相対長期線変化率
     ma_change_series = df_temp['long_ma'].pct_change()
     ma_change_today = ma_change_series.iloc[-1]
     baseline_change_120d = ma_change_series.abs().tail(120).mean()
     is_slope_strong_relative = (ma_change_today > 0) and (ma_change_today > baseline_change_120d)
     
+    # ローソク足形状
     candle_body_pct = ((price_today - open_today) / open_today) * 100 if open_today > 0 else 0.0
     max_body = max(price_today, open_today)
     upper_shadow = high_today - max_body
@@ -217,13 +229,15 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
+    # 買い4
     if diff_rate <= oversold_threshold:
         if is_yang_candle or is_price_up:
             category = "BUY4"
             category_name = "買い4：逆張りリバ"
             badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
-            reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発の兆候が確認されました。{warning_suffix}"
+            reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
+    # 買い1
     crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
                     (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
     is_flat_or_rising = long_ma_slope_3d >= -0.01
@@ -234,8 +248,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         category = "BUY1"
         category_name = "買い1：新規買い"
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-        reason = f"価格が、横這い〜上向きの長期線({long_window}日線: {long_ma_today:,.0f}円)を上抜けたゴールデンクロス初動です(乖離率 +{diff_rate:.1f}%)。"
+        reason = f"価格が横這い〜上昇トレンドの長期線({long_window}日線)を本日明確に上抜けました。"
 
+    # 買い2
     is_long_ma_rising = long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)
     below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_10d <= 4
@@ -245,30 +260,41 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         category = "BUY2"
         category_name = "買い2：再突き抜け"
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-        reason = f"上昇トレンドの中、長期線({long_window}日線)を一時下抜け後に回復した押し目ポイントです(乖離率 +{diff_rate:.1f}%)。"
+        reason = f"良好な上昇トレンド中、長期線を一時的に下抜け後、本日素早く上方に復帰しました。"
 
+    # 買い3（通常：陽線＋プラス反発）
     is_long_ma_rising_strong = long_ma_slope_15d > 0
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
+    # & のタイポを and に確実に修正
     if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        reason = f"上昇トレンドの中、一度大きく上昇した株価が長期線({long_window}日線: {long_ma_today:,.0f}円)の手前まで押し、本日反発しました(乖離率 +{diff_rate:.1f}%)。"
+        reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
 
+    # 買い3-Pre（下落日待ち伏せ用：支持線接触）
+    is_resting_on_ma = -0.5 <= diff_rate <= 1.5
+    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_resting_on_ma:
+        category = "BUY3_PRE"
+        category_name = "買い3：押し目待ち伏せ"
+        badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
+        reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
+
+    # 期待度スコア
     score = 3
     if category != "NONE":
         if vol_ratio >= 1.5: score += 1
-        if category != "BUY4" and upper_shadow_pct >= 40.0: score -= 1
+        if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0: score -= 1
         if category == "BUY1":
             if is_slope_strong_relative: score += 1
             if candle_body_pct < 0.5: score -= 1
         elif category == "BUY2":
             if is_slope_strong_relative: score += 1
-        elif category == "BUY3":
+        elif category in ["BUY3", "BUY3_PRE"]:
             if diff_rate <= 1.5: score += 1
             if candle_body_pct < 1.0: score -= 1
         elif category == "BUY4":
@@ -290,9 +316,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "stars": clean_val(stars_str)
     }
 
-# 5. 全データの判定実行
+# 4. 全データの判定実行
 results_list = []
-print("判定ロジックを実行しています...")
+print("各銘柄の判定ロジックを実行しています...")
 
 for ticker, df_stock in bulk_data.items():
     if df_stock.empty or len(df_stock) < 130:
@@ -304,9 +330,11 @@ for ticker, df_stock in bulk_data.items():
     price_today = float(today['Close'])
     price_yesterday = float(yesterday['Close'])
     change = price_today - price_yesterday
-    change_rate = (change / price_yesterday) * 100
+    change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
     
-    # 市場マッピング
+    volume_today = float(today['Volume'])
+    is_low_volume = volume_today <= 1000
+    
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
         market_short = "東Ｐ"
@@ -320,23 +348,57 @@ for ticker, df_stock in bulk_data.items():
     short_res = evaluate_logic(df_stock, 5, 25, market_short)
     mid_res = evaluate_logic(df_stock, 25, 75, market_short)
     
+    # ★【超軽量化ハック】短期・中期ともに「NONE(条件外)」の無駄データは結果リストに入れない
+    if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
+        continue
+        
     stock_info = {
         "ticker": clean_val(ticker.replace(".T", "")),
         "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
-        "market": clean_val(market_short),
+        "market": market_short,
         "sector": clean_val(ticker_to_sector.get(ticker, "不明")),
         "price": clean_val(price_today),
         "change": clean_val(change),
         "changeRate": clean_val(round(change_rate, 2)),
+        "volume": clean_val(volume_today),
+        "isLowVolume": clean_val(is_low_volume),
+        "isStrongRelative": False,
         "short": short_res,
         "mid": mid_res
     }
     results_list.append(stock_info)
 
-json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
+# 本日の東証全銘柄の騰落中央値を算出
+all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
+market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
+print(f" -> 本日の東証全上場銘柄の騰落率中央値: {market_median_change:.2f}%")
 
+# 地合い強気銘柄の判定および加点
+for item in results_list:
+    is_strong_relative = False
+    if market_median_change <= -1.0:
+        is_strong_relative = item["changeRate"] >= (market_median_change + 1.5)
+        
+    if is_strong_relative:
+        item["isStrongRelative"] = True
+        for sys_key in ["short", "mid"]:
+            if item[sys_key]["category"] != "NONE":
+                new_score = min(5, item[sys_key]["score"] + 1)
+                item[sys_key]["score"] = new_score
+                item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score)
+
+json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
+
+# 昨日総計の集計をJSに渡す（NONEを除外した昨日各カテゴリ総計）
+for sys_key in ["short", "mid"]:
+    total_active = 0
+    for cat in ["BUY1", "BUY2", "BUY3", "BUY3_PRE", "BUY4"]:
+        total_active += prev_counts[sys_key][cat]
+    prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
+
+prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
 
 # HTMLテンプレート
 html_template = """<!doctype html>
@@ -388,10 +450,10 @@ html_template = """<!doctype html>
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white font-bold text-xl">G</div>
           <div>
             <h1 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
-              グランビル法則スクリーナー
-              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.7_FULL_FEEDBACK</span>
+              全自動グランビル・スクリーナー
+              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.8_ULTIMATE</span>
             </h1>
-            <p class="text-xs text-slate-400 hidden sm:block">東証3市場（プライム・スタンダード・グロース）自動解析・高精度ロジック（最終更新：__LAST_UPDATE__）</p>
+            <p class="text-xs text-slate-400 hidden sm:block">東証全市場自動解析・高精度ロジック（最終更新：__LAST_UPDATE__）</p>
           </div>
         </div>
         
@@ -413,27 +475,36 @@ html_template = """<!doctype html>
       <!-- サマリーカード -->
       <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">東証判定対象数</span>
+          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">東証判定シグナル数</span>
           <div class="flex items-baseline gap-2 mt-2">
             <span id="statTotal" class="text-2xl font-bold text-white">0</span>
-            <span class="text-xs text-slate-500">銘柄 (P•S•G)</span>
+            <span class="text-xs text-slate-500">銘柄</span>
+            <span id="statTotalDiff" class="text-[10px] font-bold ml-1"></span>
           </div>
         </div>
         <div class="bg-slate-900/80 border border-emerald-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">買い1 (新規ゴールデン)</span>
-          <span id="statBuy1" class="text-2xl font-bold text-emerald-400 mt-2">0</span>
+          <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">買い1 (新規GC初動)</span>
+          <div class="flex items-baseline justify-between mt-2" id="statBuy1">
+            <span class="text-2xl font-bold text-emerald-400">0</span>
+          </div>
         </div>
         <div class="bg-slate-900/80 border border-sky-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">買い2 (一時下抜け復帰)</span>
-          <span id="statBuy2" class="text-2xl font-bold text-sky-400 mt-2">0</span>
+          <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">買い2 (下抜け復帰)</span>
+          <div class="flex items-baseline justify-between mt-2" id="statBuy2">
+            <span class="text-2xl font-bold text-sky-400">0</span>
+          </div>
         </div>
         <div class="bg-slate-900/80 border border-amber-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">買い3 (サポート反発)</span>
-          <span id="statBuy3" class="text-2xl font-bold text-amber-400 mt-2">0</span>
+          <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">買い3 (支持線反発/Pre)</span>
+          <div class="flex items-baseline justify-between mt-2" id="statBuy3">
+            <span class="text-2xl font-bold text-amber-400">0</span>
+          </div>
         </div>
         <div class="bg-slate-900/80 border border-purple-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
           <span class="text-[11px] font-bold text-purple-400 uppercase tracking-wider">買い4 (下方乖離リバ)</span>
-          <span id="statBuy4" class="text-2xl font-bold text-purple-400 mt-2">0</span>
+          <div class="flex items-baseline justify-between mt-2" id="statBuy4">
+            <span class="text-2xl font-bold text-purple-400">0</span>
+          </div>
         </div>
       </section>
 
@@ -457,9 +528,9 @@ html_template = """<!doctype html>
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
               <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
               <button data-market="ALL" class="market-btn px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-white cursor-pointer">すべて</button>
-              <button data-market="東Ｐ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｐ (プライム)</button>
-              <button data-market="東Ｓ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｓ (スタンダード)</button>
-              <button data-market="東Ｇ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｇ (グロース)</button>
+              <button data-market="東Ｐ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｐ</button>
+              <button data-market="東Ｓ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｓ</button>
+              <button data-market="東Ｇ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｇ</button>
             </div>
           </div>
 
@@ -483,8 +554,8 @@ html_template = """<!doctype html>
           <table class="w-full text-left">
             <thead>
               <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
-                <th class="p-3 w-32">判定カテゴリ</th>
-                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-28 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
+                <th class="p-3 w-20 whitespace-nowrap">判定</th>
+                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-24 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
                   <div class="flex items-center justify-center gap-1.5">
                     <span>期待度</span>
                     <span id="sortScoreIcon" class="text-cyan-400 font-mono text-[11px] w-3 text-center">↕</span>
@@ -492,18 +563,17 @@ html_template = """<!doctype html>
                 </th>
                 <th class="p-3 w-28">コード</th>
                 <th class="p-3 min-w-[200px]">銘柄名 / 業種</th>
-                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
+                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-right w-32 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
                   <div class="flex items-center justify-end gap-1.5">
                     <span>株価</span>
                     <span id="sortIcon" class="text-cyan-400 font-mono text-[11px] w-3 text-center">↕</span>
                   </div>
                 </th>
-                <th class="p-3 text-right">前日比</th>
+                <th class="p-3 text-right w-36">前日比</th>
                 <th class="p-3 text-right w-44" id="thma">5日線 / 25日線</th>
-                <th class="p-3 text-right w-20">乖離率</th>
-                <th class="p-3 text-center w-20">市場</th>
+                <th class="p-3 text-right w-24">乖離率</th>
+                <th class="p-3 text-center w-24">市場</th>
                 <th class="p-3 text-center w-32">改善報告</th>
-                <th class="p-3">判定理由</th>
               </tr>
             </thead>
             <tbody id="resultTableBody" class="divide-y divide-slate-800/60 text-xs"></tbody>
@@ -592,11 +662,12 @@ html_template = """<!doctype html>
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発</span>
+                <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発（待ち伏せ含む）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)が右肩上がり<br>
                   ・調整: 過去15日以内に長期線から <span class="font-mono">+4.0%</span> 以上上に離れた山を作っていること<br>
-                  ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日「前日比プラス」かつ「陽線」反発
+                  ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日反発。<br>
+                  ・<strong>【下落日待ち伏せPre-Buy3】</strong>: 長期線の極近(JST -0.5%〜+1.5%)にある銘柄は、陰線・マイナス引けでも「押し目待ち伏せ」として特別点灯。
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
@@ -619,7 +690,9 @@ html_template = """<!doctype html>
 
     <script>
       const state = {
-        results: /* PLACEHOLDER_RESULTS */ [],
+        results: __PLACEHOLDER_RESULTS__,
+        prevCounts: __PLACEHOLDER_PREV_COUNTS__,
+        marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
@@ -730,7 +803,16 @@ html_template = """<!doctype html>
       function exportCSV() {
         const sys = state.currentSystem;
         let filtered = [...state.results];
-        if (state.activeTab !== 'ALL') filtered = filtered.filter(r => r[sys].category === state.activeTab);
+        
+        filtered = filtered.filter(r => r[sys].category !== "NONE");
+
+        if (state.activeTab !== 'ALL') {
+          if (state.activeTab === 'BUY3') {
+            filtered = filtered.filter(r => r[sys].category === 'BUY3' || r[sys].category === 'BUY3_PRE');
+          } else {
+            filtered = filtered.filter(r => r[sys].category === state.activeTab);
+          }
+        }
         if (state.activeMarket !== 'ALL') filtered = filtered.filter(r => r.market === state.activeMarket);
         if (state.searchQuery) {
           filtered = filtered.filter(r => r.ticker.includes(state.searchQuery) || r.name.toLowerCase().includes(state.searchQuery) || r.sector.toLowerCase().includes(state.searchQuery));
@@ -740,7 +822,7 @@ html_template = """<!doctype html>
           return;
         }
         let csvContent = "\\uFEFF";
-        csvContent += "カテゴリ,期待度スコア,証券コード,銘柄名,株価,前日比,前日比率,市場,業種,判定理由\\r\\n";
+        csvContent += "カテゴリ,期待度スコア,証券コード,銘柄名,株価,前日比,前日比率,本日出来高,市場,業種\\r\\n";
         filtered.forEach(item => {
           const sysData = item[sys];
           const isPlus = item.change >= 0;
@@ -753,9 +835,9 @@ html_template = """<!doctype html>
             `"${item.price}"`,
             `"${sign}${item.change}"`,
             `"${sign}${item.changeRate}%"`,
+            `"${item.volume}"`,
             `"${item.market}"`,
-            `"${item.sector}"`,
-            `"${sysData.reason.replace(/"/g, '""')}"`
+            `"${item.sector}"`
           ].join(",");
           csvContent += row + "\\r\\n";
         });
@@ -805,22 +887,68 @@ html_template = """<!doctype html>
         renderTable();
       }
 
+      function getDiffBadge(todayVal, yesterdayVal) {
+        const diff = todayVal - yesterdayVal;
+        if (diff > 0) {
+          return `<span class="text-[11px] text-emerald-400 font-bold ml-1.5">(+${diff})</span>`;
+        } else if (diff < 0) {
+          return `<span class="text-[11px] text-rose-400 font-bold ml-1.5">(${diff})</span>`;
+        } else {
+          return `<span class="text-[10px] text-slate-500 font-normal ml-1.5">(±0)</span>`;
+        }
+      }
+
       function updateStats() {
-        const counts = { BUY1: 0, BUY2: 0, BUY3: 0, BUY4: 0 };
+        const counts = { BUY1: 0, BUY2: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0 };
         const sys = state.currentSystem;
         state.results.forEach(r => {
           const cat = r[sys].category;
           if (counts[cat] !== undefined) counts[cat]++;
         });
-        document.getElementById('statBuy1').textContent = counts.BUY1;
-        document.getElementById('statBuy2').textContent = counts.BUY2;
-        document.getElementById('statBuy3').textContent = counts.BUY3;
-        document.getElementById('statBuy4').textContent = counts.BUY4;
-        document.getElementById('statTotal').textContent = state.results.length;
-        const labels = { ALL: 'すべて', BUY1: '買い1', BUY2: '買い2', BUY3: '買い3', BUY4: '買い4', NONE: '条件外' };
+        
+        const buy3Total = counts.BUY3 + counts.BUY3_PRE;
+        const buy3Yesterday = (state.prevCounts[sys].BUY3 || 0) + (state.prevCounts[sys].BUY3_PRE || 0);
+
+        const totalToday = state.results.filter(r => r[sys].category !== "NONE").length;
+        const totalYesterday = state.prevCounts[sys].TOTAL_ACTIVE || 0; 
+        const totalDiff = totalToday - totalYesterday;
+
+        document.getElementById('statBuy1').innerHTML = `
+          <span class="text-2xl font-bold text-emerald-400">${counts.BUY1}</span>
+          ${getDiffBadge(counts.BUY1, state.prevCounts[sys].BUY1 || 0)}
+        `;
+        document.getElementById('statBuy2').innerHTML = `
+          <span class="text-2xl font-bold text-sky-400">${counts.BUY2}</span>
+          ${getDiffBadge(counts.BUY2, state.prevCounts[sys].BUY2 || 0)}
+        `;
+        document.getElementById('statBuy3').innerHTML = `
+          <span class="text-2xl font-bold text-amber-400">${buy3Total}</span>
+          ${getDiffBadge(buy3Total, buy3Yesterday)}
+        `;
+        document.getElementById('statBuy4').innerHTML = `
+          <span class="text-2xl font-bold text-purple-400">${counts.BUY4}</span>
+          ${getDiffBadge(counts.BUY4, state.prevCounts[sys].BUY4 || 0)}
+        `;
+        
+        document.getElementById('statTotal').textContent = state.results.length.toLocaleString();
+        const totalDiffEl = document.getElementById('statTotalDiff');
+        if (totalDiffEl) {
+          const tDiff = state.results.length - (state.prevCounts[sys].TOTAL || 0);
+          totalDiffEl.innerHTML = tDiff > 0 ? `+${tDiff}` : tDiff < 0 ? `${tDiff}` : '±0';
+          totalDiffEl.className = `text-[10px] font-bold ml-1.5 ${tDiff > 0 ? 'text-emerald-400' : tDiff < 0 ? 'text-rose-400' : 'text-slate-500'}`;
+        }
+
+        const labels = { ALL: 'すべて', BUY1: '買い1', BUY2: '買い2', BUY3: '買い3', BUY4: '買い4' };
         document.querySelectorAll('.tab-btn').forEach(btn => {
           const t = btn.dataset.tab;
-          const count = (t === 'ALL') ? state.results.length : state.results.filter(r => r[sys].category === t).length;
+          let count = 0;
+          if (t === 'ALL') {
+            count = state.results.filter(r => r[sys].category !== 'NONE').length;
+          } else if (t === 'BUY3') {
+            count = counts.BUY3 + counts.BUY3_PRE;
+          } else {
+            count = counts[t];
+          }
           btn.textContent = `${labels[t]} (${count})`;
         });
       }
@@ -830,7 +958,16 @@ html_template = """<!doctype html>
         tbody.innerHTML = '';
         const sys = state.currentSystem;
         let filtered = [...state.results];
-        if (state.activeTab !== 'ALL') filtered = filtered.filter(r => r[sys].category === state.activeTab);
+        
+        filtered = filtered.filter(r => r[sys].category !== "NONE");
+
+        if (state.activeTab !== 'ALL') {
+          if (state.activeTab === 'BUY3') {
+            filtered = filtered.filter(r => r[sys].category === 'BUY3' || r[sys].category === 'BUY3_PRE');
+          } else {
+            filtered = filtered.filter(r => r[sys].category === state.activeTab);
+          }
+        }
         if (state.activeMarket !== 'ALL') filtered = filtered.filter(r => r.market === state.activeMarket);
         if (state.searchQuery) {
           filtered = filtered.filter(r => r.ticker.includes(state.searchQuery) || r.name.toLowerCase().includes(state.searchQuery) || r.sector.toLowerCase().includes(state.searchQuery));
@@ -857,7 +994,7 @@ html_template = """<!doctype html>
         if (filtered.length === 0) {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td colspan="11" class="py-14 text-center text-slate-500">
+            <td colspan="10" class="py-14 text-center text-slate-500">
               <p class="text-sm">該当する銘柄がありません</p>
             </td>
           `;
@@ -876,7 +1013,14 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
-          // ボタン順：左に「⭐ 期待度」、右に「✍️ 判定」
+          const volumeWarning = item.isLowVolume 
+            ? `<span class="ml-1 px-1 text-rose-400 font-bold select-none cursor-help" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク極めて高：1,000株以下)">⚠️</span>` 
+            : '';
+
+          const rsBadge = item.isStrongRelative 
+            ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
+            : '';
+
           tr.innerHTML = `
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span></td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
@@ -889,7 +1033,11 @@ html_template = """<!doctype html>
               </div>
             </td>
             <td class="p-3">
-              <div class="font-bold text-slate-100 text-sm">${item.name}</div>
+              <div class="font-bold text-slate-100 text-sm flex items-center flex-wrap gap-1">
+                <span>${item.name}</span>
+                ${volumeWarning}
+                ${rsBadge}
+              </div>
               <div class="text-[10px] text-slate-400 mt-0.5">${item.sector}</div>
             </td>
             <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
@@ -909,8 +1057,6 @@ html_template = """<!doctype html>
                 ✍️ 判定
               </button>
             </td>
-            
-            <td class="p-3 text-slate-300">${sysData.reason}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -918,14 +1064,19 @@ html_template = """<!doctype html>
     </script>
   </body>
 </html>"""
+# ==========================================
 
-# HTMLテンプレートの動的更新
-html_content = html_template.replace("__LAST_UPDATE__", current_time_str)
-html_content = html_content.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
+# 実際の置換処理
+html_content = html_template
+html_content = html_content.replace("__LAST_UPDATE__", current_time_str)
+html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_median_change:.4f}")
+html_content = html_content.replace("__PLACEHOLDER_RESULTS__", json_data_str)
+html_content = html_content.replace("__PLACEHOLDER_PREV_COUNTS__", prev_counts_json_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_SCORE */ {}", form_score_str)
 
 with open(html_output_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
-print(f"自動更新時刻「{current_time_str}」とnoindex設定を含む最新版 HTML を書き出し完了しました！")
+print(f"\n--- HTML生成が完了しました ---")
+print(f"👉 生成されたファイル: {html_output_path} (自動更新時刻：{current_time_str})")
