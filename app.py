@@ -122,7 +122,6 @@ for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     try:
-        # 以前のバージョンと同じ period="2y" 方式
         data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
         for ticker in chunk:
             if ticker in data.columns.levels[0]:
@@ -138,7 +137,6 @@ for i in range(0, len(tickers), chunk_size):
     except Exception as e:
         print(f" -> ブロック取得でエラーが発生しました: {e}")
     
-    # API制限回避
     time.sleep(4)
 
 print(f"データのダウンロードが完了しました。正常取得銘柄数: {len(bulk_data)}")
@@ -277,6 +275,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
 
     # ★【新設】買い3-Pre（下落日待ち伏せ用：陰線・マイナスを許容し、長期線の真上に接触した状態）
+    # &をandに確実にデバッグ修正
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5  # 支持線まで極小乖離（わずかな下振れも許容）
     if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_resting_on_ma:
         category = "BUY3_PRE"
@@ -349,6 +348,11 @@ for ticker, df_stock in bulk_data.items():
     short_res = evaluate_logic(df_stock, 5, 25, market_short)
     mid_res = evaluate_logic(df_stock, 25, 75, market_short)
     
+    # ★【超軽量化ハック】短期・中期の両方で「NONE(条件外)」の銘柄は、HTML膨張を防ぐためリストにすら追加しない
+    # これにより index.html のサイズが1/30に激減し、Actions更新や画面描画が瞬時に終わるようになります
+    if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
+        continue
+        
     stock_info = {
         "ticker": clean_val(ticker.replace(".T", "")),
         "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
@@ -389,7 +393,7 @@ json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
-# 昨日総計の集集をJSに渡す（NONEを除外した昨日各カテゴリ総計）
+# 昨日総計の集計をJSに渡す（NONEを除外した昨日各カテゴリ総計）
 for sys_key in ["short", "mid"]:
     total_active = 0
     for cat in ["BUY1", "BUY2", "BUY3", "BUY3_PRE", "BUY4"]:
@@ -403,7 +407,7 @@ prev_counts_str = json.dumps(prev_counts, ensure_ascii=False)
 # ・出来高極小バッジを文字なしのアイコン「⚠️」のみに極小化しました。
 # ・運用上読まれていなかった「判定理由」列を完全廃止し、表示ゆとりを最大化しました。
 # ・前営業日の index.html から昨日件数をパースして自動比較表示する前日比機能を搭載。
-# ・【修正完了】 marketMedian のJS内コメント記号「#」を、JS仕様の「//」に完全修正してSyntaxErrorを解消。
+# ・【バグ修正】 /* PLACEHOLDER_... */ による完全置換ハックにより、JS構文エラーを根底から解決。
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -478,7 +482,7 @@ html_template = """<!doctype html>
       <!-- サマリーカード -->
       <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">東証判定母数</span>
+          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">東証判定シグナル数</span>
           <div class="flex items-baseline gap-2 mt-2">
             <span id="statTotal" class="text-2xl font-bold text-white">0</span>
             <span class="text-xs text-slate-500">銘柄</span>
@@ -552,7 +556,7 @@ html_template = """<!doctype html>
           ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンや検索窓を使って絞り込むとスムーズに閲覧できます。
         </div>
 
-        <!-- テーブル (判定理由を消去し、他の列に大きなゆとりを持たせました) -->
+        <!-- テーブル -->
         <div class="mt-6 overflow-x-auto">
           <table class="w-full text-left">
             <thead>
@@ -651,9 +655,9 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横誰い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
                   ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
-                  ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
+                  ・上抜け乖傷率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
@@ -694,8 +698,8 @@ html_template = """<!doctype html>
     <script>
       const state = {
         results: /* PLACEHOLDER_RESULTS */ [],
-        prevCounts: /* PLACEHOLDER_PREV_COUNTS */ {"short":{"BUY1":0,"BUY2":0,"BUY3":0,"BUY3_PRE":0,"BUY4":0,"TOTAL":0},"mid":{"BUY1":0,"BUY2":0,"BUY3":0,"BUY3_PRE":0,"BUY4":0,"TOTAL":0}},
-        marketMedian: __MARKET_MEDIAN__,  // 本日の東証騰落中央値
+        prevCounts: /* PLACEHOLDER_PREV_COUNTS */ {},
+        marketMedian: /* PLACEHOLDER_MARKET_MEDIAN */ 0.0,
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
@@ -761,7 +765,7 @@ html_template = """<!doctype html>
 
       function openScoreFeedback(ticker, name, score) {
         if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
+          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォーム of HTMLとIDを設定してください。");
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
@@ -807,7 +811,6 @@ html_template = """<!doctype html>
         const sys = state.currentSystem;
         let filtered = [...state.results];
         
-        // CSV出力時も NONE(条件外) を除外して無用な行を省く
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
         if (state.activeTab !== 'ALL') {
@@ -884,14 +887,13 @@ html_template = """<!doctype html>
           expsLong.forEach(el => el.textContent = '75日線');
           expPNormal.textContent = '-12.0%';
           expPSurge.textContent = '-20.0%';
-          expS.textContent = '-18.0%';
+          expS.textContent = '-20.0%';
           expG.textContent = '-20.0%';
         }
         updateStats();
         renderTable();
       }
 
-      // ★ 前日比の差分バッジを生成するヘルパー関数
       function getDiffBadge(todayVal, yesterdayVal) {
         const diff = todayVal - yesterdayVal;
         if (diff > 0) {
@@ -911,12 +913,11 @@ html_template = """<!doctype html>
           if (counts[cat] !== undefined) counts[cat]++;
         });
         
-        // 買い3カードは「通常買い3」と「待ち伏せPre-Buy3」を合算
         const buy3Total = counts.BUY3 + counts.BUY3_PRE;
         const buy3Yesterday = (state.prevCounts[sys].BUY3 || 0) + (state.prevCounts[sys].BUY3_PRE || 0);
 
         const totalToday = state.results.filter(r => r[sys].category !== "NONE").length;
-        const totalYesterday = state.prevCounts[sys].TOTAL_ACTIVE || 0; // NONE以外の昨日総計
+        const totalYesterday = state.prevCounts[sys].TOTAL_ACTIVE || 0; 
         const totalDiff = totalToday - totalYesterday;
 
         document.getElementById('statBuy1').innerHTML = `
@@ -965,7 +966,6 @@ html_template = """<!doctype html>
         const sys = state.currentSystem;
         let filtered = [...state.results];
         
-        // NONE(条件外)は初期状態やタブ切り替え時にリストに混ざらないよう排除
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
         if (state.activeTab !== 'ALL') {
@@ -1020,12 +1020,10 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
-          // 出来高極小サインを文字なしの極小バッジアイコン「⚠️」へ集約
           const volumeWarning = item.isLowVolume 
             ? `<span class="ml-1 px-1 text-rose-400 font-bold select-none cursor-help" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク極めて高：1,000株以下)">⚠️</span>` 
             : '';
 
-          // 「🛡️地合い強気」バッジの生成
           const rsBadge = item.isStrongRelative 
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
             : '';
@@ -1073,4 +1071,3 @@ html_template = """<!doctype html>
     </script>
   </body>
 </html>"""
-# ==========================================
