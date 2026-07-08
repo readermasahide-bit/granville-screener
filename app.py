@@ -78,10 +78,9 @@ tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
 # 2. 全銘柄のデータをブロック分けして一括ダウンロード
-# ★【株価ずれ解消】以前のバージョンで100%正常に稼働していた「ダウンロードおよび格納処理」を完全復活
 session = requests.Session()
 session.headers.update({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, Gecko) Chrome/120.0.0.0 Safari/537.36'
 })
 
 print("株価データ(2年分)を一括ダウンロード中...")
@@ -91,14 +90,13 @@ for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     try:
-        # 以前のバージョンと同じ period="2y" 方式
-        # ※Web画面の生数値と確実に一致させるため auto_adjust=False を指定
+        # Web上の画面価格と一致させるため auto_adjust=False を指定
         data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
         for ticker in chunk:
             if ticker in data.columns.levels[0]:
                 df_single = data[ticker].dropna(subset=['Close']).copy()
                 
-                # ★【JSTローカル化】Actionsサーバー（UTC）上での時差による最新日の日付ズレ・タイムラグを二重に防ぐ安全策
+                # タイムゾーン情報を剥離して平坦化
                 if df_single.index.tz is not None:
                     df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
                 else:
@@ -108,7 +106,7 @@ for i in range(0, len(tickers), chunk_size):
     except Exception as e:
         print(f" -> ブロック取得でエラーが発生しました: {e}")
     
-    # API制限回避のための適切な4秒ディレイ
+    # API制限回避
     time.sleep(4)
 
 print(f"データのダウンロードが完了しました。正常取得銘柄数: {len(bulk_data)}")
@@ -123,7 +121,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    # 以前のバージョンに基づく安全なデータ不足判定しきい値
     min_len = 45 if long_window <= 25 else 130
     if len(df_temp) < min_len:
         return {
@@ -241,13 +238,13 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
+    if category == "NONE" and is_long_ma_rising_strong& has_pulled_back and is_close_to_ma and is_rebound:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
         reason = f"上昇トレンドの中、一度大きく上昇した株価が長期線({long_window}日線: {long_ma_today:,.0f}円)の手前まで押し、本日反発しました(乖離率 +{diff_rate:.1f}%)。"
 
-    # 期待度スコア (100%継承)
+    # 期待度スコア
     score = 3
     if category != "NONE":
         if vol_ratio >= 1.5: score += 1
@@ -295,6 +292,10 @@ for ticker, df_stock in bulk_data.items():
     change = price_today - price_yesterday
     change_rate = (change / price_yesterday) * 100
     
+    # ★【出来高追加】本日の出来高データを抽出
+    volume_today = float(today['Volume'])
+    is_low_volume = volume_today <= 1000  # 出来高1000以下の判定フラグ
+    
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
         market_short = "東Ｐ"
@@ -316,6 +317,8 @@ for ticker, df_stock in bulk_data.items():
         "price": clean_val(price_today),
         "change": clean_val(change),
         "changeRate": clean_val(round(change_rate, 2)),
+        "volume": clean_val(volume_today),            # ★追加：出来高実数
+        "isLowVolume": clean_val(is_low_volume),      # ★追加：出来高極小判定
         "short": short_res,
         "mid": mid_res
     }
@@ -326,7 +329,7 @@ json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
-# HTMLテンプレート (最新のWフィードバック対応、解説トグル表示対応、noindex対応)
+# HTMLテンプレート (最新のWフィードバック対応、出来高極小警告バッジ表示、noindex)
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -479,7 +482,7 @@ html_template = """<!doctype html>
                   </div>
                 </th>
                 <th class="p-3 w-28">コード</th>
-                <th class="p-3 min-w-[200px]">銘柄名 / 業種</th>
+                <th class="p-3 min-w-[220px]">銘柄名 / 業種</th>
                 <th class="p-3 cursor-pointer select-none hover:text-cyan-400 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
                   <div class="flex items-center justify-end gap-1.5">
                     <span>株価</span>
@@ -566,7 +569,7 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横誰い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
                   ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
@@ -728,7 +731,7 @@ html_template = """<!doctype html>
           return;
         }
         let csvContent = "\\uFEFF";
-        csvContent += "カテゴリ,期待度スコア,証券コード,銘柄名,株価,前日比,前日比率,市場,業種,判定理由\\r\\n";
+        csvContent += "カテゴリ,期待度スコア,証券コード,銘柄名,株価,前日比,前日比率,本日出来高,市場,業種,判定理由\\r\\n";
         filtered.forEach(item => {
           const sysData = item[sys];
           const isPlus = item.change >= 0;
@@ -741,6 +744,7 @@ html_template = """<!doctype html>
             `"${item.price}"`,
             `"${sign}${item.change}"`,
             `"${sign}${item.changeRate}%"`,
+            `"${item.volume}"`,
             `"${item.market}"`,
             `"${item.sector}"`,
             `"${sysData.reason.replace(/"/g, '""')}"`
@@ -864,6 +868,11 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
+          // 出来高が1000以下の場合に「⚠️ 出来高極小」バッジを表示（ツールチップ付き）
+          const volumeWarning = item.isLowVolume 
+            ? `<span class="ml-1.5 px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-bold inline-flex items-center gap-0.5 select-none" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク高)">⚠️ 出来高極小</span>` 
+            : '';
+
           tr.innerHTML = `
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span></td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
@@ -876,7 +885,10 @@ html_template = """<!doctype html>
               </div>
             </td>
             <td class="p-3">
-              <div class="font-bold text-slate-100 text-sm">${item.name}</div>
+              <div class="font-bold text-slate-100 text-sm flex items-center flex-wrap gap-1">
+                <span>${item.name}</span>
+                ${volumeWarning}
+              </div>
               <div class="text-[10px] text-slate-400 mt-0.5">${item.sector}</div>
             </td>
             <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
