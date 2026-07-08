@@ -1070,8 +1070,8 @@ html_template = """<!doctype html>
 html_content = html_template
 html_content = html_content.replace("__LAST_UPDATE__", current_time_str)
 html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_median_change:.4f}")
-html_content = html_content.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
-html_content = html_content.replace("/* PLACEHOLDER_PREV_COUNTS */ {}", prev_counts_json_str)
+html_content = html_content.replace("__PLACEHOLDER_RESULTS__", json_data_str)
+html_content = html_content.replace("__PLACEHOLDER_PREV_COUNTS__", prev_counts_json_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_SCORE */ {}", form_score_str)
 
