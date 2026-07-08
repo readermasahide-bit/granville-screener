@@ -8,10 +8,10 @@ import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# ★ 設定パラメータ（Wフォーム設定済み）
+# ★ 設定パラメータ（Wフォーム設定＆クラウド対応）
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
-html_output_path = "index.html"
+html_output_path = "index.html" # ホームページとして公開するため index.html に固定
 
 # 【Googleフォーム1：判定カテゴリ改善用】
 FORM_CONFIG_CAT = {
@@ -77,73 +77,41 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. User-Agent設定と安全なバルクダウンロード
+# 2. 全銘柄のデータをブロック分けして一括ダウンロード
+# ★【株価ずれ解消】以前のバージョンで100%正常に稼働していた「ダウンロードおよび格納処理」を完全復活
 session = requests.Session()
 session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 })
 
-print(f"Yahoo! Financeから株価データ(直近2年分)を一括ダウンロード中...")
+print("株価データ(2年分)を一括ダウンロード中...")
 bulk_data = {}
 chunk_size = 200
-
 for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
-    
     try:
-        # ★【超改善】時差・タイムゾーンによる1日欠落バグを防ぐため period="2y" を指定
-        # ★【超改善】Web上の画面価格と100%一致させるため、auto_adjust=False を指定
-        data = yf.download(
-            chunk, 
-            period="2y", 
-            interval="1d", 
-            group_by="ticker", 
-            auto_adjust=False,
-            progress=False, 
-            session=session
-        )
-        
-        # 1. 戻り値がマルチインデックスの場合（通常時）
-        if isinstance(data.columns, pd.MultiIndex):
-            available_tickers = data.columns.levels[0]
-            for ticker in chunk:
-                if ticker in available_tickers:
-                    df_single = data[ticker].copy()
-                    
-                    # ★【超改善】タイムゾーン情報を完全に剥離し、純粋なJSTローカル「年月日」に平坦化して1日ズレを防止
-                    if df_single.index.tz is not None:
-                        df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
-                    else:
-                        df_single.index = df_single.index.tz_localize(None)
-                    
-                    # 必須データ（CloseとAdj Close）に欠損がない行のみを残す
-                    df_single = df_single.dropna(subset=['Close', 'Adj Close'])
-                    if not df_single.empty:
-                        bulk_data[ticker] = df_single
-                        
-        # 2. 戻り値がシングルインデックスの場合（1銘柄のみの返却時）
-        else:
-            required_cols = ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']
-            if all(col in data.columns for col in required_cols):
-                if len(chunk) == 1:
-                    df_single = data.copy()
-                    if df_single.index.tz is not None:
-                        df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
-                    else:
-                        df_single.index = df_single.index.tz_localize(None)
-                        
-                    df_single = df_single.dropna(subset=['Close', 'Adj Close'])
-                    if not df_single.empty:
-                        bulk_data[chunk[0]] = df_single
-                        
+        # 以前のバージョンと同じ period="2y" 方式
+        # ※Web画面の生数値と確実に一致させるため auto_adjust=False を指定
+        data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
+        for ticker in chunk:
+            if ticker in data.columns.levels[0]:
+                df_single = data[ticker].dropna(subset=['Close']).copy()
+                
+                # ★【JSTローカル化】Actionsサーバー（UTC）上での時差による最新日の日付ズレ・タイムラグを二重に防ぐ安全策
+                if df_single.index.tz is not None:
+                    df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
+                else:
+                    df_single.index = df_single.index.tz_localize(None)
+                
+                bulk_data[ticker] = df_single
     except Exception as e:
-        print(f" -> チャンク({i+1}〜)のダウンロードに失敗（自動スキップ）: {e}")
+        print(f" -> ブロック取得でエラーが発生しました: {e}")
     
-    # API負荷制限を完璧に回避するため、各リクエスト間に4秒待機
+    # API制限回避のための適切な4秒ディレイ
     time.sleep(4)
 
-print(f"データのダウンロードが完了しました。正常に取得できた銘柄数: {len(bulk_data)}")
+print(f"データのダウンロードが完了しました。正常取得銘柄数: {len(bulk_data)}")
 
 # 3. 判定および採点ロジック関数
 def evaluate_logic(df_temp, short_window, long_window, market_type):
@@ -151,13 +119,13 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
         
-    # ★【超改善】移動平均線（MA）の計算には、株式分割・配当落ち調整済みの「Adj Close」を使用。
-    # これにより、配当落ちや分割の「窓開け」による移動平均の歪み・ダマシ判定を完全に排除します。
-    df_temp['short_ma'] = df_temp['Adj Close'].rolling(window=short_window).mean()
-    df_temp['long_ma'] = df_temp['Adj Close'].rolling(window=long_window).mean()
+    df_temp['short_ma'] = df_temp['Close'].rolling(window=short_window).mean()
+    df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    if len(df_temp) < 130:
+    # 以前のバージョンに基づく安全なデータ不足判定しきい値
+    min_len = 45 if long_window <= 25 else 130
+    if len(df_temp) < min_len:
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
@@ -168,7 +136,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     today = df_temp.iloc[-1]
     yesterday = df_temp.iloc[-2]
     
-    # ★【超改善】表示や陽線・実体のローソク足計算には、Yahooウェブ画面と同じ「Close/Open/High/Low(生株価)」を使用。
     price_today = float(today['Close'])
     price_yesterday = float(yesterday['Close'])
     open_today = float(today['Open'])
@@ -180,9 +147,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     long_ma_today = float(today['long_ma'])
     long_ma_yesterday = float(yesterday['long_ma'])
     
-    # 乖離率の計算は調整済み終値（Adj Close）ベースで判定（テクニカル上のダマシを防止）
-    price_today_adj = float(today['Adj Close'])
-    diff_rate = ((price_today_adj - long_ma_today) / long_ma_today) * 100
+    diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
     
     long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
     long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
@@ -191,12 +156,14 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_yang_candle = price_today > open_today
     is_price_up = price_today > price_yesterday
     
+    # 急騰判定
     df_recent_40d = df_temp.tail(40)
     max_price_40d = df_recent_40d['Close'].max()
     min_price_40d = df_recent_40d['Close'].min()
     price_surge_ratio = max_price_40d / min_price_40d if min_price_40d > 0 else 1.0
     is_surged_stock = price_surge_ratio >= 1.50
     
+    # 乖離率しきい値
     warning_suffix = ""
     if market_type == "東Ｐ":
         if is_surged_stock:
@@ -211,15 +178,18 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     else:
         oversold_threshold = -10.0 if long_window <= 25 else -15.0
     
+    # 出来高25日平均比
     recent_volumes = df_temp['Volume'].iloc[-26:-1]
     vol_ma25 = recent_volumes.mean() if len(recent_volumes) > 0 else 0
     vol_ratio = today['Volume'] / vol_ma25 if vol_ma25 > 0 else 1.0
     
+    # 相対長期線変化率
     ma_change_series = df_temp['long_ma'].pct_change()
     ma_change_today = ma_change_series.iloc[-1]
     baseline_change_120d = ma_change_series.abs().tail(120).mean()
     is_slope_strong_relative = (ma_change_today > 0) and (ma_change_today > baseline_change_120d)
     
+    # ローソク足形状
     candle_body_pct = ((price_today - open_today) / open_today) * 100 if open_today > 0 else 0.0
     max_body = max(price_today, open_today)
     upper_shadow = high_today - max_body
@@ -231,6 +201,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
+    # 買い4
     if diff_rate <= oversold_threshold:
         if is_yang_candle or is_price_up:
             category = "BUY4"
@@ -238,6 +209,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
             reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発の兆候が確認されました。{warning_suffix}"
 
+    # 買い1
     crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
                     (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
     is_flat_or_rising = long_ma_slope_3d >= -0.01
@@ -250,6 +222,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         reason = f"価格が、横這い〜上向きの長期線({long_window}日線: {long_ma_today:,.0f}円)を上抜けたゴールデンクロス初動です(乖離率 +{diff_rate:.1f}%)。"
 
+    # 買い2
     is_long_ma_rising = long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)
     below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_10d <= 4
@@ -261,6 +234,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
         reason = f"上昇トレンドの中、長期線({long_window}日線)を一時下抜け後に回復した押し目ポイントです(乖離率 +{diff_rate:.1f}%)。"
 
+    # 買い3
     is_long_ma_rising_strong = long_ma_slope_15d > 0
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
@@ -273,6 +247,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
         reason = f"上昇トレンドの中、一度大きく上昇した株価が長期線({long_window}日線: {long_ma_today:,.0f}円)の手前まで押し、本日反発しました(乖離率 +{diff_rate:.1f}%)。"
 
+    # 期待度スコア (100%継承)
     score = 3
     if category != "NONE":
         if vol_ratio >= 1.5: score += 1
@@ -304,9 +279,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "stars": clean_val(stars_str)
     }
 
-# 5. 全データの判定実行
+# 4. 全データの判定実行
 results_list = []
-print("判定ロジックを実行しています...")
+print("各銘柄の判定ロジックを実行しています...")
 
 for ticker, df_stock in bulk_data.items():
     if df_stock.empty or len(df_stock) < 130:
@@ -315,14 +290,11 @@ for ticker, df_stock in bulk_data.items():
     today = df_stock.iloc[-1]
     yesterday = df_stock.iloc[-2]
     
-    # ★【超改善】表示する本日の株価、前営業日の株価、前日比は生のCloseをベースにするため、
-    # ヤフーファイナンスWeb画面の「生株価」「前日比」「前日比率」と1円単位まで完全一致します。
     price_today = float(today['Close'])
     price_yesterday = float(yesterday['Close'])
     change = price_today - price_yesterday
     change_rate = (change / price_yesterday) * 100
     
-    # 市場マッピング
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
         market_short = "東Ｐ"
@@ -354,7 +326,7 @@ json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
-# HTMLテンプレート (100%オリジナルのまま維持)
+# HTMLテンプレート (最新のWフィードバック対応、解説トグル表示対応、noindex対応)
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -594,7 +566,7 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横誰い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
                   ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
@@ -701,7 +673,7 @@ html_template = """<!doctype html>
 
       function openScoreFeedback(ticker, name, score) {
         if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          alert("【初期設定が必要です】\\nコード冒頭 of 「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
+          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
@@ -934,7 +906,7 @@ html_template = """<!doctype html>
   </body>
 </html>"""
 
-# HTMLテンプレートの動的更新
+# HTML置換と書き込み
 html_content = html_template.replace("__LAST_UPDATE__", current_time_str)
 html_content = html_content.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
@@ -943,4 +915,5 @@ html_content = html_content.replace("/* PLACEHOLDER_FORM_SCORE */ {}", form_scor
 with open(html_output_path, "w", encoding="utf-8") as f:
     f.write(html_content)
 
-print(f"自動更新時刻「{current_time_str}」とnoindex設定を含む最新版 HTML を書き出し完了しました！")
+print(f"\n--- HTML生成が完了しました ---")
+print(f"👉 生成されたファイル: {html_output_path} (自動更新時刻：{current_time_str})")
