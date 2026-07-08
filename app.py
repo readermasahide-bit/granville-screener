@@ -31,8 +31,15 @@ FORM_CONFIG_SCORE = {
 }
 # ==========================================
 
+# 日本時間(JST)の現在時刻をベースに動的な日付を計算
 JST = timezone(timedelta(hours=+9))
-current_time_str = datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S")
+now_jst = datetime.now(JST)
+current_time_str = now_jst.strftime("%Y-%m-%d %H:%M:%S")
+
+# ★【改善】時差ボケによる「最新日データ漏れ」を防ぐため、開始日と終了日（明日）を明示的に算出します
+tomorrow_jst = now_jst + timedelta(days=1)
+start_date_str = (now_jst - timedelta(days=740)).strftime("%Y-%m-%d") # 過去2年分(約740日)
+tomorrow_date_str = tomorrow_jst.strftime("%Y-%m-%d")
 
 if SYSTEM_TYPE == "short":
     short_window = 5
@@ -67,13 +74,14 @@ session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 })
 
-print("Yahoo! Financeから株価データをダウンロード中...")
+print(f"Yahoo! Financeから株価データ({start_date_str} 〜 {tomorrow_date_str})を一括ダウンロード中...")
 bulk_data = {}
 chunk_size = 200
 for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     try:
-        data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", progress=False, session=session)
+        # ★【改善】曖昧な period 属性を廃止し、明示的な start と end (未来の日付) を指定して強制取得
+        data = yf.download(chunk, start=start_date_str, end=tomorrow_date_str, interval="1d", group_by="ticker", progress=False, session=session)
         if isinstance(data.columns, pd.MultiIndex):
             for ticker in chunk:
                 if ticker in data.columns.levels[0]:
@@ -98,7 +106,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    if len(df_temp) < 45:
+    if len(df_temp) < 130:
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
@@ -199,7 +207,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
         reason = f"上昇トレンドの中、長期線({long_window}日線)を一時下抜け後に回復した押し目ポイントです(乖離率 +{diff_rate:.1f}%)。"
 
-    # 買い3 (※バグのない綺麗な単一の論理判定です)
     is_long_ma_rising_strong = long_ma_slope_15d > 0
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
@@ -212,7 +219,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
         reason = f"上昇トレンドの中、一度大きく上昇した株価が長期線({long_window}日線: {long_ma_today:,.0f}円)の手前まで押し、本日反発しました(乖離率 +{diff_rate:.1f}%)。"
 
-    # 期待度評価（星3からスタート）
     score = 3
     if category != "NONE":
         if vol_ratio >= 1.5: score += 1
@@ -244,7 +250,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "stars": stars_str
     }
 
-# 4. 全データの判定実行
+# 5. 全データの判定実行
 results_list = []
 print("判定ロジックを実行しています...")
 
@@ -260,6 +266,7 @@ for ticker, df_stock in bulk_data.items():
     change = price_today - price_yesterday
     change_rate = (change / price_yesterday) * 100
     
+    # 市場マッピング
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
         market_short = "東Ｐ"
@@ -291,12 +298,11 @@ json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
-# HTMLテンプレート（noindex対応、解説ボタン最下部移動、最終更新動的注入）
+# HTMLテンプレート
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <!-- ★【改善②】検索エンジンからのインデックス登録を防ぐメタタグを最上部に設置 -->
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <title>グランビル法則スクリーナー 📈 東証全市場統合ダッシュボード</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -396,7 +402,9 @@ html_template = """<!doctype html>
         
         <!-- 複合コントロールバー -->
         <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+          
           <div class="flex flex-wrap items-center gap-3">
+            <!-- 判定タブ -->
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
               <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
               <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
@@ -405,6 +413,7 @@ html_template = """<!doctype html>
               <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-500 hover:text-slate-300 cursor-pointer">すべて</button>
             </div>
 
+            <!-- 市場フィルターボタン -->
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
               <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
               <button data-market="ALL" class="market-btn px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-white cursor-pointer">すべて</button>
@@ -424,6 +433,7 @@ html_template = """<!doctype html>
           </div>
         </div>
 
+        <!-- パフォーマンス警告バナー -->
         <div id="performanceWarning" class="mt-4 hidden bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] p-2.5 rounded-xl">
           ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンや検索窓を使って絞り込むとスムーズに閲覧できます。
         </div>
@@ -472,14 +482,14 @@ html_template = """<!doctype html>
 
       </section>
 
-      <!-- ★【改善③】解説の開閉トグルボタンを画面最下部（テーブルの下）に移動配置 -->
+      <!-- 解説開閉ボタン -->
       <div class="flex justify-center mt-6">
         <button id="btnToggleExplanation" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md">
           📖 解説を表示
         </button>
       </div>
 
-      <!-- 解説小窓（トグルで最下部から開閉展開します） -->
+      <!-- 解説小窓 -->
       <section id="explanationSection" class="pt-6 border-t border-slate-800/60 hidden space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
@@ -526,14 +536,14 @@ html_template = """<!doctype html>
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
-                <span class="font-bold text-slate-200 block mb-1">買い1：新規買い初動</span>
+                <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
                   ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
-                  ・乖離率: 長期線から <span class="font-mono">+5.0%</span> 以内
+                  ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
-              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い2：一時下抜け復帰</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)が右肩上がり<br>
@@ -826,6 +836,7 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
+          // ボタン順：左に「⭐ 期待度」、右に「✍️ 判定」
           tr.innerHTML = `
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span></td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
@@ -869,7 +880,6 @@ html_template = """<!doctype html>
 </html>"""
 
 # HTMLテンプレートの動的更新
-# __LAST_UPDATE__ の置換コード（これにより、JST時刻が確実に index.html に埋め込まれます）
 html_content = html_template.replace("__LAST_UPDATE__", current_time_str)
 html_content = html_content.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
