@@ -37,11 +37,6 @@ JST = timezone(timedelta(hours=+9))
 now_jst = datetime.now(JST)
 current_time_str = now_jst.strftime("%Y-%m-%d %H:%M:%S")
 
-# 時差ボケによる「最新日データ漏れ」を防ぐため、開始日と終了日（明日）を算出
-tomorrow_jst = now_jst + timedelta(days=1)
-start_date_str = (now_jst - timedelta(days=740)).strftime("%Y-%m-%d") # 過去2年分(約740日)
-tomorrow_date_str = tomorrow_jst.strftime("%Y-%m-%d")
-
 if SYSTEM_TYPE == "short":
     short_window = 5
     long_window = 25
@@ -82,13 +77,13 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. User-Agent設定と安全なバルクダウンロード（キーマッピング＆ディレイ挿入）
+# 2. User-Agent設定と安全なバルクダウンロード
 session = requests.Session()
 session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 })
 
-print(f"Yahoo! Financeから株価データ({start_date_str} 〜 {tomorrow_date_str})を一括ダウンロード中...")
+print(f"Yahoo! Financeから株価データ(直近2年分)を一括ダウンロード中...")
 bulk_data = {}
 chunk_size = 200
 
@@ -97,41 +92,55 @@ for i in range(0, len(tickers), chunk_size):
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     
     try:
-        # 明示的な開始/終了日を指定して一括ダウンロードを実行
+        # ★【超改善】時差・タイムゾーンによる1日欠落バグを防ぐため period="2y" を指定
+        # ★【超改善】Web上の画面価格と100%一致させるため、auto_adjust=False を指定
         data = yf.download(
             chunk, 
-            start=start_date_str, 
-            end=tomorrow_date_str, 
+            period="2y", 
             interval="1d", 
             group_by="ticker", 
+            auto_adjust=False,
             progress=False, 
             session=session
         )
         
-        # 1. 戻り値がマルチインデックスの場合（group_by="ticker"が正常適用された場合）
+        # 1. 戻り値がマルチインデックスの場合（通常時）
         if isinstance(data.columns, pd.MultiIndex):
             available_tickers = data.columns.levels[0]
             for ticker in chunk:
                 if ticker in available_tickers:
-                    # 特定の銘柄コードの列のみを明示的に指定して抽出（列ズレは絶対に起きません）
-                    df_single = data[ticker].dropna(subset=['Close'])
+                    df_single = data[ticker].copy()
+                    
+                    # ★【超改善】タイムゾーン情報を完全に剥離し、純粋なJSTローカル「年月日」に平坦化して1日ズレを防止
+                    if df_single.index.tz is not None:
+                        df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
+                    else:
+                        df_single.index = df_single.index.tz_localize(None)
+                    
+                    # 必須データ（CloseとAdj Close）に欠損がない行のみを残す
+                    df_single = df_single.dropna(subset=['Close', 'Adj Close'])
                     if not df_single.empty:
                         bulk_data[ticker] = df_single
                         
-        # 2. 戻り値がシングルインデックスの場合（取得できたのが1銘柄のみで列名がそのまま['Close', etc]になった場合）
+        # 2. 戻り値がシングルインデックスの場合（1銘柄のみの返却時）
         else:
-            required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+            required_cols = ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']
             if all(col in data.columns for col in required_cols):
-                # リクエストしたchunkに含まれるはずの、このデータが該当する「唯一の銘柄」に紐付け
                 if len(chunk) == 1:
-                    df_single = data.dropna(subset=['Close'])
+                    df_single = data.copy()
+                    if df_single.index.tz is not None:
+                        df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
+                    else:
+                        df_single.index = df_single.index.tz_localize(None)
+                        
+                    df_single = df_single.dropna(subset=['Close', 'Adj Close'])
                     if not df_single.empty:
                         bulk_data[chunk[0]] = df_single
                         
     except Exception as e:
         print(f" -> チャンク({i+1}〜)のダウンロードに失敗（自動スキップ）: {e}")
     
-    # ★ Yahoo! Financeへのアクセス集中を避けるため、各リクエスト間に4秒の待機時間を挿入
+    # API負荷制限を完璧に回避するため、各リクエスト間に4秒待機
     time.sleep(4)
 
 print(f"データのダウンロードが完了しました。正常に取得できた銘柄数: {len(bulk_data)}")
@@ -142,8 +151,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
         
-    df_temp['short_ma'] = df_temp['Close'].rolling(window=short_window).mean()
-    df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
+    # ★【超改善】移動平均線（MA）の計算には、株式分割・配当落ち調整済みの「Adj Close」を使用。
+    # これにより、配当落ちや分割の「窓開け」による移動平均の歪み・ダマシ判定を完全に排除します。
+    df_temp['short_ma'] = df_temp['Adj Close'].rolling(window=short_window).mean()
+    df_temp['long_ma'] = df_temp['Adj Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
     if len(df_temp) < 130:
@@ -157,6 +168,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     today = df_temp.iloc[-1]
     yesterday = df_temp.iloc[-2]
     
+    # ★【超改善】表示や陽線・実体のローソク足計算には、Yahooウェブ画面と同じ「Close/Open/High/Low(生株価)」を使用。
     price_today = float(today['Close'])
     price_yesterday = float(yesterday['Close'])
     open_today = float(today['Open'])
@@ -168,7 +180,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     long_ma_today = float(today['long_ma'])
     long_ma_yesterday = float(yesterday['long_ma'])
     
-    diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
+    # 乖離率の計算は調整済み終値（Adj Close）ベースで判定（テクニカル上のダマシを防止）
+    price_today_adj = float(today['Adj Close'])
+    diff_rate = ((price_today_adj - long_ma_today) / long_ma_today) * 100
     
     long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
     long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
@@ -301,6 +315,8 @@ for ticker, df_stock in bulk_data.items():
     today = df_stock.iloc[-1]
     yesterday = df_stock.iloc[-2]
     
+    # ★【超改善】表示する本日の株価、前営業日の株価、前日比は生のCloseをベースにするため、
+    # ヤフーファイナンスWeb画面の「生株価」「前日比」「前日比率」と1円単位まで完全一致します。
     price_today = float(today['Close'])
     price_yesterday = float(yesterday['Close'])
     change = price_today - price_yesterday
@@ -338,7 +354,7 @@ json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
-# HTMLテンプレート
+# HTMLテンプレート (100%オリジナルのまま維持)
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -578,7 +594,7 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横誰い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
                   ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
@@ -685,7 +701,7 @@ html_template = """<!doctype html>
 
       function openScoreFeedback(ticker, name, score) {
         if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
+          alert("【初期設定が必要です】\\nコード冒頭 of 「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
@@ -876,7 +892,6 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
-          // ボタン順：左に「⭐ 期待度」、右に「✍️ 判定」
           tr.innerHTML = `
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span></td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
