@@ -122,6 +122,7 @@ for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     try:
+        # 以前のバージョンと同じ period="2y" 方式
         data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
         for ticker in chunk:
             if ticker in data.columns.levels[0]:
@@ -268,20 +269,20 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
+    # & のタイポを and に確実に修正
     if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
         reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
 
-    # ★【新設】買い3-Pre（下落日待ち伏せ用：陰線・マイナスを許容し、長期線の真上に接触した状態）
-    # &をandに確実にデバッグ修正
-    is_resting_on_ma = -0.5 <= diff_rate <= 1.5  # 支持線まで極小乖離（わずかな下振れも許容）
+    # 買い3-Pre（下落日待ち伏せ用：支持線接触）
+    is_resting_on_ma = -0.5 <= diff_rate <= 1.5
     if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_resting_on_ma:
         category = "BUY3_PRE"
         category_name = "買い3：押し目待ち伏せ"
         badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
-        reason = f"長期上昇トレンド中、地合い連れ安によって支持線接触まで十分に引き付けた絶好の『仕込み待ち伏せ』状態です。"
+        reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
 
     # 期待度スコア
     score = 3
@@ -331,9 +332,8 @@ for ticker, df_stock in bulk_data.items():
     change = price_today - price_yesterday
     change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
     
-    # 出来高の抽出
     volume_today = float(today['Volume'])
-    is_low_volume = volume_today <= 1000  # 出来高1000株以下判定フラグ
+    is_low_volume = volume_today <= 1000
     
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
@@ -348,8 +348,7 @@ for ticker, df_stock in bulk_data.items():
     short_res = evaluate_logic(df_stock, 5, 25, market_short)
     mid_res = evaluate_logic(df_stock, 25, 75, market_short)
     
-    # ★【超軽量化ハック】短期・中期の両方で「NONE(条件外)」の銘柄は、HTML膨張を防ぐためリストにすら追加しない
-    # これにより index.html のサイズが1/30に激減し、Actions更新や画面描画が瞬時に終わるようになります
+    # ★【超軽量化ハック】短期・中期ともに「NONE(条件外)」の無駄データは結果リストに入れない
     if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
         continue
         
@@ -369,12 +368,12 @@ for ticker, df_stock in bulk_data.items():
     }
     results_list.append(stock_info)
 
-# ★【クオンツ地合い算出】本日の東証全銘柄の騰落中央値を動的算出
+# 本日の東証全銘柄の騰落中央値を算出
 all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
 market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
 print(f" -> 本日の東証全上場銘柄の騰落率中央値: {market_median_change:.2f}%")
 
-# 地合い連れ安日に逆行・抵抗している「🛡️ 地合い強気」銘柄を算出し、期待度スコアを加算
+# 地合い強気銘柄の判定および加点
 for item in results_list:
     is_strong_relative = False
     if market_median_change <= -1.0:
@@ -389,7 +388,6 @@ for item in results_list:
                 item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score)
 
 json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
-
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
@@ -400,14 +398,9 @@ for sys_key in ["short", "mid"]:
         total_active += prev_counts[sys_key][cat]
     prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
 
-prev_counts_str = json.dumps(prev_counts, ensure_ascii=False)
+prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
 
 # HTMLテンプレート
-# ・判定カテゴリ列の幅を w-20 (最狭化) にし、他の列に大きなゆとりを持たせました。
-# ・出来高極小バッジを文字なしのアイコン「⚠️」のみに極小化しました。
-# ・運用上読まれていなかった「判定理由」列を完全廃止し、表示ゆとりを最大化しました。
-# ・前営業日の index.html から昨日件数をパースして自動比較表示する前日比機能を搭載。
-# ・【バグ修正】 /* PLACEHOLDER_... */ による完全置換ハックにより、JS構文エラーを根底から解決。
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -655,9 +648,9 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横這い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横誰い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
                   ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
-                  ・上抜け乖傷率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
+                  ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
@@ -697,9 +690,9 @@ html_template = """<!doctype html>
 
     <script>
       const state = {
-        results: /* PLACEHOLDER_RESULTS */ [],
-        prevCounts: /* PLACEHOLDER_PREV_COUNTS */ {},
-        marketMedian: /* PLACEHOLDER_MARKET_MEDIAN */ 0.0,
+        results: __PLACEHOLDER_RESULTS__,
+        prevCounts: __PLACEHOLDER_PREV_COUNTS__,
+        marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
@@ -765,7 +758,7 @@ html_template = """<!doctype html>
 
       function openScoreFeedback(ticker, name, score) {
         if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォーム of HTMLとIDを設定してください。");
+          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
@@ -887,7 +880,7 @@ html_template = """<!doctype html>
           expsLong.forEach(el => el.textContent = '75日線');
           expPNormal.textContent = '-12.0%';
           expPSurge.textContent = '-20.0%';
-          expS.textContent = '-20.0%';
+          expS.textContent = '-18.0%';
           expG.textContent = '-20.0%';
         }
         updateStats();
@@ -1071,3 +1064,19 @@ html_template = """<!doctype html>
     </script>
   </body>
 </html>"""
+# ==========================================
+
+# 実際の置換処理
+html_content = html_template
+html_content = html_content.replace("__LAST_UPDATE__", current_time_str)
+html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_median_change:.4f}")
+html_content = html_content.replace("/* PLACEHOLDER_RESULTS */ []", json_data_str)
+html_content = html_content.replace("/* PLACEHOLDER_PREV_COUNTS */ {}", prev_counts_json_str)
+html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
+html_content = html_content.replace("/* PLACEHOLDER_FORM_SCORE */ {}", form_score_str)
+
+with open(html_output_path, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print(f"\n--- HTML生成が完了しました ---")
+print(f"👉 生成されたファイル: {html_output_path} (自動更新時刻：{current_time_str})")
