@@ -37,11 +37,11 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python auto_improve.py
 
-      # 5. コードに変更があった場合のみ、自動でプルリクエスト（PR）を作成する
+     # 5. コードに変更があった場合のみ、自動でプルリクエスト（PR）を作成する
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}  # ここを GITHUB_TOKEN から PAT_TOKEN に変更
           commit-message: "style: AIによる判定ロジックの最適化"
           branch: ai-logic-improvement
           title: "🤖 [AI自動改善] ユーザーフィードバックに基づくロジックのブラッシュアップ"
