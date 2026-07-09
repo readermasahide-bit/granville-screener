@@ -7,7 +7,7 @@ import requests
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
-# 2026年現在のGoogle推奨である最新のGenAI SDKを使用します
+# GoogleのGenAI SDKを使用
 from google import genai
 
 # ==========================================
@@ -175,6 +175,9 @@ def main():
     with open(MAIN_CODE_FILE, "r", encoding="utf-8") as f:
         current_code = f.read()
 
+    # 表示崩れ防止のため、バッククォート3つをスクリプト内部で動的に合成します
+    bq_block = "`" * 3
+
     # 3. プロンプトの組み立て
     prompt_template = f"""
 【プログラミング改善依頼プロンプト】
@@ -188,5 +191,76 @@ def main():
 ### 1. 現在のシステム仕様（改善のベースとなるソースコード）
 以下に、現在のプログラムのソースコードを提示します。
 
-```python
+{bq_block}python
 {current_code}
+{bq_block}
+
+---
+
+### 2. 今回改善したい「誤判定（ダマシ）」の実例データ一覧
+以下の銘柄は、現在のプログラムでシグナル点灯または高期待度採点されましたが、ユーザー（投資家）の目視判定では不適合となった事例です。
+それぞれの「ユーザーのフィードバック」と「当時の生テクニカルデータ」を分析してください。
+
+#### ▼ 判定カテゴリ（買い1〜4）に関する誤判定・改善要望
+{cat_cases_text if cat_cases_text else "（新規のデータなし）"}
+
+#### ▼ 期待度スコア（★1〜5）に関する誤判定・改善要望
+{score_cases_text if score_cases_text else "（新規のデータなし）"}
+
+---
+
+### 3. あなた（AI）への要求
+1. 上記の実例データ一覧を1件ずつ吟味し、現在の数式条件のどこが緩かったために「ダマシ」を拾ってしまったのか、数式レベルで原因をプロの視点で分析・解説してください。
+2. これらを回避しつつ、正常な銘柄を取りこぼさないために、`evaluate_logic` 関数等に対して追加・修正すべき「新たな数式条件（フィルター）」や「しきい値の微調整」を論理的に提案してください。
+3. 提案した改善策をすべてコード内に反映し、プログラム全体のインポートから最後のHTML書き出しまで、**そのままコピペして上書きできるバグのない完全版の「{MAIN_CODE_FILE}」のコードのみ**を丸ごと出力してください。
+   (※ Googleフォームの構成、HTMLテンプレート内のソート機能やトグル解説、日付JSTスタンプなどのUIは一切変更せず、判定・採点ロジックのみを安全に書き換えてください。)
+"""
+
+    # 4. Gemini APIに接続してプロンプトを送信
+    print("🤖 Gemini APIに接続中...")
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("❌ エラー: 環境変数 GEMINI_API_KEY が設定されていません。")
+        sys.exit(1)
+
+    client = genai.Client(api_key=api_key)
+    
+    print("📝 コードの自動改善提案を生成中（これには数分かかる場合があります）...")
+    try:
+        response = client.models.generate_content(
+            model='gemini-1.5-pro',
+            contents=prompt_template
+        )
+        ai_output = response.text
+    except Exception as e:
+        print(f"❌ Gemini APIの呼び出し中にエラーが発生しました: {e}")
+        sys.exit(1)
+
+    # 5. 返ってきた回答から Python コードブロックを抽出
+    print("✂️ 生成されたコードを抽出中...")
+    match = re.search(r"```python\s*(.*?)\s*```", ai_output, re.DOTALL)
+    if match:
+        new_code = match.group(1)
+    else:
+        # ```python 囲みがない場合のフォールバック抽出
+        match_any = re.search(r"```\s*(.*?)\s*```", ai_output, re.DOTALL)
+        new_code = match_any.group(1) if match_any else ai_output
+
+    if not new_code or len(new_code) < 1000:
+        print("❌ エラー: 有効なソースコードをAIから抽出できませんでした。AIの回答にコードブロックが含まれているか確認してください。")
+        print("【AIの回答一部】")
+        print(ai_output[:500])
+        sys.exit(1)
+
+    # 6. メインコードへの上書き保存
+    print(f"💾 改善されたコードを {MAIN_CODE_FILE} に上書き保存しています...")
+    try:
+        with open(MAIN_CODE_FILE, "w", encoding="utf-8") as f:
+            f.write(new_code)
+        print("🟢 自動改善・コードの上書きに成功しました！")
+    except Exception as e:
+        print(f"❌ ファイルの保存に失敗しました: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
