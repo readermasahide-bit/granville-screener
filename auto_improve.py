@@ -14,9 +14,7 @@ from google import genai
 # ★ 設定パラメータ（取得したURLをここに貼り付けてください）
 # ==========================================
 CSV_URL_CAT = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJlXSONBac6K6ZpuilefCRNcouFdcI97lu8HoRTRmSBAZwVB9gi1GpFi_ZJZGVoWmbtyL8DGSV8ray/pub?gid=825425309&single=true&output=csv"
-"ここに【判定カテゴリ用】CSV公開URLを貼"
 CSV_URL_SCORE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQDcOnuC9hfa6BtMkI9ZJzLE_o9E__kCQTrnV8D8xlq6vvguK2gnDoAzaPgrNXPiQ9WagaqadfzEZ8v/pub?gid=1420276699&single=true&output=csv"
-"ここに【期待度（スコア）用】CSV公開URLを貼り付け"
 
 # 修正対象となる現在のメインプログラムのファイル名
 MAIN_CODE_FILE = "app.py" 
@@ -42,14 +40,15 @@ def analyze_feedback_csv(csv_url, label_name):
     try:
         response = requests.get(csv_url)
         response.raise_for_status()
-        df = pd.read_csv(io.StringIO(response.text))
+        # 文字化けを防止するため、明示的に utf-8 でデコードします
+        df = pd.read_csv(io.BytesIO(response.content), encoding='utf-8')
     except Exception as e:
         print(f"❌ CSVの取得に失敗しました ({label_name}): {e}")
         return ""
 
     cols = df.columns
     col_time = find_col(cols, ["タイムスタンプ", "Timestamp", "時間"])
-    col_code = find_col(cols, ["コード", "証券", "Ticker", "code"]) # キーワードを拡張
+    col_code = find_col(cols, ["コード", "証券", "Ticker", "code"]) 
     col_name = find_col(cols, ["銘柄", "Name"])
     col_sys  = find_col(cols, ["システム", "System"])
     col_cat  = find_col(cols, ["カテゴリ", "期待度", "Score", "星"])
@@ -81,25 +80,21 @@ def analyze_feedback_csv(csv_url, label_name):
         end_str = (target_dt + timedelta(days=5)).strftime("%Y-%m-%d")
 
         try:
-            # 安定したyfinanceライブラリを用いて、該当期間の株価データを取得します
+            # yfinanceを用いて該当期間の株価データを取得
             df_stock = yf.download(ticker, start=start_str, end=end_str, progress=False)
             if df_stock.empty:
                 continue
 
-            # インデックスのDate列を通常のカラムに変換
             df_stock = df_stock.reset_index()
-            # マルチインデックスの平坦化
             if isinstance(df_stock.columns, pd.MultiIndex):
                 df_stock.columns = df_stock.columns.get_level_values(0)
 
-            # Date列の名称を統一
             df_stock.columns = [c.capitalize() if c.lower() == 'date' else c for c in df_stock.columns]
             df_stock = df_stock.dropna().reset_index(drop=True)
 
-            if len(df_stock) < 50: # 最低限のデータ量チェックに緩和
+            if len(df_stock) < 50:
                 continue
 
-            # 移動平均線（短期5/中期25/長期75）の算出
             df_stock['ma5'] = df_stock['Close'].rolling(window=5).mean()
             df_stock['ma25'] = df_stock['Close'].rolling(window=25).mean()
             df_stock['ma75'] = df_stock['Close'].rolling(window=75).mean()
@@ -186,7 +181,7 @@ def main():
     with open(MAIN_CODE_FILE, "r", encoding="utf-8") as f:
         current_code = f.read()
 
-    # 表示崩れ防止のため、バッククォート3つをスクリプト内部で動的に合成します
+    # 表示崩れ防止のため、バッククォート3つをスクリプト内部で動的に合成
     bq_block = "`" * 3
 
     # 3. プロンプトの組み立て
@@ -238,8 +233,9 @@ def main():
     
     print("📝 コードの自動改善提案を生成中（これには数分かかる場合があります）...")
     try:
+        # 新しいSDKに適合した動作の安定している最新モデル「gemini-2.5-flash」を指定
         response = client.models.generate_content(
-            model='gemini-1.5-pro',
+            model='gemini-2.5-pro',
             contents=prompt_template
         )
         ai_output = response.text
