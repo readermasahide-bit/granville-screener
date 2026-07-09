@@ -235,7 +235,7 @@ def main():
     try:
         # 新しいSDKに適合した動作の安定している最新モデル「gemini-2.5-flash」を指定
         response = client.models.generate_content(
-            model='gemini-2.5-pro',
+            model='gemini-2.5-flash',
             contents=prompt_template
         )
         ai_output = response.text
