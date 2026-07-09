@@ -31,26 +31,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas yfinance requests google-genai
 
-      # 4. 自動改善スクリプトを実行（app.pyが書き換えられます）
+      # 4. 自動改善スクリプトを実行（app.pyが更新され、ai_explanation.mdが生成されます）
       - name: Run Auto Improve Script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python auto_improve.py
 
-     # 5. コードに変更があった場合のみ、自動でプルリクエスト（PR）を作成する
+      # 5. コードに変更があった場合のみ、自動でプルリクエスト（PR）を作成する
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.PAT_TOKEN }}  # ここを GITHUB_TOKEN から PAT_TOKEN に変更
+          token: ${{ secrets.PAT_TOKEN }}
           commit-message: "style: AIによる判定ロジックの最適化"
           branch: ai-logic-improvement
           title: "🤖 [AI自動改善] ユーザーフィードバックに基づくロジックのブラッシュアップ"
-          body: |
-            Googleフォームから寄せられたユーザーのフィードバック（ダマシ事例等）を元に、Gemini 1.5 Proが自動分析を行い、判定・期待度ロジックを最適化しました。
-            
-            **📌 変更内容の確認方法:**
-            - 「Files changed」タブから、`app.py`（メインコード）の差分を確認してください。
-            - 修正内容に問題がなければ、画面の「Merge pull request」を押して本番に反映してください。
+          body-path: ai_explanation.md  # AIが生成した日本語の解説文章をPRの本文として適用します
           labels: |
             ai-improvement
             automated-pr
