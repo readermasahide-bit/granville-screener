@@ -40,7 +40,7 @@ def analyze_feedback_csv(csv_url, label_name):
     try:
         response = requests.get(csv_url)
         response.raise_for_status()
-        # 文字化けを防止するため、明示的に utf-8 でデコードします
+        # 文字化け防止のため、明示的に utf-8 でデコード
         df = pd.read_csv(io.BytesIO(response.content), encoding='utf-8')
     except Exception as e:
         print(f"❌ CSVの取得に失敗しました ({label_name}): {e}")
@@ -80,7 +80,6 @@ def analyze_feedback_csv(csv_url, label_name):
         end_str = (target_dt + timedelta(days=5)).strftime("%Y-%m-%d")
 
         try:
-            # yfinanceを用いて該当期間の株価データを取得
             df_stock = yf.download(ticker, start=start_str, end=end_str, progress=False)
             if df_stock.empty:
                 continue
@@ -164,6 +163,13 @@ def analyze_feedback_csv(csv_url, label_name):
     return "".join(analyzed_cases)
 
 def main():
+    # 最初に空の解説ファイルを作成して初期化（GitHub Actionsでのエラー防止用）
+    try:
+        with open("ai_explanation.md", "w", encoding="utf-8") as f:
+            f.write("AIによる自動ロジック修正が完了しました。詳細はFiles changedタブをご確認ください。")
+    except Exception as e:
+        print(f"⚠️ 初期化警告: {e}")
+
     # 1. 2つのCSVをそれぞれ読み込み、再現データを組み立てる
     print("🚀 フィードバックデータの分析を開始します...")
     cat_cases_text = analyze_feedback_csv(CSV_URL_CAT, "判定カテゴリ改善用")
@@ -233,7 +239,6 @@ def main():
     
     print("📝 コードの自動改善提案を生成中（これには数分かかる場合があります）...")
     try:
-        # 新しいSDKに適合した動作の安定している最新モデル「gemini-2.5-flash」を指定
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt_template
@@ -243,23 +248,32 @@ def main():
         print(f"❌ Gemini APIの呼び出し中にエラーが発生しました: {e}")
         sys.exit(1)
 
-    # 5. 返ってきた回答から Python コードブロックを抽出
-    print("✂️ 生成されたコードを抽出中...")
-    match = re.search(r"```python\s*(.*?)\s*```", ai_output, re.DOTALL)
+    # 5. 返ってきた回答から、解説（日本語）とプログラムコード（Python）を分離して抽出
+    print("✂️ 生成された解説文とコードを分離・抽出中...")
+    # ```python の前後で文章とコードを分離する正規表現
+    match = re.search(r"(.*?)```python\s*(.*?)\s*```", ai_output, re.DOTALL)
     if match:
-        new_code = match.group(1)
+        explanation = match.group(1).strip()
+        new_code = match.group(2)
     else:
-        # ```python 囲みがない場合のフォールバック抽出
-        match_any = re.search(r"```\s*(.*?)\s*```", ai_output, re.DOTALL)
-        new_code = match_any.group(1) if match_any else ai_output
+        # 切り分けがうまくいかなかった場合の安全なフォールバック処理
+        explanation = "AIによる自動判定ロジックの改善が完了しました。\n詳細は「Files changed」タブのプログラムの差分をご確認ください。"
+        match_code = re.search(r"```python\s*(.*?)\s*```", ai_output, re.DOTALL)
+        new_code = match_code.group(1) if match_code else ai_output
 
     if not new_code or len(new_code) < 1000:
-        print("❌ エラー: 有効なソースコードをAIから抽出できませんでした。AIの回答にコードブロックが含まれているか確認してください。")
-        print("【AIの回答一部】")
-        print(ai_output[:500])
+        print("❌ エラー: 有効なソースコードをAIから抽出できませんでした。")
         sys.exit(1)
 
-    # 6. メインコードへの上書き保存
+    # 6. 抽出した「AIの解説（日本語）」をmarkdownファイルとして書き出し
+    print("📝 AIの分析・解説テキストを ai_explanation.md に保存中...")
+    try:
+        with open("ai_explanation.md", "w", encoding="utf-8") as f:
+            f.write(explanation)
+    except Exception as e:
+        print(f"⚠️ 警告: 解説テキストの保存に失敗しました: {e}")
+
+    # 7. メインコードへの上書き保存
     print(f"💾 改善されたコードを {MAIN_CODE_FILE} に上書き保存しています...")
     try:
         with open(MAIN_CODE_FILE, "w", encoding="utf-8") as f:
