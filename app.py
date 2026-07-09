@@ -16,7 +16,7 @@ html_output_path = "index.html" # ホームページとして公開するため 
 
 # 【Googleフォーム1：判定カテゴリ改善用】
 FORM_CONFIG_CAT = {
-    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
+    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxOR5vGX69gYxDiOQ/viewform",
     "entryCode": "entry.1616153480",
     "entryName": "entry.639288663",
     "entrySys":  "entry.1292630960",
@@ -25,7 +25,7 @@ FORM_CONFIG_CAT = {
 
 # 【Googleフォーム2：期待度改善用】
 FORM_CONFIG_SCORE = {
-    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSet_-Ab3-3HgXrRS5pG-5PT4K-qgip4lV4EUqqivaWNRBOO_g/viewform",
+    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSet_-Ab3-3HgXrRS5pG-5PT4K-qgip4lV4EUqqivaWNRBO0_g/viewform",
     "entryCode": "entry.473391802",
     "entryName": "entry.1042173003",
     "entrySys":  "entry.1364518533",
@@ -152,13 +152,13 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    min_len = 45 if long_window <= 25 else 130
+    min_len = 45 if long_window <= 25 else 130 # min_lenは200営業日確保するyf.downloadのperiod="2y"によって十分満たされる
     if len(df_temp) < min_len:
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
             "diffRate": 0.0, "reason": "データが不足しています。",
-            "ma_short": 0.0, "ma_long": 0.0, "score": 1
+            "ma_short": 0.0, "ma_long": 0.0, "score": 1, "stars": "★☆☆☆☆"
         }
         
     today = df_temp.iloc[-1]
@@ -177,9 +177,14 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
     
+    # 傾き計算 (既存)
     long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
     long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
     long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma']
+
+    # 傾き計算 (追加)
+    long_ma_slope_5d = long_ma_today - df_temp.iloc[-6]['long_ma']
+    short_ma_slope_3d = short_ma_today - df_temp.iloc[-4]['short_ma']
     
     is_yang_candle = price_today > open_today
     is_price_up = price_today > price_yesterday
@@ -241,8 +246,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
                     (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
     is_flat_or_rising = long_ma_slope_3d >= -0.01
-    below_count_20d = (df_temp.iloc[-21:-1]['Close'] < df_temp.iloc[-21:-1]['long_ma']).sum()
-    is_new_crossover = below_count_20d >= 12
+    # 改善: 下抜け期間の厳格化 (過去30日のうち18日以上は長期線の下に沈んでいたこと)
+    below_count_30d = (df_temp.iloc[-31:-1]['Close'] < df_temp.iloc[-31:-1]['long_ma']).sum()
+    is_new_crossover = below_count_30d >= 18 # 20日中12日 -> 30日中18日
     
     if category == "NONE" and crossed_above and is_flat_or_rising and is_new_crossover and (diff_rate <= 5.0):
         category = "BUY1"
@@ -256,21 +262,31 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_temp_dip = 1 <= below_count_10d <= 4
     recovered_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     
-    if category == "NONE" and is_long_ma_rising and is_temp_dip and recovered_above and (0.0 <= diff_rate <= 5.0):
+    # 改善: 乖離率の制限と短期線(short_ma)の位置と株価と短期線の乖離を追加
+    is_close_to_short_ma = ((price_today - short_ma_today) / short_ma_today) * 100 <= 3.0 if short_ma_today > 0 else True
+    is_short_ma_above_long_ma = short_ma_today > long_ma_today
+
+    if category == "NONE" and is_long_ma_rising and is_temp_dip and recovered_above and \
+       (0.0 <= diff_rate <= 2.5) and is_short_ma_above_long_ma and is_close_to_short_ma: # diff_rateを2.5に厳しく
         category = "BUY2"
         category_name = "買い2：再突き抜け"
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
         reason = f"良好な上昇トレンド中、長期線を一時的に下抜け後、本日素早く上方に復帰しました。"
 
     # 買い3（通常：陽線＋プラス反発）
-    is_long_ma_rising_strong = long_ma_slope_15d > 0
+    # 改善: 長期線の上昇トレンドをより厳しく (直近15日, 5日, 本日のすべてが上昇)
+    is_long_ma_strong_up = (long_ma_slope_15d > 0 and long_ma_slope_5d > 0 and long_ma_today > long_ma_yesterday)
+    
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
-    is_close_to_ma = 0.0 < diff_rate <= 3.5
+    
+    # 改善: 短期線(short_ma)も長期線の上にあることを条件に追加し、下向きでないことも確認
+    is_short_ma_well_placed = (short_ma_today > long_ma_today and short_ma_slope_3d >= 0)
+    
+    is_close_to_ma = 0.0 < diff_rate <= 2.0 # diff_rateを2.0に厳しく
     is_rebound = is_yang_candle and is_price_up
     
-    # & のタイポを and に確実に修正
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
+    if category == "NONE" and is_long_ma_strong_up and has_pulled_back and is_close_to_ma and is_rebound and is_short_ma_well_placed:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
@@ -278,29 +294,50 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
 
     # 買い3-Pre（下落日待ち伏せ用：支持線接触）
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_resting_on_ma:
+    # 改善: BUY3と同様に長期線と短期線の条件を強化
+    if category == "NONE" and is_long_ma_strong_up and has_pulled_back and is_resting_on_ma and is_short_ma_well_placed:
         category = "BUY3_PRE"
         category_name = "買い3：押し目待ち伏せ"
         badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
         reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
 
     # 期待度スコア
-    score = 3
+    score = 3 # 基本点
+    
     if category != "NONE":
+        # 出来高急増ボーナス (+1)
         if vol_ratio >= 1.5: score += 1
+        
+        # 上髭割合が40%以上で減点 (-1) (BUY4, BUY3_PREを除く元のロジック維持)
         if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0: score -= 1
+
+        # 各カテゴリ固有の調整 (既存ロジックをベースにBUY2を追加)
         if category == "BUY1":
             if is_slope_strong_relative: score += 1
             if candle_body_pct < 0.5: score -= 1
         elif category == "BUY2":
             if is_slope_strong_relative: score += 1
-        elif category in ["BUY3", "BUY3_PRE"]:
+            if candle_body_pct < 0.5: score -= 1 # BUY2にも実体極小減点を追加
+        elif category == "BUY3": # BUY3_PREは含めない
             if diff_rate <= 1.5: score += 1
             if candle_body_pct < 1.0: score -= 1
         elif category == "BUY4":
             if candle_body_pct >= 3.0: score += 1
             if candle_body_pct < 0.5: score -= 1
             
+        # 改善: 追加の減点条件 (総合的なトレンドの悪化)
+        # 長期線が下降トレンド (-1)
+        if long_ma_slope_10d < 0: 
+            score -= 1
+        
+        # 短期線が長期線の下にある場合 (-1) ただし、BUY1, BUY4は回復局面のため除外
+        if category not in ["BUY1", "BUY4"] and short_ma_today < long_ma_today: 
+            score -= 1
+
+        # 短期線(short_ma)が下降トレンド (-1) ただし、BUY1, BUY4は回復局面のため除外
+        if category not in ["BUY1", "BUY4"] and short_ma_slope_3d < 0:
+            score -= 1
+
     score = max(1, min(5, score))
     stars_str = "★" * score + "☆" * (5 - score)
 
@@ -633,7 +670,17 @@ html_template = """<!doctype html>
                   ・(買い3) 線に極近(1.5%以下)で綺麗に反発 ➔ <strong>+1</strong><br>
                   ・(買い4) 3%以上の大陽線で反発 ➔ <strong>+1</strong><br>
                   ・(全共通) 上髭割合が40%以上 ➔ <strong>-1</strong><br>
-                  ・(全共通) 反発時の実体が極小 ➔ <strong>-1</strong>
+                  ・(BUY1/BUY2/BUY3/BUY4) 反発時の実体が極小(0.5%未満) ➔ <strong>-1</strong><br>
+                  ・(買い3) 反発時の実体が小さい(1.0%未満) ➔ <strong>-1</strong>
+                </p>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 col-span-full">
+                <span class="font-bold text-rose-400 block mb-1">総合トレンド悪化による減点 (-1〜-3)</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  ・長期移動平均線（25日線/75日線）自体が下降トレンドにある場合 ➔ <strong>-1</strong><br>
+                  ・短期移動平均線（5日線/25日線）が長期線の下にある場合 (買い1, 買い4を除く) ➔ <strong>-1</strong><br>
+                  ・短期移動平均線（5日線/25日線）自体が下降トレンドにある場合 (買い1, 買い4を除く) ➔ <strong>-1</strong><br>
+                  いずれかの条件に該当する場合、期待度から減点されます。
                 </p>
               </div>
             </div>
@@ -649,7 +696,7 @@ html_template = """<!doctype html>
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)の傾き: 直近3日で横誰い〜上向き(<span class="font-mono">&gt;=-0.01</span>)<br>
-                  ・底確認: 過去20日のうち12日以上は線の下に沈んでいたこと<br>
+                  ・底確認: 過去<span class="font-mono">30日</span>のうち<span class="font-mono">18日以上</span>は線の下に沈んでいたこと<br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
@@ -658,15 +705,17 @@ html_template = """<!doctype html>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)が右肩上がり<br>
                   ・一時性: 過去10日で長期線の下に沈んだのが「1〜4日のみ」<br>
-                  ・本日、再度長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+5.0%</span> 以内
+                  ・本日、再度長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+2.5%</span> 以内<br>
+                  ・短期線（<span class="exp-short"></span>）が長期線の上にあり、株価も短期線から <span class="font-mono">+3.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発（待ち伏せ含む）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)が右肩上がり<br>
+                  ・長期線(<span class="exp-long"></span>)が右肩上がり: 直近<span class="font-mono">15日</span>と<span class="font-mono">5日</span>両方で上昇、かつ本日も上昇<br>
                   ・調整: 過去15日以内に長期線から <span class="font-mono">+4.0%</span> 以上上に離れた山を作っていること<br>
-                  ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日反発。<br>
+                  ・短期線（<span class="exp-short"></span>）が長期線の上にあり、かつ下降トレンドでないこと<br>
+                  ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+2.0%</span>)で本日反発。<br>
                   ・<strong>【下落日待ち伏せPre-Buy3】</strong>: 長期線の極近(JST -0.5%〜+1.5%)にある銘柄は、陰線・マイナス引けでも「押し目待ち伏せ」として特別点灯。
                 </p>
               </div>
@@ -859,6 +908,7 @@ html_template = """<!doctype html>
         const btnMid = document.getElementById('btnSystemMid');
         const thma = document.getElementById('thma');
         const expsLong = document.querySelectorAll('.exp-long');
+        const expsShort = document.querySelectorAll('.exp-short'); // 追加
         const expPNormal = document.getElementById('expPNormal');
         const expPSurge = document.getElementById('expPSurge');
         const expS = document.getElementById('expS');
@@ -869,6 +919,7 @@ html_template = """<!doctype html>
           btnMid.className = 'px-4 py-1.5 rounded-lg font-bold text-slate-400 hover:text-slate-100 cursor-pointer';
           thma.textContent = '5日線 / 25日線';
           expsLong.forEach(el => el.textContent = '25日線');
+          expsShort.forEach(el => el.textContent = '5日線'); // 追加
           expPNormal.textContent = '-8.0%';
           expPSurge.textContent = '-15.0%';
           expS.textContent = '-12.0%';
@@ -878,6 +929,7 @@ html_template = """<!doctype html>
           btnShort.className = 'px-4 py-1.5 rounded-lg font-bold text-slate-400 hover:text-slate-100 cursor-pointer';
           thma.textContent = '25日線 / 75日線';
           expsLong.forEach(el => el.textContent = '75日線');
+          expsShort.forEach(el => el.textContent = '25日線'); // 追加
           expPNormal.textContent = '-12.0%';
           expPSurge.textContent = '-20.0%';
           expS.textContent = '-18.0%';
