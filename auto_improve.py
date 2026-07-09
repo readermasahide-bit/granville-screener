@@ -13,9 +13,9 @@ from google import genai
 # ==========================================
 # ★ 設定パラメータ（取得したURLをここに貼り付けてください）
 # ==========================================
-CSV_URL_CAT = https://docs.google.com/spreadsheets/d/e/2PACX-1vQJlXSONBac6K6ZpuilefCRNcouFdcI97lu8HoRTRmSBAZwVB9gi1GpFi_ZJZGVoWmbtyL8DGSV8ray/pub?gid=825425309&single=true&output=csv
+CSV_URL_CAT = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJlXSONBac6K6ZpuilefCRNcouFdcI97lu8HoRTRmSBAZwVB9gi1GpFi_ZJZGVoWmbtyL8DGSV8ray/pub?gid=825425309&single=true&output=csv"
 "ここに【判定カテゴリ用】CSV公開URLを貼り付け"
-CSV_URL_SCORE = https://docs.google.com/spreadsheets/d/e/2PACX-1vQDcOnuC9hfa6BtMkI9ZJzLE_o9E__kCQTrnV8D8xlq6vvguK2gnDoAzaPgrNXPiQ9WagaqadfzEZ8v/pub?gid=1420276699&single=true&output=csv
+CSV_URL_SCORE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQDcOnuC9hfa6BtMkI9ZJzLE_o9E__kCQTrnV8D8xlq6vvguK2gnDoAzaPgrNXPiQ9WagaqadfzEZ8v/pub?gid=1420276699&single=true&output=csv"
 "ここに【期待度（スコア）用】CSV公開URLを貼り付け"
 
 # 修正対象となる現在のメインプログラムのファイル名
