@@ -1,0 +1,56 @@
+name: AI Auto Logic Improver
+
+on:
+  # 毎週土曜日の 日本時間 20:00 (世界標準時 11:00 UTC) に自動実行
+  schedule:
+    - cron: '0 11 * * 6'
+  # GitHubの「Actions」タブから、手動でいつでも「今すぐ実行」できるようにする設定
+  workflow_dispatch:
+
+jobs:
+  improve-logic:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # 1. リポジトリのコードを取得
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Python環境のセットアップ（標準的な3.10を使用）
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # 3. 必要なライブラリのインストール
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas yfinance requests google-genai
+
+      # 4. 自動改善スクリプトを実行（app.pyが書き換えられます）
+      - name: Run Auto Improve Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python auto_improve.py
+
+      # 5. コードに変更があった場合のみ、自動でプルリクエスト（PR）を作成する
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "style: AIによる判定ロジックの最適化"
+          branch: ai-logic-improvement
+          title: "🤖 [AI自動改善] ユーザーフィードバックに基づくロジックのブラッシュアップ"
+          body: |
+            Googleフォームから寄せられたユーザーのフィードバック（ダマシ事例等）を元に、Gemini 1.5 Proが自動分析を行い、判定・期待度ロジックを最適化しました。
+            
+            **📌 変更内容の確認方法:**
+            - 「Files changed」タブから、`app.py`（メインコード）の差分を確認してください。
+            - 修正内容に問題がなければ、画面の「Merge pull request」を押して本番に反映してください。
+          labels: |
+            ai-improvement
+            automated-pr
