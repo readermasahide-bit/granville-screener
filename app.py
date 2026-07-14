@@ -60,11 +60,12 @@ def clean_val(val):
         return None
     return val
 
-# ★【件数前日比ハック】既存の index.html から昨日の件数をパースして自動計算
+# ★【件数前日比ハック】既存の index.html から前日の集計データを自動解析中...
 prev_counts = {
-    "short": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0, "TOTAL_ACTIVE": 0},
-    "mid": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0, "TOTAL_ACTIVE": 0}
+    "short": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0},
+    "mid": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0}
 }
+prev_results_by_ticker = {}  # ★ 新規追加：昨日のデータを銘柄コード単位で引くための空辞書
 
 if os.path.exists(html_output_path):
     print("既存の index.html から前日の集計データを自動解析中...")
@@ -84,6 +85,11 @@ if os.path.exists(html_output_path):
                     cat = item.get(sys_key, {}).get("category", "NONE")
                     if cat in prev_counts[sys_key]:
                         prev_counts[sys_key][cat] += 1
+                
+                # ★ 新規追加：昨日のデータを銘柄コードをキーにして保存
+                ticker_key = item.get("ticker")
+                if ticker_key:
+                    prev_results_by_ticker[ticker_key] = item
                         
             # アクティブな合計数を計算 (NONEを除外)
             for sys_key in ["short", "mid"]:
@@ -452,7 +458,37 @@ for ticker, df_stock in bulk_data.items():
     # ★【超軽量化ハック】短期・中期ともに「NONE(条件外)」の無駄データは結果リストに入れない
     if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
         continue
-        
+
+# ★ 新規追加：前日データとの比較および連続日数の計算
+    ticker_clean = ticker.replace(".T", "")
+    yesterday_data = prev_results_by_ticker.get(ticker_clean)
+
+    for sys_key, sys_res in [("short", short_res), ("mid", mid_res)]:
+        if sys_res["category"] != "NONE":
+            consecutive = 1
+            prev_cat_name = None
+
+            # 前日もこのシステムでデータが存在し、かつ条件外(NONE)ではない場合
+            if yesterday_data and sys_key in yesterday_data:
+                yes_sys = yesterday_data[sys_key]
+                yes_cat = yes_sys.get("category", "NONE")
+
+                if yes_cat != "NONE":
+                    # 連続日数を1増やす
+                    yes_consecutive = yes_sys.get("consecutiveDays", 1)
+                    consecutive = yes_consecutive + 1
+
+                    # 前日と今回の条件が異なる場合のみ、前日の条件名を記録
+                    if yes_cat != sys_res["category"]:
+                        prev_cat_name = yes_sys.get("categoryName", yes_cat).split('：')[0]
+
+            sys_res["consecutiveDays"] = consecutive
+            sys_res["prevCategory"] = prev_cat_name
+        else:
+            sys_res["consecutiveDays"] = 0
+            sys_res["prevCategory"] = None
+    # ★ ここまで追加    
+    
     stock_info = {
         "ticker": clean_val(ticker.replace(".T", "")),
         "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
@@ -1129,8 +1165,25 @@ html_template = """<!doctype html>
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
             : '';
 
+         // ★ 新規追加：連続日数と前日カテゴリのUI表示
+          const consecutiveBadge = sysData.consecutiveDays === 1 
+            ? '<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1 w-max">🆕 初点灯</span>' 
+            : sysData.consecutiveDays >= 2 
+              ? `<span class="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold block mt-1 w-max">🔥 ${sysData.consecutiveDays}日連続</span>` 
+              : '';
+
+          const prevCatLabel = sysData.prevCategory 
+            ? `<span class="text-[9px] text-slate-400 font-medium block mt-1">前日: ${sysData.prevCategory}</span>` 
+            : '';
+
           tr.innerHTML = `
-            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span></td>
+            <td class="p-3">
+              <div class="flex flex-col items-start">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${categoryShortName}</span>
+                ${consecutiveBadge}
+                ${prevCatLabel}
+              </div>
+            </td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
             <td class="p-3 font-mono font-bold text-white">
               <div class="flex items-center gap-1.5">
