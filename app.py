@@ -433,7 +433,7 @@ for ticker, df_stock in bulk_data.items():
     change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
     
     volume_today = float(today['Volume'])
-    is_low_volume = volume_today <= 1000
+    is_low_volume = volume_today <= 10000
     
     market_raw = ticker_to_market.get(ticker, "")
     if "プライム" in market_raw:
@@ -1122,7 +1122,7 @@ html_template = """<!doctype html>
           const categoryShortName = sysData.categoryName.split('：')[0];
 
           const volumeWarning = item.isLowVolume 
-            ? `<span class="ml-1 px-1 text-rose-400 font-bold select-none cursor-help" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク極めて高：1,000株以下)">⚠️</span>` 
+            ? `<span class="ml-1 px-1 text-rose-400 font-bold select-none cursor-help" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク極めて高：10,000株以下)">⚠️</span>` 
             : '';
 
           const rsBadge = item.isStrongRelative 
