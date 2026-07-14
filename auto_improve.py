@@ -59,9 +59,27 @@ def analyze_feedback_csv(csv_url, label_name):
         print(f"   検出されたカラム名一覧: {list(cols)}")
         return ""
 
+    # ==========================================
+    # ★【リソース節約用フィルター】直近7日以内の回答のみに絞り込む
+    # ==========================================
+    try:
+        df[col_time] = pd.to_datetime(df[col_time])
+        # タイムゾーンを排除して本日日付から7日前を算出
+        seven_days_ago = pd.Timestamp.now().floor('D') - pd.Timedelta(days=7)
+        # 7日前以降のデータのみを抽出
+        df_filtered = df[df[col_time] >= seven_days_ago].copy()
+        
+        total_rows = len(df)
+        filtered_rows = len(df_filtered)
+        print(f"📊 データ件数: 全体 {total_rows} 件 ➔ 直近1週間分 {filtered_rows} 件に絞り込みました。")
+        df = df_filtered
+    except Exception as e:
+        print(f"⚠️ 日付による絞り込み処理中にエラーが発生したため、全件を対象にします: {e}")
+    # ==========================================
+
     analyzed_cases = []
 
-    # 各フィードバック行の技術分析
+    # 絞り込まれたフィードバック行のみを技術分析
     for idx, row in df.iterrows():
         raw_time = row[col_time]
         target_date = extract_date(raw_time)
@@ -80,6 +98,7 @@ def analyze_feedback_csv(csv_url, label_name):
         end_str = (target_dt + timedelta(days=5)).strftime("%Y-%m-%d")
 
         try:
+            # yfinanceを用いて該当期間の株価データを取得
             df_stock = yf.download(ticker, start=start_str, end=end_str, progress=False)
             if df_stock.empty:
                 continue
