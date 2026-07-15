@@ -923,13 +923,13 @@ html_template = """<!doctype html>
         window.open(targetUrl, '_blank', 'width=620,height=750');
       }
 
-      function openScoreFeedback(ticker, name, score) {
+       function openScoreFeedback(ticker, name, score) {
         if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          alert("【初期設定が必要です】\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
+          // ダブルクォーテーション " " を、改行に強いバッククォート ` ` に書き換えます
+          alert(`【初期設定が必要です】\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。`);
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
-        // 「?viewform&」を「?」に修正し、標準的なプリフィルURLにします
         const targetUrl = `${FORM_SCORE_CFG.baseUrl}?${FORM_SCORE_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_SCORE_CFG.entryName}=${encodeURIComponent(name)}&${FORM_SCORE_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_SCORE_CFG.entryScore}=${encodeURIComponent(score)}`;
         window.open(targetUrl, '_blank', 'width=620,height=750');
       }
