@@ -705,11 +705,11 @@ html_template = """<!doctype html>
           ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンや検索窓を使って絞り込むとスムーズに閲覧できます。
         </div>
 
-<!-- テーブル (ヘッダー追従固定版) -->
+<!-- テーブル -->
         <div class="mt-6 overflow-x-auto">
           <table class="w-full text-left">
-            <thead class="sticky top-16 bg-slate-900/95 backdrop-blur-sm z-20 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase select-none">
-              <tr>
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
                 <th class="p-3 w-20 whitespace-nowrap">判定</th>
                 <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-24 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
                   <div class="flex items-center justify-center gap-1.5">
