@@ -155,42 +155,67 @@ for i in range(0, len(tickers), chunk_size):
 
 print(f"データのダウンロードが完了しました。正常取得銘柄数: {len(bulk_data)}")
 
-# 3. 判定および採点ロジック関数
+# 1. 独自実装：正確なワイルダー平滑化方式のRSI（14日）を算出する関数
+def calculate_rsi(series, period=14):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    
+    # ワイルダーの平滑化：alpha = 1 / period の指数移動平均(EMA)を使用
+    avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
+    
+    rs = avg_gain / avg_loss.replace(0, 1e-10) # ゼロ除算防止
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+# 2. ヘルパー：先読みバイアスを排除したスイングロー（極小値）検出関数
+def find_swing_lows(series, window=25):
+    """
+    直近の指定ウインドウ内における、前後2営業日で最小値となる極小値のインデックス(位置)を返します。
+    本日(N-1)、昨日(N-2)は将来のデータがないため極小値の判定対象から除外し、先読みバイアスを防ぎます。
+    """
+    n = len(series)
+    low_indices = []
+    
+    # 25営業日前から3営業日前までの範囲を探索 (今日がN-1)
+    start_idx = max(2, n - window)
+    end_idx = n - 2  # n-2は含まないため、探索は n-3 (3営業日前) まで
+    
+    for i in range(start_idx, end_idx):
+        val = series.iloc[i]
+        # 前後2営業日の計5日間で、自身が最小値であるかを判定
+        if (val < series.iloc[i-1] and val < series.iloc[i-2] and 
+            val < series.iloc[i+1] and val < series.iloc[i+2]):
+            low_indices.append(i)
+            
+    return low_indices
+
+# 3. 判定および採点ロジック関数（プロンプト要件・完全対応版）
 def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
         
+    # 生データから正確なRSIを算出
+    df_temp['rsi'] = calculate_rsi(df_temp['Close'], 14)
+        
     df_temp['short_ma'] = df_temp['Close'].rolling(window=short_window).mean()
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
+    df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    # 新しい移動平均線の当日、前日データを計算するための準備
-    df_temp['short_ma_prev_day'] = df_temp['short_ma'].shift(1)
-    df_temp['long_ma_prev_day'] = df_temp['long_ma'].shift(1)
-
-    # 必要なデータフレームの長さを考慮
-    # 買い1, 買い3などで過去20日や15日のデータを使うため、それに応じてmin_lenを調整
-    min_required_periods = max(long_window + 1, 21) # long_ma, long_ma_prev_day, short_ma, short_ma_prev_dayを計算するためにlong_window + 1日
-                                                    # あと日足データ参照のため20日前のデータまで取得できるよう+1
-    
-    # ここでdropnaすることで、iloc[-1], [-2], [-4], [-11], [-16], [-21] のアクセスが安全になる
-    df_temp = df_temp.dropna(subset=['short_ma', 'long_ma', 'short_ma_prev_day', 'long_ma_prev_day']).reset_index(drop=True)
-    
-    if len(df_temp) < min_required_periods:
+    min_len = 45 if long_window <= 25 else 130
+    if len(df_temp) < min_len:
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
             "diffRate": 0.0, "reason": "データが不足しています。",
-            "ma_short": 0.0, "ma_long": 0.0, "score": 1, "stars": "☆☆☆☆☆"
+            "ma_short": 0.0, "ma_long": 0.0, "score": 1,
+            "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False
         }
         
-    # 最新のデータを取得
     today = df_temp.iloc[-1]
     yesterday = df_temp.iloc[-2]
-    day_3_ago = df_temp.iloc[-4]   # 3営業日前
-    day_10_ago = df_temp.iloc[-11] # 10営業日前
-    day_15_ago = df_temp.iloc[-16] # 15営業日前
-    day_20_ago = df_temp.iloc[-21] # 20営業日前
     
     price_today = float(today['Close'])
     price_yesterday = float(yesterday['Close'])
@@ -205,33 +230,76 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
     
-    # 移動平均線の傾き（X日間の変化量）
-    long_ma_slope_15d = long_ma_today - float(day_15_ago['long_ma'])
-    long_ma_slope_10d = long_ma_today - float(day_10_ago['long_ma'])
-    long_ma_slope_3d = long_ma_today - float(day_3_ago['long_ma'])
-    
-    short_ma_slope_10d = short_ma_today - float(day_10_ago['short_ma'])
-    short_ma_slope_3d = short_ma_today - float(day_3_ago['short_ma'])
-    
-    # MAの当日変化
-    is_long_ma_rising_today = long_ma_today > long_ma_yesterday
-    is_short_ma_rising_today = short_ma_today > short_ma_yesterday
-    
-    # MA間の関係
-    is_short_ma_above_long_ma = short_ma_today > long_ma_today
-    is_short_ma_below_long_ma = short_ma_today < long_ma_today
+    long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
+    long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
+    long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma']
     
     is_yang_candle = price_today > open_today
     is_price_up = price_today > price_yesterday
     
-    # 急騰判定 (既存ロジック)
+    # ------------------------------------------
+    # ★ RSI シグナル検出セクション
+    # ------------------------------------------
+    rsi_series = df_temp['rsi']
+    price_low_series = df_temp['Low']
+    
+    rsi_today = float(rsi_series.iloc[-1])
+    rsi_yesterday = float(rsi_series.iloc[-2])
+    
+    # --- ① 過熱警戒 (減点 -1) ---
+    is_rsi_sell_warning = False
+    if rsi_today >= 70:
+        is_rsi_sell_warning = True
+    else:
+        # 直近5営業日以内に70を超えた履歴があり、本日70を下抜け、かつ前日比RSI低下
+        recent_rsi_5d = rsi_series.iloc[-6:-1]
+        if (recent_rsi_5d > 70).any() and (rsi_yesterday >= 70) and (rsi_today < 70) and (rsi_today < rsi_yesterday):
+            is_rsi_sell_warning = True
+
+    # --- ② 通常反発 (加点 +1) ---
+    is_rsi_buy_reversal = False
+    recent_rsi_3d = rsi_series.iloc[-4:-1]  # 過去3営業日
+    if (recent_rsi_3d <= 30).any():
+        # 本日RSIが前日比+2.0%以上向上、または本日のローソク足が陽線
+        if (rsi_today >= rsi_yesterday + 2.0) or is_yang_candle:
+            is_rsi_buy_reversal = True
+
+    # --- ③ 底値切り上がりダブルボトム (加点 +2) ---
+    is_rsi_double_bottom = False
+    rsi_lows = find_swing_lows(rsi_series, 25)
+    # RSIが30%以下の領域に制限
+    rsi_lows_30 = [i for i in rsi_lows if rsi_series.iloc[i] <= 30]
+    
+    if len(rsi_lows_30) >= 2:
+        t1 = rsi_lows_30[-2]
+        t2 = rsi_lows_30[-1]
+        # 成立条件チェック
+        if (5 <= (t2 - t1) <= 20) and (rsi_series.iloc[t2] > rsi_series.iloc[t1]):
+            if (rsi_today > rsi_series.iloc[t2]) and (rsi_today > rsi_yesterday):
+                is_rsi_double_bottom = True
+
+    # --- ④ 強気のダイバージェンス (加点 +1) ---
+    is_rsi_divergence = False
+    price_lows = find_swing_lows(price_low_series, 25)
+    
+    if len(price_lows) >= 2:
+        d1 = price_lows[-2]
+        d2 = price_lows[-1]
+        # 成立条件チェック
+        if (5 <= (d2 - d1) <= 20) and (price_low_series.iloc[d2] < price_low_series.iloc[d1]):
+            if rsi_series.iloc[d2] > rsi_series.iloc[d1]:
+                # 本日が底打ち反発局面
+                if (rsi_today <= 45) and (rsi_today > rsi_yesterday):
+                    is_rsi_divergence = True
+
+    # 急騰判定
     df_recent_40d = df_temp.tail(40)
     max_price_40d = df_recent_40d['Close'].max()
     min_price_40d = df_recent_40d['Close'].min()
     price_surge_ratio = max_price_40d / min_price_40d if min_price_40d > 0 else 1.0
     is_surged_stock = price_surge_ratio >= 1.50
     
-    # 乖離率しきい値 (既存ロジック)
+    # 乖離率しきい値
     warning_suffix = ""
     if market_type == "東Ｐ":
         if is_surged_stock:
@@ -246,18 +314,18 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     else:
         oversold_threshold = -10.0 if long_window <= 25 else -15.0
     
-    # 出来高25日平均比 (既存ロジック)
+    # 出来高25日平均比
     recent_volumes = df_temp['Volume'].iloc[-26:-1]
     vol_ma25 = recent_volumes.mean() if len(recent_volumes) > 0 else 0
     vol_ratio = today['Volume'] / vol_ma25 if vol_ma25 > 0 else 1.0
     
-    # 相対長期線変化率 (既存ロジック)
+    # 相対長期線変化率
     ma_change_series = df_temp['long_ma'].pct_change()
     ma_change_today = ma_change_series.iloc[-1]
     baseline_change_120d = ma_change_series.abs().tail(120).mean()
     is_slope_strong_relative = (ma_change_today > 0) and (ma_change_today > baseline_change_120d)
     
-    # ローソク足形状 (既存ロジック)
+    # ローソク足形状
     candle_body_pct = ((price_today - open_today) / open_today) * 100 if open_today > 0 else 0.0
     max_body = max(price_today, open_today)
     upper_shadow = high_today - max_body
@@ -269,10 +337,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
-    # ----------------------------------------------------
-    # ▼ グランビル判定ロジック (改善箇所)
-    # ----------------------------------------------------
-
     # 買い4
     if diff_rate <= oversold_threshold:
         if is_yang_candle or is_price_up:
@@ -282,126 +346,78 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
     # 買い1
-    # 長期線が下向きからの転換期(横ばい〜上昇)で、かつ十分に長期線の下に沈んでいた後に上抜けるケース
-    crossed_above_price = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today)
-    crossed_above_short_ma = (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
-    crossed_above = crossed_above_price or crossed_above_short_ma
-    
-    # 長期線が下向きから横ばい・上向きに転換し始めたことをより厳密にチェック
-    is_ma_reversal_or_flat = (long_ma_slope_3d >= 0) and (long_ma_slope_10d >= 0) # 直近3日と10日間の長期線が横ばいか上昇
-    
-    # 過去20日のうち15日以上は長期線の下に沈んでいたこと (ユーザーフィードバック: 短期間ではダメ → 12日 -> 15日へ強化)
+    crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
+                    (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
+    is_flat_or_rising = long_ma_slope_3d >= -0.01
     below_count_20d = (df_temp.iloc[-21:-1]['Close'] < df_temp.iloc[-21:-1]['long_ma']).sum()
-    is_new_crossover_condition = below_count_20d >= 15 
+    is_new_crossover = below_count_20d >= 12
     
-    # 直近数日は長期線の下にいたことを確認 (一時的な接触からの反発ではなく、明確な上抜けを捉える)
-    # 過去5営業日のうち、少なくとも1日は長期線の下に位置していたか
-    was_below_long_ma_recently = (df_temp.iloc[-5:-1]['Close'] < df_temp.iloc[-5:-1]['long_ma']).any()
-
-    if category == "NONE" and crossed_above and is_ma_reversal_or_flat and \
-       is_new_crossover_condition and (diff_rate <= 5.0) and was_below_long_ma_recently:
+    if category == "NONE" and crossed_above and is_flat_or_rising and is_new_crossover and (diff_rate <= 5.0):
         category = "BUY1"
         category_name = "買い1：新規買い"
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-        reason = f"価格が下向きからの転換期(横這い〜上昇)の長期線({long_window}日線)を本日明確に上抜けました。"
+        reason = f"価格が横這い〜上昇トレンドの長期線({long_window}日線)を本日明確に上抜けました。"
 
     # 買い2
-    # 長期線が安定した上昇トレンドであること
-    is_long_ma_stable_rising = (long_ma_slope_10d > 0) and is_long_ma_rising_today
-    
-    # 過去10日で長期線の下に沈んだのが「1〜4日のみ」
-    is_temp_dip = 1 <= (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum() <= 4
-    
-    # 本日、長期線の上に復帰
+    is_long_ma_rising = long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)
+    below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
+    is_temp_dip = 1 <= below_count_10d <= 4
     recovered_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     
-    # 乖離率のしきい値を調整 (買い3との差別化を意識し、少し広め)
-    is_close_to_ma_buy2 = (0.0 <= diff_rate <= 4.0)
-
-    if category == "NONE" and is_long_ma_stable_rising and is_temp_dip and recovered_above and is_close_to_ma_buy2:
+    if category == "NONE" and is_long_ma_rising and is_temp_dip and recovered_above and (0.0 <= diff_rate <= 5.0):
         category = "BUY2"
         category_name = "買い2：再突き抜け"
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-        reason = f"安定上昇トレンド中、長期線を一時的に下抜け後、本日素早く上方に復帰しました。"
+        reason = f"良好な上昇トレンド中、長期線を一時的に下抜け後、本日素早く上方に復帰しました。"
 
     # 買い3（通常：陽線＋プラス反発）
-    # 1. 長期線が強い上昇トレンドであること (ユーザーフィードバック: 緩いトレンドはダメ → 複数期間の上昇を条件化)
-    is_long_ma_strong_rising_trend = (long_ma_slope_15d > 0) and \
-                                     (long_ma_slope_10d > 0) and \
-                                     (long_ma_slope_3d > 0) and \
-                                     is_long_ma_rising_today
-    
-    # 2. 短期線が長期線の上に継続的に位置していること (ユーザーフィードバック: レンジ相場での誤判定回避)
-    # 過去15日間のうち、12日以上で短期MAが長期MAの上に位置していること
-    short_ma_above_long_ma_recently_count = (df_temp.iloc[-16:-1]['short_ma'] > df_temp.iloc[-16:-1]['long_ma']).sum()
-    is_short_ma_consistently_above_long_ma = short_ma_above_long_ma_recently_count >= 12 
-
-    # 3. 直近で一度大きく上放れてから、長期線に押し目をつけたこと (ユーザーフィードバック「上放れが起こっていない」への対応)
-    # 過去15日以内に短期MAが長期MAから2%以上上に離れた実績があることを確認
-    max_short_long_ma_diff_pct_15d = ((df_temp.iloc[-16:-1]['short_ma'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
-    is_clear_initial_breakaway = max_short_long_ma_diff_pct_15d >= 2.0 
-
-    # 4. 本日、長期線に接近して反発
-    is_close_to_ma_buy3 = (0.0 <= diff_rate <= 3.5) # 乖離率の調整 (BUY2より狭く、より支持線に近い)
+    is_long_ma_rising_strong = long_ma_slope_15d > 0
+    max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
+    has_pulled_back = max_diff_15d >= 4.0
+    is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
-    if category == "NONE" and is_long_ma_strong_rising_trend and \
-       is_short_ma_above_long_ma and is_short_ma_consistently_above_long_ma and \
-       is_clear_initial_breakaway and is_close_to_ma_buy3 and is_rebound:
+    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        reason = f"強力な上昇トレンド中、長期線({long_window}日線)を支持線とした綺麗な陽線反発を観測しました。"
+        reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
 
     # 買い3-Pre（下落日待ち伏せ用：支持線接触）
-    # BUY3と共通の強力な上昇トレンド、短期線が上にあること、明確な上放れ後という条件を使用
-    is_resting_on_ma = (-0.5 <= diff_rate <= 1.5)
-    
-    # 短期線も上昇傾向にあることを追加 (ユーザーフィードバック「25日線が下向きのまま」への対応)
-    is_short_ma_also_strong_current = is_short_ma_rising_today or (short_ma_slope_3d > 0)
-    
-    if category == "NONE" and is_long_ma_strong_rising_trend and \
-       is_short_ma_above_long_ma and is_short_ma_consistently_above_long_ma and \
-       is_clear_initial_breakaway and is_resting_on_ma and is_short_ma_also_strong_current:
+    is_resting_on_ma = -0.5 <= diff_rate <= 1.5
+    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_resting_on_ma:
         category = "BUY3_PRE"
         category_name = "買い3：押し目待ち伏せ"
         badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
-        reason = f"強力な長期上昇トレンド中、支持線接触まで引き付けた仕込み待ち伏せ状態です。"
+        reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
 
-    # ----------------------------------------------------
-    # ▼ 期待度スコア (改善箇所)
-    # ----------------------------------------------------
+    # 期待度スコア (RSI・クオンツ対応)
     score = 3
     if category != "NONE":
+        # 1. 新しい4大RSIシグナルのスコアリング
+        if is_rsi_sell_warning:
+            score -= 1  # ① 過熱警戒 (-1)
+        if is_rsi_buy_reversal:
+            score += 1  # ② 通常反発 (+1)
+        if is_rsi_double_bottom:
+            score += 2  # ③ Wボトム特別反発 (+2)
+        if is_rsi_divergence:
+            score += 1  # ④ 強気のダイバージェンス (+1)
+
+        # 2. 既存のテクニカル加減点ロジック
         if vol_ratio >= 1.5: score += 1
-        # 上髭による減点 (既存ロジック)
         if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0: score -= 1
-        
-        # カテゴリ別スコア調整 (既存ロジック)
         if category == "BUY1":
             if is_slope_strong_relative: score += 1
             if candle_body_pct < 0.5: score -= 1
         elif category == "BUY2":
             if is_slope_strong_relative: score += 1
         elif category in ["BUY3", "BUY3_PRE"]:
-            if diff_rate <= 1.5: score += 1 # 乖離率がより小さいほど良い
-            if candle_body_pct < 1.0: score -= 1 # 実体が小さい場合はマイナス
+            if diff_rate <= 1.5: score += 1
+            if candle_body_pct < 1.0: score -= 1
         elif category == "BUY4":
             if candle_body_pct >= 3.0: score += 1
             if candle_body_pct < 0.5: score -= 1
-            
-        # 新しい減点条件：トレンド方向性チェック (ユーザーフィードバック: 移動平均線が下向きなら期待度を下げるべき)
-        # 長期線が本日下降かつ直近3日も下降傾向の場合に減点
-        is_long_ma_descending_short_term = (long_ma_today < long_ma_yesterday) and (long_ma_slope_3d < 0)
-        if is_long_ma_descending_short_term:
-            score -= 1 
-            reason += " (⚠️長期線が下降傾向)"
-            
-        # 短期線が長期線の下にあり、かつ短期線も本日下降かつ直近3日も下降傾向の場合、さらに減点
-        is_short_ma_bad_trend = is_short_ma_below_long_ma and (short_ma_today < short_ma_yesterday) and (short_ma_slope_3d < 0)
-        if is_short_ma_bad_trend:
-            score -= 1 
-            reason += " (⚠️短期線も長期線下で下降)"
             
     score = max(1, min(5, score))
     stars_str = "★" * score + "☆" * (5 - score)
@@ -415,7 +431,13 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "ma_short": clean_val(round(short_ma_today, 1)),
         "ma_long": clean_val(round(long_ma_today, 1)),
         "score": clean_val(int(score)),
-        "stars": clean_val(stars_str)
+        "stars": clean_val(stars_str),
+        # 新しいRSI判定フラグをフロントエンドに引き渡す
+        "rsi": clean_val(round(rsi_today, 1)),
+        "rsi_sell_warning": is_rsi_sell_warning,
+        "rsi_buy_reversal": is_rsi_buy_reversal,
+        "rsi_double_bottom": is_rsi_double_bottom,
+        "rsi_divergence": is_rsi_divergence
     }
 
 # 4. 全データの判定実行 (変更なし)
@@ -1159,24 +1181,38 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
+          // 出来高警告の基準値を10,000株以下に適用
           const volumeWarning = item.isLowVolume 
             ? `<span class="ml-1 px-1 text-rose-400 font-bold select-none cursor-help" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク極めて高：10,000株以下)">⚠️</span>` 
             : '';
 
+          // 地合い強気バッジ (Relative Strength Badge)
           const rsBadge = item.isStrongRelative 
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
             : '';
 
-         // ★ 新規追加：連続日数と前日カテゴリのUI表示
+          // 連続日数・初点灯バッジ
           const consecutiveBadge = sysData.consecutiveDays === 1 
             ? '<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1 w-max">🆕 初点灯</span>' 
             : sysData.consecutiveDays >= 2 
               ? `<span class="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold block mt-1 w-max">🔥 ${sysData.consecutiveDays}日連続</span>` 
               : '';
 
+          // 前日と異なるカテゴリ名のラベル
           const prevCatLabel = sysData.prevCategory 
             ? `<span class="text-[9px] text-slate-400 font-medium block mt-1">前日: ${sysData.prevCategory}</span>` 
             : '';
+
+          // 4大RSI指標のステータスバッジ
+          const rsiBadge = sysData.rsi_divergence
+            ? '<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1" title="株価の底値が切り下がっているにもかかわらず、RSIの底値が切り上がっている強気の逆行現象です。強い上昇転換の予兆です。">🛡️ 強気ダイバージェンス</span>'
+            : sysData.rsi_double_bottom
+              ? '<span class="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold block mt-1" title="RSIが30%以下の売られすぎ圏で底値切り上がりのダブルボトムを形成し、本日上向きに反発した強い買いサインです。">📈 Wボトム特別反発</span>'
+              : sysData.rsi_buy_reversal
+                ? '<span class="text-[9px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold block mt-1" title="過去3日以内にRSIが30%以下に沈んだ後、本日陽線またはRSI大幅反発を伴って折り返しを開始したサインです。">🔄 RSIゾーン反発</span>'
+                : sysData.rsi_sell_warning
+                  ? '<span class="text-[9px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold block mt-1" title="本日RSIが70%以上の買われすぎ圏に達しているか、または過去5日以内に70%を超えた後本日デッドクロスして下落に転じているため、過熱警戒です。">⚠️ RSI過熱警戒</span>'
+                  : '';
 
           tr.innerHTML = `
             <td class="p-3">
@@ -1209,7 +1245,13 @@ html_template = """<!doctype html>
               <div>${sys==='short'?'5日':'25日'}: ${sysData.ma_short.toLocaleString()}</div>
               <div class="text-[10px] text-slate-400">${sys==='short'?'25日':'75日'}: ${sysData.ma_long.toLocaleString()}</div>
             </td>
-            <td class="p-3 text-right font-mono ${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'}">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</td>
+            <td class="p-3 text-right font-mono">
+              <div class="flex flex-col items-end">
+                <span class="${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'} font-bold">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</span>
+                <span class="text-[10px] text-slate-400">RSI: ${sysData.rsi}%</span>
+                ${rsiBadge}
+              </div>
+            </td>
             <td class="p-3 text-center"><span class="${marketBadgeClass} px-2 py-0.5 rounded text-[10px] font-bold">${item.market}</span></td>
             
             <td class="p-3 text-center space-x-1 whitespace-nowrap">
