@@ -440,17 +440,16 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "rsi_divergence": is_rsi_divergence
     }
 
-# 4. 全データの判定実行 (変更なし)
+# 4. 全データの判定実行 (足切り69日・最適化版)
 results_list = []
 print("各銘柄の判定ロジックを実行しています...")
 
+# 短期・中期いずれのシステムでも確実にNONE（データ不足）になる若い銘柄を
+# スキャンの初期段階で事前にスキップするための数学的最低日数（候補①：69日）
+MIN_REQUIRED_DAYS = 69
+
 for ticker, df_stock in bulk_data.items():
-    # 必要な最低期間が確保できない銘柄はスキップ（evaluate_logic内でもチェックするが、ここで事前に排除できるものも）
-    # min_required_periods を使用して、評価ロジックとの整合性を保つ
-    min_required_periods_short = max(5 + 1, 21) # short_window=5, long_window=25 の場合
-    min_required_periods_mid = max(25 + 1, 21) # short_window=25, long_window=75 の場合
-    
-    if df_stock.empty or len(df_stock) < max(min_required_periods_short, min_required_periods_mid):
+    if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
         continue
         
     today = df_stock.iloc[-1]
@@ -706,11 +705,11 @@ html_template = """<!doctype html>
           ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンや検索窓を使って絞り込むとスムーズに閲覧できます。
         </div>
 
-        <!-- テーブル -->
+<!-- テーブル (ヘッダー追従固定版) -->
         <div class="mt-6 overflow-x-auto">
           <table class="w-full text-left">
-            <thead>
-              <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
+            <thead class="sticky top-16 bg-slate-900/95 backdrop-blur-sm z-20 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase select-none">
+              <tr>
                 <th class="p-3 w-20 whitespace-nowrap">判定</th>
                 <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-24 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
                   <div class="flex items-center justify-center gap-1.5">
