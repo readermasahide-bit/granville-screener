@@ -1168,7 +1168,7 @@ html_template = """<!doctype html>
           tbody.appendChild(tr);
           return;
         }
-        filtered.forEach(item => {
+filtered.forEach(item => {
           const sysData = item[sys];
           const isPlus = item.change >= 0;
           const tr = document.createElement('tr');
@@ -1180,38 +1180,38 @@ html_template = """<!doctype html>
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
-          // 出来高警告の基準値を10,000株以下に適用
+          // 出来高警告の基準値を10,000株以下に適用 (バッククォート化)
           const volumeWarning = item.isLowVolume 
             ? `<span class="ml-1 px-1 text-rose-400 font-bold select-none cursor-help" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク極めて高：10,000株以下)">⚠️</span>` 
-            : '';
+            : ``;
 
           // 地合い強気バッジ (Relative Strength Badge)
           const rsBadge = item.isStrongRelative 
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
-            : '';
+            : ``;
 
-          // 連続日数・初点灯バッジ
+          // 連続日数・初点灯バッジ (改行に強いバッククォートに統一)
           const consecutiveBadge = sysData.consecutiveDays === 1 
-            ? '<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1 w-max">🆕 初点灯</span>' 
+            ? `<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1 w-max">🆕 初点灯</span>` 
             : sysData.consecutiveDays >= 2 
               ? `<span class="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold block mt-1 w-max">🔥 ${sysData.consecutiveDays}日連続</span>` 
-              : '';
+              : ``;
 
-          // 前日と異なるカテゴリ名のラベル
+          // 前日と異なるカテゴリ名のラベル (改行に強いバッククォートに統一)
           const prevCatLabel = sysData.prevCategory 
             ? `<span class="text-[9px] text-slate-400 font-medium block mt-1">前日: ${sysData.prevCategory}</span>` 
-            : '';
+            : ``;
 
-          // 4大RSI指標のステータスバッジ
+          // 4大RSI指標のステータスバッジ (改行に強いバッククォートに統一)
           const rsiBadge = sysData.rsi_divergence
-            ? '<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1" title="株価の底値が切り下がっているにもかかわらず、RSIの底値が切り上がっている強気の逆行現象です。強い上昇転換の予兆です。">🛡️ 強気ダイバージェンス</span>'
+            ? `<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1" title="株価の底値が切り下がっているにもかかわらず、RSIの底値が切り上がっている強気の逆行現象です。強い上昇転換の予兆です。">🛡️ 強気ダイバージェンス</span>`
             : sysData.rsi_double_bottom
-              ? '<span class="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold block mt-1" title="RSIが30%以下の売られすぎ圏で底値切り上がりのダブルボトムを形成し、本日上向きに反発した強い買いサインです。">📈 Wボトム特別反発</span>'
+              ? `<span class="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold block mt-1" title="RSIが30%以下の売られすぎ圏で底値切り上がりのダブルボトムを形成し、本日上向きに反発した強い買いサインです。">📈 Wボトム特別反発</span>`
               : sysData.rsi_buy_reversal
-                ? '<span class="text-[9px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold block mt-1" title="過去3日以内にRSIが30%以下に沈んだ後、本日陽線またはRSI大幅反発を伴って折り返しを開始したサインです。">🔄 RSIゾーン反発</span>'
+                ? `<span class="text-[9px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold block mt-1" title="過去3日以内にRSIが30%以下に沈んだ後、本日陽線またはRSI大幅反発を伴って折り返しを開始したサインです。">🔄 RSIゾーン反発</span>`
                 : sysData.rsi_sell_warning
-                  ? '<span class="text-[9px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold block mt-1" title="本日RSIが70%以上の買われすぎ圏に達しているか、または過去5日以内に70%を超えた後本日デッドクロスして下落に転じているため、過熱警戒です。">⚠️ RSI過熱警戒</span>'
-                  : '';
+                  ? `<span class="text-[9px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold block mt-1" title="本日RSIが70%以上の買われすぎ圏に達しているか、または過去5日以内に70%を超えた後本日デッドクロスして下落に転じているため、過熱警戒です。">⚠️ RSI過熱警戒</span>`
+                  : ``;
 
           tr.innerHTML = `
             <td class="p-3">
