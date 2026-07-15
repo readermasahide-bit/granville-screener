@@ -16,7 +16,8 @@ html_output_path = "index.html" # ホームページとして公開するため 
 
 # 【Googleフォーム1：判定カテゴリ改善用】
 FORM_CONFIG_CAT = {
-    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxOR5vGX69gXyxDiOws/viewform",
+    # 末尾を「QOw」に修正します
+    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
     "entryCode": "entry.1616153480",
     "entryName": "entry.639288663",
     "entrySys":  "entry.1292630960",
@@ -25,7 +26,7 @@ FORM_CONFIG_CAT = {
 
 # 【Googleフォーム2：期待度改善用】
 FORM_CONFIG_SCORE = {
-    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSet_-Ab3-3HgXrRS5pG-5PT4K-qgip4l4EUqqivaWNRBO_g/viewform",
+    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSet_-Ab3-3HgXrRS5pG-5PT4K-qgip4lV4EUqqivaWNRBO_g/viewform",
     "entryCode": "entry.473391802",
     "entryName": "entry.1042173003",
     "entrySys":  "entry.1364518533",
@@ -896,20 +897,21 @@ html_template = """<!doctype html>
 
       function openCatFeedback(ticker, name, category) {
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
-        const targetUrl = `${FORM_CAT_CFG.baseUrl}?viewform&${FORM_CAT_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_CAT_CFG.entryName}=${encodeURIComponent(name)}&${FORM_CAT_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_CAT_CFG.entryCat}=${encodeURIComponent(category)}`;
+        // 「?viewform&」を「?」に修正し、標準的なプリフィルURLにします
+        const targetUrl = `${FORM_CAT_CFG.baseUrl}?${FORM_CAT_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_CAT_CFG.entryName}=${encodeURIComponent(name)}&${FORM_CAT_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_CAT_CFG.entryCat}=${encodeURIComponent(category)}`;
         window.open(targetUrl, '_blank', 'width=620,height=750');
       }
 
       function openScoreFeedback(ticker, name, score) {
         if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          alert("【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
+          alert("【初期設定が必要です】\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
-        const targetUrl = `${FORM_SCORE_CFG.baseUrl}?viewform&${FORM_SCORE_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_SCORE_CFG.entryName}=${encodeURIComponent(name)}&${FORM_SCORE_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_SCORE_CFG.entryScore}=${encodeURIComponent(score)}`;
+        // 「?viewform&」を「?」に修正し、標準的なプリフィルURLにします
+        const targetUrl = `${FORM_SCORE_CFG.baseUrl}?${FORM_SCORE_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_SCORE_CFG.entryName}=${encodeURIComponent(name)}&${FORM_SCORE_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_SCORE_CFG.entryScore}=${encodeURIComponent(score)}`;
         window.open(targetUrl, '_blank', 'width=620,height=750');
       }
-
       function togglePriceSort() {
         state.sortScoreOrder = 'none';
         document.getElementById('sortScoreIcon').textContent = '↕';
