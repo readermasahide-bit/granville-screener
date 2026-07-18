@@ -204,8 +204,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
+    # ロジックに必要な最大日数を考慮してデータ長をチェック
+    min_required_days_for_logic = 120 # long_ma_avg_change_120d のため
     min_len = 45 if long_window <= 25 else 130
-    if len(df_temp) < min_len:
+    if len(df_temp) < max(min_len, min_required_days_for_logic):
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
@@ -230,10 +232,26 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
     
-    long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
-    long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
-    long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma']
-    
+    long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma'] if len(df_temp) >= 11 else 0.0
+    long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma'] if len(df_temp) >= 4 else 0.0
+    long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma'] if len(df_temp) >= 16 else 0.0
+
+    # 新規追加：長期線60日傾き
+    long_ma_slope_60d = long_ma_today - df_temp.iloc[-61]['long_ma'] if len(df_temp) >= 61 else 0.0
+    # 新規追加：短期線5日傾き、長期線5日傾き (スコア用)
+    short_ma_slope_5d = short_ma_today - df_temp.iloc[-6]['short_ma'] if len(df_temp) >= 6 else 0.0
+    long_ma_slope_5d = long_ma_today - df_temp.iloc[-6]['long_ma'] if len(df_temp) >= 6 else 0.0
+
+    # 新規追加：過去15日間の短期線と長期線の最大乖離率（BUY3のhas_pulled_backを強化するため）
+    max_short_long_ma_diff_pct_15d = 0.0
+    if len(df_temp) >= 16:
+        # 短期線が長期線よりも上にある期間の乖離を対象
+        ma_diff_series = ((df_temp.iloc[-16:-1]['short_ma'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100)
+        max_short_long_ma_diff_pct_15d = ma_diff_series[ma_diff_series > 0].max() if not ma_diff_series[ma_diff_series > 0].empty else 0.0
+
+    # 長期線（long_ma）が過去120日間で健全に上昇しているかを見るための平均変化量
+    long_ma_avg_change_120d = df_temp['long_ma'].iloc[-120:].diff().mean() if len(df_temp) >= 120 else 0.0
+
     is_yang_candle = price_today > open_today
     is_price_up = price_today > price_yesterday
     
@@ -320,10 +338,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     vol_ratio = today['Volume'] / vol_ma25 if vol_ma25 > 0 else 1.0
     
     # 相対長期線変化率
-    ma_change_series = df_temp['long_ma'].pct_change()
-    ma_change_today = ma_change_series.iloc[-1]
-    baseline_change_120d = ma_change_series.abs().tail(120).mean()
-    is_slope_strong_relative = (ma_change_today > 0) and (ma_change_today > baseline_change_120d)
+    long_ma_change_series = df_temp['long_ma'].pct_change()
+    long_ma_change_today = long_ma_change_series.iloc[-1]
+    baseline_change_120d = long_ma_change_series.abs().tail(120).mean()
+    is_slope_strong_relative = (long_ma_change_today > 0) and (long_ma_change_today > baseline_change_120d)
     
     # ローソク足形状
     candle_body_pct = ((price_today - open_today) / open_today) * 100 if open_today > 0 else 0.0
@@ -345,20 +363,30 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
             reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
-    # 買い1
-    crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
-                    (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
+    # 買い1 - ロジック厳格化 (ユーザーフィードバックに基づく)
+    # 1. 短期線が長期線を下回っていて、本日短期線が長期線を上回った (ゴールデンクロス)
+    is_golden_cross_today = (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
+    # 2. 長期線の傾きが横ばい〜上昇であること
     is_flat_or_rising = long_ma_slope_3d >= -0.01
+    # 3. 過去20日のうち15日以上は長期線の下に沈んでいたこと (しきい値を12→15に厳格化)
     below_count_20d = (df_temp.iloc[-21:-1]['Close'] < df_temp.iloc[-21:-1]['long_ma']).sum()
-    is_new_crossover = below_count_20d >= 12
+    is_new_crossover_strict = below_count_20d >= 15
+    # 4. 直近5営業日で、終値が長期移動平均線よりも上に位置した日が2日以下であること (新規追加: 新規性を確認)
+    is_not_recent_above_long_ma = (df_temp.iloc[-6:-1]['Close'] > df_temp.iloc[-6:-1]['long_ma']).sum() <= 2
     
-    if category == "NONE" and crossed_above and is_flat_or_rising and is_new_crossover and (diff_rate <= 5.0):
+    if category == "NONE" and \
+       is_golden_cross_today and \
+       price_today >= long_ma_today and \
+       is_flat_or_rising and \
+       is_new_crossover_strict and \
+       is_not_recent_above_long_ma and \
+       (diff_rate <= 5.0):
         category = "BUY1"
         category_name = "買い1：新規買い"
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-        reason = f"価格が横這い〜上昇トレンドの長期線({long_window}日線)を本日明確に上抜けました。"
+        reason = f"短期線が長期線({long_window}日線)を本日明確に上抜け（ゴールデンクロス）。過去も長期線の下に長くいました。{warning_suffix}"
 
-    # 買い2
+    # 買い2 - ロジック維持 (BUY3_PREの排他性強化により、こちらに適切に流れるケースが増加)
     is_long_ma_rising = long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)
     below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_10d <= 4
@@ -368,33 +396,56 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         category = "BUY2"
         category_name = "買い2：再突き抜け"
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-        reason = f"良好な上昇トレンド中、長期線を一時的に下抜け後、本日素早く上方に復帰しました。"
+        reason = f"良好な上昇トレンド中、長期線({long_window}日線)を一時的に下抜け後、本日素早く上方に復帰しました。{warning_suffix}"
 
-    # 買い3（通常：陽線＋プラス反発）
-    is_long_ma_rising_strong = long_ma_slope_15d > 0
-    max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
-    has_pulled_back = max_diff_15d >= 4.0
+    # 買い3（通常：陽線＋プラス反発） - ロジック厳格化 (ユーザーフィードバックに基づく)
+    # 1. 長期線が強い右肩上がりトレンド中 (直近15日+60日)
+    is_long_ma_rising_strong_enhanced = long_ma_slope_15d > 0 and long_ma_slope_60d > 0
+    # 2. 長期トレンドの健全性を確保 (過去120日の長期線平均変化量が横ばいか上昇)
+    is_long_ma_stable_upward = long_ma_avg_change_120d >= -0.0001 # ほぼ横ばいか上昇
+    # 3. 短期線が長期線の上にあること
+    is_short_ma_above_long_ma = short_ma_today > long_ma_today
+    # 4. 直近5営業日で短期線が長期線を下回っていないこと (短期線が長期線の上で安定していることを確認)
+    is_short_ma_always_above_long_ma_recent = (df_temp.iloc[-6:-1]['short_ma'] > df_temp.iloc[-6:-1]['long_ma']).all()
+    # 5. 短期線が長期線から上放れた実績があること (max_short_long_ma_diff_pct_15d >= 2.0 に変更)
+    has_short_ma_pulled_back = max_short_long_ma_diff_pct_15d >= 2.0
+
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
+    if category == "NONE" and \
+       is_long_ma_rising_strong_enhanced and \
+       is_long_ma_stable_upward and \
+       is_short_ma_above_long_ma and \
+       is_short_ma_always_above_long_ma_recent and \
+       has_short_ma_pulled_back and \
+       is_close_to_ma and \
+       is_rebound:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
+        reason = f"上向き長期線({long_window}日線)を支持線とした、教科書通りの綺麗な陽線反発を観測しました。{warning_suffix}"
 
-    # 買い3-Pre（下落日待ち伏せ用：支持線接触）
+    # 買い3-Pre（下落日待ち伏せ用：支持線接触） - ロジック厳格化 (ユーザーフィードバックに基づく)
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_resting_on_ma:
+    # 新規追加条件: 前日終値が長期線の下でなかったこと（BUY2との排他性強化）
+    if category == "NONE" and \
+       is_long_ma_rising_strong_enhanced and \
+       is_long_ma_stable_upward and \
+       is_short_ma_above_long_ma and \
+       is_short_ma_always_above_long_ma_recent and \
+       has_short_ma_pulled_back and \
+       is_resting_on_ma and \
+       price_yesterday >= long_ma_yesterday: # <-- 新規追加
         category = "BUY3_PRE"
         category_name = "買い3：押し目待ち伏せ"
         badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
-        reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
+        reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。{warning_suffix}"
 
     # 期待度スコア (RSI・クオンツ対応)
     score = 3
     if category != "NONE":
-        # 1. 新しい4大RSIシグナルのスコアリング
+        # 1. 新しい4大RSIシグナルのスコアリング (既存)
         if is_rsi_sell_warning:
             score -= 1  # ① 過熱警戒 (-1)
         if is_rsi_buy_reversal:
@@ -418,6 +469,12 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         elif category == "BUY4":
             if candle_body_pct >= 3.0: score += 1
             if candle_body_pct < 0.5: score -= 1
+            
+        # 3. 新規追加：トレンド下降減点 (スコア減点マニュアルのロジック実装)
+        if long_ma_slope_5d < 0: # 長期線が直近5営業日で下降傾向にある場合
+            score -= 1
+        if short_ma_today < long_ma_today and short_ma_slope_5d < 0: # 短期線が長期線の下にあり、かつ短期線も直近5営業日で下降傾向の場合
+            score -= 1
             
     score = max(1, min(5, score))
     stars_str = "★" * score + "☆" * (5 - score)
@@ -446,7 +503,9 @@ print("各銘柄の判定ロジックを実行しています...")
 
 # 短期・中期いずれのシステムでも確実にNONE（データ不足）になる若い銘柄を
 # スキャンの初期段階で事前にスキップするための数学的最低日数（候補①：69日）
-MIN_REQUIRED_DAYS = 69
+# ただし、evaluate_logic内で min_required_days_for_logic=120 を設定したため、
+# ここでの MIN_REQUIRED_DAYS もそれに合わせるか、より余裕を持たせる。
+MIN_REQUIRED_DAYS = 120 # ロジックの変更に合わせて最低日数を120日に変更
 
 for ticker, df_stock in bulk_data.items():
     if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
@@ -812,9 +871,10 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近10日で横誰い〜上向き(JST <span class="font-mono">&gt;=0.0%</span>)<br>
+                  ・<span class="font-bold text-emerald-300">短期線が長期線を上抜けるGCを本日発生</span><br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 直近10日で横誰い〜上向き<br>
                   ・底確認: 過去20日のうち<span class="font-mono">15日以上</span>は線の下に沈んでいたこと<br>
-                  ・本日、線の上抜け、かつ直近で線の下にいた実績あり<br>
+                  ・新規性: 直近5営業日で長期線を上回った日が<span class="font-mono">2日以下</span><br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
@@ -823,17 +883,17 @@ html_template = """<!doctype html>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)が安定した右肩上がり<br>
                   ・一時性: 過去10日で長期線の下に沈んだのが「1〜4日のみ」<br>
-                  ・本日、再度長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+4.0%</span> 以内 (変更)
+                  ・本日、再度長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発（待ち伏せ含む）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">強力な右肩上がりトレンド</span>中<br>
-                  ・短期線が長期線の上で継続的に推移していること<br>
-                  ・過去に短期線が長期線から<span class="font-mono">+2.0%以上</span>上放れた実績あり<br>
+                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">長期的に安定した右肩上がりトレンド</span>中<br>
+                  ・<span class="font-bold text-emerald-300">短期線が長期線の上を維持</span>し、直近5日で下回っていない<br>
+                  ・過去15日で短期線が長期線から<span class="font-mono">+2.0%以上</span>上放れた実績あり<br>
                   ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日反発。<br>
-                  ・<strong>【下落日待ち伏せPre-Buy3】</strong>: 長期線の極近(JST -0.5%〜+1.5%)にあり、短期線も上昇傾向なら特別点灯。
+                  ・<strong>【下落日待ち伏せPre-Buy3】</strong>: 長期線の極近(JST -0.5%〜+1.5%)にあり、前日も線の下にいなかった場合のみ点灯。
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
