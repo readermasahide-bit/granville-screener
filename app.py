@@ -391,33 +391,58 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
         reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
 
-    # 期待度スコア (RSI・クオンツ対応)
+# 期待度スコア (RSI・クオンツ対応・内訳記録版)
     score = 3
+    score_reasons = [] # ★ 新規追加：加減点の具体的な理由を記録するリスト
+    
     if category != "NONE":
         # 1. 新しい4大RSIシグナルのスコアリング
         if is_rsi_sell_warning:
             score -= 1  # ① 過熱警戒 (-1)
+            score_reasons.append("⚠️ RSI過熱警戒: -1")
         if is_rsi_buy_reversal:
             score += 1  # ② 通常反発 (+1)
+            score_reasons.append("🔄 RSIゾーン反発: +1")
         if is_rsi_double_bottom:
             score += 2  # ③ Wボトム特別反発 (+2)
+            score_reasons.append("📈 Wボトム特別反発: +2")
         if is_rsi_divergence:
             score += 1  # ④ 強気のダイバージェンス (+1)
+            score_reasons.append("🛡️ 強気ダイバージェンス: +1")
 
         # 2. 既存のテクニカル加減点ロジック
-        if vol_ratio >= 1.5: score += 1
-        if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0: score -= 1
+        if vol_ratio >= 1.5:
+            score += 1
+            score_reasons.append("📊 出来高急増: +1")
+        if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0:
+            score -= 1
+            score_reasons.append("🕯️ 上髭超過: -1")
+            
         if category == "BUY1":
-            if is_slope_strong_relative: score += 1
-            if candle_body_pct < 0.5: score -= 1
+            if is_slope_strong_relative:
+                score += 1
+                score_reasons.append("📈 長期線トレンド加速: +1")
+            if candle_body_pct < 0.5:
+                score -= 1
+                score_reasons.append("🕯️ 反発実体極小: -1")
         elif category == "BUY2":
-            if is_slope_strong_relative: score += 1
+            if is_slope_strong_relative:
+                score += 1
+                score_reasons.append("📈 長期線トレンド加速: +1")
         elif category in ["BUY3", "BUY3_PRE"]:
-            if diff_rate <= 1.5: score += 1
-            if candle_body_pct < 1.0: score -= 1
+            if diff_rate <= 1.5:
+                score += 1
+                score_reasons.append("📏 支持線極近: +1")
+            if candle_body_pct < 1.0:
+                score -= 1
+                score_reasons.append("🕯️ 反発実体小: -1")
         elif category == "BUY4":
-            if candle_body_pct >= 3.0: score += 1
-            if candle_body_pct < 0.5: score -= 1
+            if candle_body_pct >= 3.0:
+                score += 1
+                score_reasons.append("📈 大陽線反発: +1")
+            if candle_body_pct < 0.5:
+                score -= 1
+                score_reasons.append("🕯️ 反発実体極小: -1")
             
     score = max(1, min(5, score))
     stars_str = "★" * score + "☆" * (5 - score)
@@ -432,12 +457,13 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "ma_long": clean_val(round(long_ma_today, 1)),
         "score": clean_val(int(score)),
         "stars": clean_val(stars_str),
-        # 新しいRSI判定フラグをフロントエンドに引き渡す
         "rsi": clean_val(round(rsi_today, 1)),
         "rsi_sell_warning": is_rsi_sell_warning,
         "rsi_buy_reversal": is_rsi_buy_reversal,
         "rsi_double_bottom": is_rsi_double_bottom,
-        "rsi_divergence": is_rsi_divergence
+        "rsi_divergence": is_rsi_divergence,
+        # ★ 追加項目：スコアの内訳データをフロントに渡す
+        "score_reasons": score_reasons
     }
 
 # 4. 全データの判定実行 (足切り69日・最適化版)
@@ -852,6 +878,17 @@ html_template = """<!doctype html>
         </div>
       </section>
 
+　　　 <!-- 詳細診断カルテ用ダイアログ (HTML5標準・ z-50で最前面) -->
+      <dialog id="diagnosticDialog" class="bg-slate-900 border border-slate-800 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-md w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
+        <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
+          <h3 id="dialogTitle" class="text-sm font-bold text-white tracking-tight flex items-center gap-2">📋 銘柄診断カルテ</h3>
+          <button onclick="closeDiagnosticDialog()" class="text-slate-400 hover:text-white font-bold text-lg select-none cursor-pointer focus:outline-none">✕</button>
+        </div>
+        <div id="dialogContent" class="space-y-4 text-xs">
+          <!-- JavaScriptによってここに情報が書き込まれます -->
+        </div>
+      </dialog>
+
     </main>
 
     <script>
@@ -1168,6 +1205,7 @@ html_template = """<!doctype html>
           tbody.appendChild(tr);
           return;
         }
+        
 filtered.forEach(item => {
           const sysData = item[sys];
           const isPlus = item.change >= 0;
@@ -1180,29 +1218,29 @@ filtered.forEach(item => {
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
-          // 出来高警告の基準値を10,000株以下に適用 (バッククォート化)
+          // 出来高警告の基準値を10,000株以下に適用
           const volumeWarning = item.isLowVolume 
             ? `<span class="ml-1 px-1 text-rose-400 font-bold select-none cursor-help" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク極めて高：10,000株以下)">⚠️</span>` 
             : ``;
 
-          // 地合い強気バッジ (Relative Strength Badge)
+          // 地合い強気バッジ
           const rsBadge = item.isStrongRelative 
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
             : ``;
 
-          // 連続日数・初点灯バッジ (改行に強いバッククォートに統一)
+          // 連続日数・初点灯バッジ
           const consecutiveBadge = sysData.consecutiveDays === 1 
             ? `<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1 w-max">🆕 初点灯</span>` 
             : sysData.consecutiveDays >= 2 
               ? `<span class="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold block mt-1 w-max">🔥 ${sysData.consecutiveDays}日連続</span>` 
               : ``;
 
-          // 前日と異なるカテゴリ名のラベル (改行に強いバッククォートに統一)
+          // 前日カテゴリ名ラベル
           const prevCatLabel = sysData.prevCategory 
             ? `<span class="text-[9px] text-slate-400 font-medium block mt-1">前日: ${sysData.prevCategory}</span>` 
             : ``;
 
-          // 4大RSI指標のステータスバッジ (改行に強いバッククォートに統一)
+          // 4大RSI指標のステータスバッジ
           const rsiBadge = sysData.rsi_divergence
             ? `<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1" title="株価の底値が切り下がっているにもかかわらず、RSIの底値が切り上がっている強気の逆行現象です。強い上昇転換の予兆です。">🛡️ 強気ダイバージェンス</span>`
             : sysData.rsi_double_bottom
@@ -1213,6 +1251,14 @@ filtered.forEach(item => {
                   ? `<span class="text-[9px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold block mt-1" title="本日RSIが70%以上の買われすぎ圏に達しているか、または過去5日以内に70%を超えた後本日デッドクロスして下落に転じているため、過熱警戒です。">⚠️ RSI過熱警戒</span>`
                   : ``;
 
+          // ★ 新規追加：期待度ホバー時の加減点内訳リスト（HTML）を作成
+          let reasonsListHtml = '';
+          if (sysData.score_reasons && sysData.score_reasons.length > 0) {
+            reasonsListHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5 text-slate-300"><span>•</span><span>${r}</span></li>`).join('');
+          } else {
+            reasonsListHtml = `<li class="text-slate-500 py-0.5">※加減点なし (基本点 3)</li>`;
+          }
+
           tr.innerHTML = `
             <td class="p-3">
               <div class="flex flex-col items-start">
@@ -1221,7 +1267,20 @@ filtered.forEach(item => {
                 ${prevCatLabel}
               </div>
             </td>
-            <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none">${sysData.score}</td>
+            
+            <!-- ★ 期待度セル：relative group を持たせることで、ホバー時のみカードが「上に浮き出て」表示されます -->
+            <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none cursor-help relative group">
+              <span class="hover:text-amber-300">${sysData.stars}</span>
+              
+              <!-- 浮遊ホバーカード (クリック不要・周囲を一切動かさず1秒で確認) -->
+              <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-slate-950/95 backdrop-blur border border-slate-800 text-left text-xs p-3 rounded-xl shadow-2xl z-30 select-none">
+                <p class="font-bold text-[10px] text-slate-400 border-b border-slate-800 pb-1 mb-1.5">🌟 期待度スコア評価内訳</p>
+                <ul class="space-y-0.5 text-[10px] font-normal leading-relaxed">
+                  ${reasonsListHtml}
+                </ul>
+              </div>
+            </td>
+            
             <td class="p-3 font-mono font-bold text-white">
               <div class="flex items-center gap-1.5">
                 <span>${item.ticker}</span>
@@ -1231,8 +1290,10 @@ filtered.forEach(item => {
               </div>
             </td>
             <td class="p-3">
+              <!-- ★ 銘柄名部分：カルテマーク 📋 を設置し、クリック時のみダイアログが開く（暴発を100%防止） -->
               <div class="font-bold text-slate-100 text-sm flex items-center flex-wrap gap-1">
                 <span>${item.name}</span>
+                <button onclick="openDiagnosticDialog('${item.ticker}', '${sys}')" class="text-xs hover:text-cyan-400 ml-1.5 cursor-pointer select-none focus:outline-none" title="詳細診断カルテを表示">📋</button>
                 ${volumeWarning}
                 ${rsBadge}
               </div>
@@ -1265,6 +1326,79 @@ filtered.forEach(item => {
           tbody.appendChild(tr);
         });
       }
+
+      // ★ 新規追加：詳細診断カルテ（HTML5 dialog）の開閉ロジック
+      function openDiagnosticDialog(ticker, sys) {
+        const item = state.results.find(r => r.ticker === ticker);
+        if (!item) return;
+        const sysData = item[sys];
+        
+        const dialog = document.getElementById('diagnosticDialog');
+        const title = document.getElementById('dialogTitle');
+        const content = document.getElementById('dialogContent');
+        
+        title.innerHTML = `📋 診断カルテ: <span class="font-mono text-cyan-400 font-bold ml-1.5">[${item.ticker}] ${item.name}</span>`;
+        
+        // スコア内訳リストの生成
+        let reasonsHtml = '';
+        if (sysData.score_reasons && sysData.score_reasons.length > 0) {
+          reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5"><span>•</span><span>${r}</span></li>`).join('');
+        } else {
+          reasonsHtml = '<li class="text-slate-500 py-0.5">※加減点なし (基本点 3)</li>';
+        }
+
+        content.innerHTML = `
+          <!-- 基礎情報 -->
+          <div class="grid grid-cols-2 gap-4 border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-slate-400 text-[10px] uppercase block">本日終値</span>
+              <strong class="text-white text-base font-mono">${item.price.toLocaleString()} 円</strong>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[10px] uppercase block">長期線乖離率</span>
+              <strong class="${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'} text-base font-mono">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</strong>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-slate-400 text-[10px] uppercase block">判定カテゴリ</span>
+              <span class="px-2 py-0.5 rounded font-bold text-[10px] inline-block mt-1 ${sysData.badgeClass}">${sysData.categoryName}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[10px] uppercase block">RSI (14日)</span>
+              <strong class="text-white text-base font-mono">${sysData.rsi}%</strong>
+            </div>
+          </div>
+          
+          <!-- 期待度内訳 -->
+          <div class="space-y-2 border-b border-slate-800 pb-3">
+            <span class="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">🌟 期待度スコア評価内訳 (星: ${sysData.stars})</span>
+            <ul class="space-y-0.5 text-slate-300 text-[11px] leading-relaxed pl-1">
+              ${reasonsHtml}
+            </ul>
+          </div>
+          
+          <!-- 詳細解説 -->
+          <div class="p-3 bg-slate-950 border border-slate-800/80 rounded-xl">
+            <span class="text-[10px] text-slate-400 block mb-1">💡 判定詳細 / 推奨戦略</span>
+            <p class="text-slate-300 text-[11px] leading-relaxed">${sysData.reason}</p>
+          </div>
+          
+          <!-- フッター（将来の拡張のために情報を整理して配置） -->
+          <div class="text-[10px] text-slate-500 pt-1 text-right">
+            システム: ${(sys === 'short') ? '短期(5/25)' : '中期(25/75)'} | 市場: ${item.market} | 業種: ${item.sector}
+          </div>
+        `;
+        
+        dialog.showModal(); // HTML5標準機能で最前面にポップアップ表示 [2.1.2, 2.1.7]
+      }
+
+      function closeDiagnosticDialog() {
+        const dialog = document.getElementById('diagnosticDialog');
+        dialog.close(); // ダイアログを安全に閉じます
+      }
+      
     </script>
   </body>
 </html>"""
