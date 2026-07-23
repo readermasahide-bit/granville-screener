@@ -474,6 +474,111 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "score_reasons": score_reasons
     }
 
+# ----------------------------------------------------------------------
+# ★【Phase 1】東証33業種 HOTセクター自動算出関数 (時価総額/売買代金加重モデル)
+# ----------------------------------------------------------------------
+def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
+    """
+    東証33業種ごとに資金流入度をスコア化(0〜100点)し、
+    閾値を超えた「本日のHOT業種」を最大5業種まで抽出します。
+    """
+    sector_data = {}
+    
+    # 1. 業種ごとに全銘柄のパフォーマンスと売買代金をグループ集計
+    for ticker, df in bulk_data.items():
+        if df.empty or len(df) < 25:
+            continue
+            
+        sector = ticker_to_sector.get(ticker)
+        if not sector or sector == "不明":
+            continue
+            
+        today = df.iloc[-1]
+        yesterday = df.iloc[-2]
+        price_today = float(today['Close'])
+        price_yesterday = float(yesterday['Close'])
+        
+        if price_yesterday <= 0:
+            continue
+            
+        change_rate = ((price_today - price_yesterday) / price_yesterday) * 100
+        trading_value = price_today * float(today['Volume'])  # 本日の売買代金(ウェイト)
+        
+        # 5日移動平均線の傾き(短期モメンタム)
+        ma5_today = df['Close'].tail(5).mean()
+        ma5_5days_ago = df['Close'].iloc[-10:-5].mean() if len(df) >= 10 else ma5_today
+        is_ma5_up = ma5_today > ma5_5days_ago
+
+        if sector not in sector_data:
+            sector_data[sector] = {
+                "total_value": 0.0,
+                "weighted_change_sum": 0.0,
+                "signal_value": 0.0,
+                "ma5_up_count": 0,
+                "total_stocks": 0
+            }
+            
+        sector_data[sector]["total_value"] += trading_value
+        sector_data[sector]["weighted_change_sum"] += change_rate * trading_value
+        sector_data[sector]["total_stocks"] += 1
+        if is_ma5_up:
+            sector_data[sector]["ma5_up_count"] += 1
+
+    if not sector_data:
+        return [], {}
+
+    # 2. シグナル点灯銘柄の売買代金シェアを集計
+    for item in results_list:
+        ticker = item["ticker"] + ".T"
+        sector = item["sector"]
+        if sector in sector_data:
+            today_price = item["price"]
+            today_vol = item["volume"]
+            sector_data[sector]["signal_value"] += (today_price * today_vol)
+
+    # 3. 各業種の総合スコア(0〜100点)の算出
+    scored_sectors = []
+    
+    for sector, s_info in sector_data.items():
+        if s_info["total_value"] <= 0 or s_info["total_stocks"] < 3:
+            continue
+            
+        # ① 加重平均騰落率 (%)
+        weighted_change = s_info["weighted_change_sum"] / s_info["total_value"]
+        
+        # ② 加重シグナル密度 (%)：業種全体の売買代金に対するシグナル点灯銘柄のシェア
+        signal_density = (s_info["signal_value"] / s_info["total_value"]) * 100
+        
+        # ③ 短期モメンタム比率 (%)：5日線が上向きの銘柄割合
+        ma5_up_ratio = (s_info["ma5_up_count"] / s_info["total_stocks"]) * 100
+
+        # --- 0〜100点への標準化スコアリング ---
+        # パフォーマンス点 (最大40点) : 騰落率 +3%で満点
+        score_perf = min(40.0, max(0.0, (weighted_change + 1.0) * 10.0))
+        
+        # シグナル密度点 (最大40点) : 点灯シェア 20%で満点
+        score_density = min(40.0, max(0.0, signal_density * 2.0))
+        
+        # モメンタム点 (最大20点) : 5日線上向き率 70%で満点
+        score_momentum = min(20.0, max(0.0, ma5_up_ratio * 0.285))
+        
+        total_score = round(score_perf + score_density + score_momentum, 1)
+
+        scored_sectors.append({
+            "sector": sector,
+            "score": total_score,
+            "changeRate": round(weighted_change, 2),
+            "signalDensity": round(signal_density, 1)
+        })
+
+    # 4. スコア順にソートし、絶対閾値(55.0点以上)を満たす上位最大5業種を判定
+    scored_sectors.sort(key=lambda x: x["score"], reverse=True)
+    
+    HOT_THRESHOLD = 55.0  # 絶対閾値
+    hot_sectors = [s for s in scored_sectors if s["score"] >= HOT_THRESHOLD][:5]
+
+    return hot_sectors, sector_data
+
 # 4. 全データの判定実行 (足切り69日・最適化版)
 results_list = []
 print("各銘柄の判定ロジックを実行しています...")
@@ -565,6 +670,11 @@ for ticker, df_stock in bulk_data.items():
 all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
 market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
 print(f" -> 本日の東証全上場銘柄の騰落率中央値: {market_median_change:.2f}%")
+
+# ★【Phase 1】東証33業種 HOTセクターの自動算出を実行 (★ここに追記)
+hot_sectors, all_sector_stats = calculate_hot_sectors(bulk_data, results_list, ticker_to_sector)
+hot_sector_names = [s["sector"] for s in hot_sectors]
+print(f" -> 本日のHOT業種 ({len(hot_sectors)}件検知): {', '.join(hot_sector_names) if hot_sectors else 'なし'}")
 
 # 地合い強気銘柄の判定および加点 (変更なし)
 for item in results_list:
