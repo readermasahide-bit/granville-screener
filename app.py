@@ -1372,6 +1372,11 @@ filtered.forEach(item => {
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
             : ``;
 
+          // ★ Phase 4: HOT業種バッジの作成
+          const hotSectorBadge = item.isHotSector 
+            ? `<span class="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold select-none cursor-help" title="本日、大口資金が集中しているHOT業種（資金流入セクター）に属している銘柄です。">🔥 HOT業種</span>` 
+            : ``;
+
           // 連続日数・初点灯バッジ
           const consecutiveBadge = sysData.consecutiveDays === 1 
             ? `<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1 w-max">🆕 初点灯</span>` 
@@ -1395,7 +1400,7 @@ filtered.forEach(item => {
                   ? `<span class="text-[9px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold block mt-1" title="本日RSIが70%以上の買われすぎ圏に達しているか、または過去5日以内に70%を超えた後本日デッドクロスして下落に転じているため、過熱警戒です。">⚠️ RSI過熱警戒</span>`
                   : ``;
 
-          // ★ 新規追加：期待度ホバー時の加減点内訳リスト（HTML）を作成
+          // 期待度ホバー時の加減点内訳リスト（HTML）
           let reasonsListHtml = '';
           if (sysData.score_reasons && sysData.score_reasons.length > 0) {
             reasonsListHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5 text-slate-300"><span>•</span><span>${r}</span></li>`).join('');
@@ -1412,11 +1417,9 @@ filtered.forEach(item => {
               </div>
             </td>
             
-           <!-- 期待度セル：数字表記 (${sysData.score}) に変更し、幅をスマートに保持 -->
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none cursor-help relative group">
               <span class="hover:text-amber-300">${sysData.score}</span>
               
-              <!-- 浮遊ホバーカード (数字にマウスを乗せると内訳を表示) -->
               <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-slate-950/95 backdrop-blur border border-slate-800 text-left text-xs p-3 rounded-xl shadow-2xl z-30 select-none">
                 <p class="font-bold text-[10px] text-slate-400 border-b border-slate-800 pb-1 mb-1.5">🌟 期待度スコア評価内訳</p>
                 <ul class="space-y-0.5 text-[10px] font-normal leading-relaxed">
@@ -1434,14 +1437,17 @@ filtered.forEach(item => {
               </div>
             </td>
             <td class="p-3">
-              <!-- ★ 銘柄名部分：カルテマーク 📋 を設置し、クリック時のみダイアログが開く（暴発を100%防止） -->
               <div class="font-bold text-slate-100 text-sm flex items-center flex-wrap gap-1">
                 <span>${item.name}</span>
                 <button onclick="openDiagnosticDialog('${item.ticker}', '${sys}')" class="text-xs hover:text-cyan-400 ml-1.5 cursor-pointer select-none focus:outline-none" title="詳細診断カルテを表示">📋</button>
                 ${volumeWarning}
                 ${rsBadge}
               </div>
-              <div class="text-[10px] text-slate-400 mt-0.5">${item.sector}</div>
+              <!-- 業種表示部分：HOT業種バッジ（🔥 HOT業種）を並べて表示 -->
+              <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <span>${item.sector}</span>
+                ${hotSectorBadge}
+              </div>
             </td>
             <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
             <td class="p-3 text-right font-mono ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${item.change.toLocaleString()} (${isPlus ? '+' : ''}${item.changeRate}%)</td>
@@ -1468,7 +1474,7 @@ filtered.forEach(item => {
             </td>
           `;
           tbody.appendChild(tr);
-        });
+        });        
       }
 
       // ★ 新規追加：詳細診断カルテ（HTML5 dialog）の開閉ロジック
