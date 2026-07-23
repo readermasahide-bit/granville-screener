@@ -1081,10 +1081,10 @@ html_template = """<!doctype html>
             renderTable();
           });
         });
-　　　　 renderHotSectorsBanner(); // ★ここに追記
+
+        renderHotSectorsBanner();
         switchSystem('mid');
       });
-
       function toggleExplanation() {
         const expSec = document.getElementById('explanationSection');
         const btn = document.getElementById('btnToggleExplanation');
