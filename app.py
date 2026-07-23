@@ -790,6 +790,11 @@ html_template = """<!doctype html>
 
     <!-- メイン -->
     <main class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+
+    <!-- ★ Phase 3: HOT業種ランキングバナー枠 (ここに追記) -->
+      <div id="hotSectorsBanner" class="hidden bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+        <!-- JavaScriptによってここにHOT業種バッジが挿入されます -->
+      </div>
       
       <!-- サマリーカード -->
       <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -1032,6 +1037,7 @@ html_template = """<!doctype html>
     <script>
       const state = {
         results: __PLACEHOLDER_RESULTS__,
+        hotSectors: __PLACEHOLDER_HOT_SECTORS__, // ★ここに追記
         prevCounts: __PLACEHOLDER_PREV_COUNTS__,
         marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
@@ -1075,7 +1081,7 @@ html_template = """<!doctype html>
             renderTable();
           });
         });
-
+　　　　 renderHotSectorsBanner(); // ★ここに追記
         switchSystem('mid');
       });
 
@@ -1537,6 +1543,48 @@ filtered.forEach(item => {
         dialog.close(); // ダイアログを安全に閉じます
       }
       
+      // ★ Phase 3: HOT業種ランキングバナーの描画関数
+      function renderHotSectorsBanner() {
+        const container = document.getElementById('hotSectorsBanner');
+        if (!container) return;
+        
+        const sectors = state.hotSectors || [];
+        container.classList.remove('hidden');
+
+        if (sectors.length === 0) {
+          container.innerHTML = `
+            <div class="flex items-center gap-2 text-slate-400 font-medium text-xs">
+              <span class="text-amber-400 font-bold">🔥 本日のHOT業種:</span>
+              <span>該当なし（売買資金が分散中、または市場全体が警戒相場です）</span>
+            </div>
+          `;
+          return;
+        }
+
+        const badgesHtml = sectors.map((s, idx) => {
+          const rank = idx + 1;
+          const isPlus = s.changeRate >= 0;
+          const sign = isPlus ? '+' : '';
+          return `
+            <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950/80 border border-amber-500/30 rounded-xl font-mono text-xs">
+              <span class="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">#${rank}</span>
+              <span class="font-bold text-slate-200 font-sans">${s.sector}</span>
+              <span class="${isPlus ? 'text-emerald-400' : 'text-rose-400'} font-bold">${sign}${s.changeRate}%</span>
+            </div>
+          `;
+        }).join('');
+
+        container.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-amber-400 text-xs flex items-center gap-1 shrink-0">
+              <span>🔥</span> 本日のHOT業種 (資金集中セクター):
+            </span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            ${badgesHtml}
+          </div>
+        `;
+      }          
     </script>
   </body>
 </html>"""
