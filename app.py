@@ -676,6 +676,24 @@ hot_sectors, all_sector_stats = calculate_hot_sectors(bulk_data, results_list, t
 hot_sector_names = [s["sector"] for s in hot_sectors]
 print(f" -> 本日のHOT業種 ({len(hot_sectors)}件検知): {', '.join(hot_sector_names) if hot_sectors else 'なし'}")
 
+# ★【Phase 2】HOT業種に属する銘柄への期待度+1加点 ＆ 内訳理由の記録 (★ここに追記)
+for item in results_list:
+    sector = item["sector"]
+    is_hot = sector in hot_sector_names
+    item["isHotSector"] = is_hot
+    
+    if is_hot:
+        for sys_key in ["short", "mid"]:
+            sys_data = item[sys_key]
+            if sys_data["category"] != "NONE":
+                # 期待度を+1（最大5点にクランプ）
+                new_score = min(5, sys_data["score"] + 1)
+                sys_data["score"] = new_score
+                
+                if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
+                    sys_data["score_reasons"] = []
+                sys_data["score_reasons"].append(f"🔥 追い風業種 ({sector}): +1")
+
 # 地合い強気銘柄の判定および加点 (変更なし)
 for item in results_list:
     is_strong_relative = False
@@ -692,6 +710,7 @@ for item in results_list:
                 item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score)
 
 json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
+hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)  # ★追記
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
@@ -1527,6 +1546,7 @@ filtered.forEach(item => {
 html_content = html_template
 html_content = html_content.replace("__LAST_UPDATE__", current_time_str)
 html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_median_change:.4f}")
+html_content = html_content.replace("__PLACEHOLDER_HOT_SECTORS__", hot_sectors_json_str)  # ★追記
 html_content = html_content.replace("__PLACEHOLDER_RESULTS__", json_data_str)
 html_content = html_content.replace("__PLACEHOLDER_PREV_COUNTS__", prev_counts_json_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
