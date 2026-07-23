@@ -61,12 +61,12 @@ def clean_val(val):
         return None
     return val
 
-# ★【件数前日比ハック】既存の index.html から前日の集計データを自動解析中...
+# ★【件数前日比＆連続日数ハック】既存の index.html から前日のデータを自動解析
 prev_counts = {
     "short": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0},
     "mid": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0}
 }
-prev_results_by_ticker = {}  # ★ 新規追加：昨日のデータを銘柄コード単位で引くための空辞書
+prev_results_by_ticker = {}
 
 if os.path.exists(html_output_path):
     print("既存の index.html から前日の集計データを自動解析中...")
@@ -74,33 +74,41 @@ if os.path.exists(html_output_path):
         with open(html_output_path, "r", encoding="utf-8") as f:
             old_html = f.read()
         
-        # 既存の results = [ ... ] の配列部分を正規表現で検出してパース
-        match = re.search(r"results:\s*(\[.*?\]),", old_html, re.DOTALL)
-        if match:
-            prev_results_json = match.group(1)
-            prev_results = json.loads(prev_results_json)
+        # 確実に results: [...] のJSON配列部分を抽出する文字列探索ロジック
+        start_marker = "results:"
+        end_marker = "prevCounts:"
+        start_idx = old_html.find(start_marker)
+        end_idx = old_html.find(end_marker)
+        
+        if start_idx != -1 and end_idx != -1:
+            json_part = old_html[start_idx:end_idx]
+            b_start = json_part.find("[")
+            b_end = json_part.rfind("]")
             
-            # 各システムの昨日点灯数を集計
-            for item in prev_results:
-                for sys_key in ["short", "mid"]:
-                    cat = item.get(sys_key, {}).get("category", "NONE")
-                    if cat in prev_counts[sys_key]:
-                        prev_counts[sys_key][cat] += 1
+            if b_start != -1 and b_end != -1:
+                prev_results_json = json_part[b_start:b_end+1]
+                prev_results = json.loads(prev_results_json)
                 
-                # ★ 新規追加：昨日のデータを銘柄コードをキーにして保存
-                ticker_key = item.get("ticker")
-                if ticker_key:
-                    prev_results_by_ticker[ticker_key] = item
-                        
-            # アクティブな合計数を計算 (NONEを除外)
-            for sys_key in ["short", "mid"]:
-                prev_counts[sys_key]["TOTAL"] = len(prev_results) # 全銘柄数（当日結果に合わせる）
-                total_active = 0
-                for cat in ["BUY1", "BUY2", "BUY3", "BUY3_PRE", "BUY4"]:
-                    total_active += prev_counts[sys_key][cat]
-                prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
-            
-            print(" -> 前日データのパースに成功しました。")
+                # 各システムの昨日点灯数を集計＆銘柄ルックアップを作成
+                for item in prev_results:
+                    for sys_key in ["short", "mid"]:
+                        cat = item.get(sys_key, {}).get("category", "NONE")
+                        if cat in prev_counts[sys_key]:
+                            prev_counts[sys_key][cat] += 1
+                    
+                    ticker_key = item.get("ticker")
+                    if ticker_key:
+                        prev_results_by_ticker[ticker_key] = item
+                            
+                # アクティブな合計数を計算 (NONEを除外)
+                for sys_key in ["short", "mid"]:
+                    prev_counts[sys_key]["TOTAL"] = len(prev_results)
+                    total_active = 0
+                    for cat in ["BUY1", "BUY2", "BUY3", "BUY3_PRE", "BUY4"]:
+                        total_active += prev_counts[sys_key][cat]
+                    prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
+                
+                print(f" -> 前日データのパースに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
     except Exception as e:
         print(f" -> 前日データの読み込みに失敗（初回実行として無視します）: {e}")
 
@@ -734,10 +742,11 @@ html_template = """<!doctype html>
 <!-- テーブル -->
         <div class="mt-6 overflow-x-auto">
           <table class="w-full text-left">
-            <thead>
+           <thead>
               <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
                 <th class="p-3 w-20 whitespace-nowrap">判定</th>
-                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-24 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
+                <!-- 幅を w-24 から w-16 に縮小 -->
+                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-16 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
                   <div class="flex items-center justify-center gap-1.5">
                     <span>期待度</span>
                     <span id="sortScoreIcon" class="text-cyan-400 font-mono text-[11px] w-3 text-center">↕</span>
@@ -1268,11 +1277,11 @@ filtered.forEach(item => {
               </div>
             </td>
             
-            <!-- ★ 期待度セル：relative group を持たせることで、ホバー時のみカードが「上に浮き出て」表示されます -->
+           <!-- 期待度セル：数字表記 (${sysData.score}) に変更し、幅をスマートに保持 -->
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none cursor-help relative group">
-              <span class="hover:text-amber-300">${sysData.stars}</span>
+              <span class="hover:text-amber-300">${sysData.score}</span>
               
-              <!-- 浮遊ホバーカード (クリック不要・周囲を一切動かさず1秒で確認) -->
+              <!-- 浮遊ホバーカード (数字にマウスを乗せると内訳を表示) -->
               <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-slate-950/95 backdrop-blur border border-slate-800 text-left text-xs p-3 rounded-xl shadow-2xl z-30 select-none">
                 <p class="font-bold text-[10px] text-slate-400 border-b border-slate-800 pb-1 mb-1.5">🌟 期待度スコア評価内訳</p>
                 <ul class="space-y-0.5 text-[10px] font-normal leading-relaxed">
@@ -1371,9 +1380,9 @@ filtered.forEach(item => {
             </div>
           </div>
           
-          <!-- 期待度内訳 -->
+          <!-- 期待度内訳 (表示をスコア数字に変更) -->
           <div class="space-y-2 border-b border-slate-800 pb-3">
-            <span class="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">🌟 期待度スコア評価内訳 (星: ${sysData.stars})</span>
+            <span class="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">🌟 期待度スコア評価内訳 (スコア: ${sysData.score})</span>
             <ul class="space-y-0.5 text-slate-300 text-[11px] leading-relaxed pl-1">
               ${reasonsHtml}
             </ul>
