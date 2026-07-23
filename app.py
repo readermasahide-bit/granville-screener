@@ -74,41 +74,63 @@ if os.path.exists(html_output_path):
         with open(html_output_path, "r", encoding="utf-8") as f:
             old_html = f.read()
         
-        # 確実に results: [...] のJSON配列部分を抽出する文字列探索ロジック
-        start_marker = "results:"
-        end_marker = "prevCounts:"
-        start_idx = old_html.find(start_marker)
-        end_idx = old_html.find(end_marker)
-        
-        if start_idx != -1 and end_idx != -1:
-            json_part = old_html[start_idx:end_idx]
-            b_start = json_part.find("[")
-            b_end = json_part.rfind("]")
+        # results: [ ... ] の配列だけをカッコの深さを追って正確に抽出する安全な関数
+        def extract_results_json(text):
+            start_pos = text.find("results:")
+            if start_pos == -1: return None
+            b_start = text.find("[", start_pos)
+            if b_start == -1: return None
             
-            if b_start != -1 and b_end != -1:
-                prev_results_json = json_part[b_start:b_end+1]
-                prev_results = json.loads(prev_results_json)
-                
-                # 各システムの昨日点灯数を集計＆銘柄ルックアップを作成
-                for item in prev_results:
-                    for sys_key in ["short", "mid"]:
-                        cat = item.get(sys_key, {}).get("category", "NONE")
-                        if cat in prev_counts[sys_key]:
-                            prev_counts[sys_key][cat] += 1
-                    
-                    ticker_key = item.get("ticker")
-                    if ticker_key:
-                        prev_results_by_ticker[ticker_key] = item
-                            
-                # アクティブな合計数を計算 (NONEを除外)
+            depth = 0
+            in_string = False
+            escape = False
+            for i in range(b_start, len(text)):
+                char = text[i]
+                if escape:
+                    escape = False
+                    continue
+                if char == '\\':
+                    escape = True
+                    continue
+                if char == '"':
+                    in_string = not in_string
+                    continue
+                if not in_string:
+                    if char == '[':
+                        depth += 1
+                    elif char == ']':
+                        depth -= 1
+                        if depth == 0:
+                            return text[b_start:i+1]
+            return None
+
+        prev_results_json = extract_results_json(old_html)
+        
+        if prev_results_json:
+            prev_results = json.loads(prev_results_json)
+            
+            # 各システムの昨日点灯数を集計＆銘柄ルックアップを作成
+            for item in prev_results:
                 for sys_key in ["short", "mid"]:
-                    prev_counts[sys_key]["TOTAL"] = len(prev_results)
-                    total_active = 0
-                    for cat in ["BUY1", "BUY2", "BUY3", "BUY3_PRE", "BUY4"]:
-                        total_active += prev_counts[sys_key][cat]
-                    prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
+                    cat = item.get(sys_key, {}).get("category", "NONE")
+                    if cat in prev_counts[sys_key]:
+                        prev_counts[sys_key][cat] += 1
                 
-                print(f" -> 前日データのパースに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
+                ticker_key = item.get("ticker")
+                if ticker_key:
+                    prev_results_by_ticker[ticker_key] = item
+                        
+            # アクティブな合計数を計算 (NONEを除外)
+            for sys_key in ["short", "mid"]:
+                prev_counts[sys_key]["TOTAL"] = len(prev_results)
+                total_active = 0
+                for cat in ["BUY1", "BUY2", "BUY3", "BUY3_PRE", "BUY4"]:
+                    total_active += prev_counts[sys_key][cat]
+                prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
+            
+            print(f" -> 前日データのパースに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
+        else:
+            print(" -> 前日データ(results)の抽出パターンが見つかりませんでした。")
     except Exception as e:
         print(f" -> 前日データの読み込みに失敗（初回実行として無視します）: {e}")
 
