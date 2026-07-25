@@ -1,3 +1,177 @@
+ユーザーから提示された「ダマシ」事例を詳細に分析し、グランビル法則スクリーナーの判定ロジックを最適化しました。特に、移動平均線の「傾き」に関する判定をより厳密にし、各シグナルの本来の意図に合致するよう条件を強化しています。
+
+---
+
+### 1. 誤判定（ダマシ）の実例データ分析と改善提案
+
+#### 全体的な問題点
+
+提示された4つの事例はすべて中期（25日線/75日線）システムでの誤判定であり、主に「買い2」と「買い3」に関するものでした。共通する問題は以下の2点です。
+
+1.  **移動平均線の「傾き」の判定が甘い:**
+    *   `long_ma_slope_10d > 0` や `long_ma_slope_15d > 0` といった条件が、わずかなプラス傾きでも成立してしまうため、ユーザーが期待するような「安定した上昇トレンド」や「強力な右肩上がりトレンド」ではない状況でもシグナルが点灯していました。
+    *   特に「買い3（押し目反発）」は、明確な上昇トレンド中での一時的な調整からの反発を狙うものですが、トレンドが弱かったり、下降から転換したばかりの銘柄を拾ってしまう原因となっていました。
+
+2.  **「買い1」と「買い2」「買い3」の区別があいまい:**
+    *   ユーザーのフィードバックでは、「買い2」や「買い3」と判定された銘柄が、実際には「買い1（新規買い初動）」に近い状況だと指摘されています。これは、株価が長期線の下に長期間沈んでいた後の上抜けを適切に「買い1」として識別できておらず、他のシグナルに誤分類されたためと考えられます。
+
+これらの問題に対処するため、主に`evaluate_logic`関数内の判定条件を以下の通り修正・強化します。
+
+---
+
+#### ▼ 判定カテゴリ（買い1〜4）に関する誤判定・改善要望の個別分析
+
+### 📁 事例：4743.T (アイティフォー)
+- **発生日:** 2026-07-21 (中期(25/75))
+- **現在のプログラムの出力:** 買い2
+- **ユーザーのフィードバック:** 「2か月間下向きの75日線に伴って下落した株価が初めて75日線を上抜けたので少なくとも買い2ではなく買い1と判断できる。」
+
+**分析:**
+*   現在の「買い2」は `is_long_ma_rising` (`long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)`) と `is_temp_dip` (`1 <= below_count_10d <= 4`) が成立したと推測されます。
+*   ユーザーの指摘の通り、2ヶ月間下向きの75日線だったにもかかわらず「買い2」になったのは、`is_long_ma_rising` の条件が緩すぎたためです。本来「買い2」は**安定した上昇トレンド**中の押し目を意図します。
+*   「初めて75日線を上抜けた」という状況は「買い1」の新規買い初動に該当します。現在のロジックでは「長らく下にあった」ことを示す`is_new_crossover`（買い1の条件）と、「一時的に下抜け」を示す`is_temp_dip`（買い2の条件）が排他的に機能していなかったか、`is_new_crossover`の条件が厳しすぎた可能性があります。
+
+**改善提案:**
+1.  **「買い1」条件の強化:** 長期間（例: 20日間）長期線の下に株価が沈んでおり、かつその間の長期線が下降または横ばいだったものが、本日、長期線が上向きに転換しつつ、株価が長期線を明確に上抜けた場合に「買い1」とする条件を導入します。
+2.  **「買い2」条件の強化:** `is_long_ma_rising` をより厳密にし、「安定した上昇トレンド」を定義するために、より長い期間（例: 10日/20日）での長期線の傾きが明確にプラスであること、かつ「買い1」の長期間沈んでいた銘柄とは排他的に判定されるようにします。
+
+---
+
+### 📁 事例：155A.T (情報戦略テクノロジー)
+- **発生日:** 2026-07-23 (中期(25/75))
+- **現在のプログラムの出力:** 買い3
+- **ユーザーのフィードバック:** 「判定日の株価は75日線に上から触れているが、それ以前に75日線の上昇を伴って大きく株価が上昇するという前提を満たしておらず、買い3として不適。6月中に75日線を下から上に抜けていることから買い1か買い2とも考えられるが、75日線の上向きの角度がほぼないため買いタイミングですらないともいえる。」
+
+**分析:**
+*   「買い3」は`is_long_ma_rising_strong` (`long_ma_slope_15d > 0`) が主要な前提条件ですが、今回のデータでは「75日線の上向きの角度がほぼない」とあり、この条件がユーザーの意図する「強力な右肩上がり」には不十分であったことが原因です。
+*   `max_diff_15d >= 4.0` (過去15日で長期線から4%以上上放れた実績) は満たされたものの、肝心のトレンドの勢いが足りなかったようです。
+
+**改善提案:**
+1.  **「買い3」の長期線傾き強化:** `is_long_ma_rising_strong` の条件を大幅に厳しくし、15日だけでなく30日程度の期間でも長期線が明確な上昇トレンドであること（例: 一定のパーセンテージ以上の上昇率）を求めます。
+2.  **「買い3」の短期線位置関係追加:** 「短期線が長期線の上で継続的に推移していること」という、安定した上昇トレンドの必須条件をコードに反映します。
+
+---
+
+### 📁 事例：2130.T (メンバーズ)
+- **発生日:** 2026-07-23 (中期(25/75))
+- **現在のプログラムの出力:** 買い3
+- **ユーザーのフィードバック:** 「今回の判定に至る前にMAが大きく上を向いての上昇がなく、株価の上昇と下落しか経験できていないため、買い3としては×。75日線がマイナスからプラスに転換しそうなタイミングなので買い1ではないか。」
+
+**分析:**
+*   事例2と類似しており、「MAが大きく上を向いての上昇がない」というフィードバックは、やはり`is_long_ma_rising_strong`の条件の甘さが原因です。
+*   「75日線がマイナスからプラスに転換しそうなタイミング」という状況は、「買い1」の定義に合致する可能性を示唆しています。
+
+**改善提案:**
+*   事例2と同様に、「買い3」の長期線傾き条件と短期線位置関係条件を強化します。
+*   「買い1」のトレンド転換初動を捉える新条件によって、このような銘柄が適切に「買い1」として判定されるか、「NONE」となるかを明確化します。
+
+---
+
+### 📁 事例：3064.T (ＭｏｎｏｔａＲＯ)
+- **発生日:** 2026-07-24 (中期(25/75))
+- **現在のプログラムの出力:** 買い3
+- **ユーザーのフィードバック:** 「株価が長らく75日線の下をヨコヨコで移動してからのローソク全体がやっと75日線の上で停滞するようになったので買い1と判断できる。」
+
+**分析:**
+*   これも事例2、3と同様に「買い3」の誤判定です。「長らく75日線の下をヨコヨコで移動」という状況は、典型的な「買い1」の前提条件（長期間下で推移していたこと、長期線が横ばい〜下降から転換したこと）に合致します。
+*   現在の「買い3」の条件が、トレンドの初動と押し目トレンドの区別を明確にできていなかったことが原因です。
+
+**改善提案:**
+*   事例2、3と同様に「買い3」の長期線傾き条件を強化します。
+*   「買い1」のトレンド転換初動を捉える新条件によって、このような銘柄が「買い1」として適切に判定されるようにします。
+
+---
+
+#### ▼ 期待度スコア（★1〜5）に関する誤判定・改善要望
+（新規のデータなし） -> 今回はロジック変更なし。
+
+---
+
+### 2. 新たな数式条件とロジックの最適化提案
+
+上記の分析に基づき、`evaluate_logic`関数に対して以下の修正を提案します。
+
+#### 新規導入する判定変数
+
+各シグナルの本来の意図に合わせるため、移動平均線の「傾き」や「位置関係」をより定量的に評価する新しい変数を導入します。
+
+1.  **`long_ma_slope_N_days_pct` (長期線N日変化率):**
+    *   長期線がN日間でどれだけパーセンテージ変化したかを計算。これにより、株価水準に依存しない「傾きの強さ」を評価します。
+    *   例: `long_ma_slope_3d_pct`, `long_ma_slope_10d_pct`, `long_ma_slope_15d_pct`, `long_ma_slope_20d_pct`, `long_ma_slope_30d_pct`
+
+2.  **`short_ma_slope_3d_pct` (短期線3日変化率):**
+    *   短期線が直近3日間でどれだけパーセンテージ変化したかを計算。反発の勢いや押し目での下支えを評価します。
+
+3.  **`is_long_period_below_ma` (長期間長期線の下):**
+    *   過去20日間のうち12日以上、終値が長期線の下にあったかを示すフラグ。これは「買い1」の根拠となります。
+
+4.  **`was_long_ma_flat_or_down_recent` (長期線が直近で下降/横ばいだった):**
+    *   過去20日間の長期線の平均傾きがほぼ0以下（下降または横ばい）だったかを示すフラグ。これも「買い1」の根拠となります。
+
+5.  **`is_long_ma_turning_up_recently` (長期線が直近で上向きに転換した):**
+    *   直近5日間の長期線傾きが上向き（`long_ma_slope_3d_pct > 0.01`）。これも「買い1」の根拠となります。
+
+6.  **`is_long_ma_stable_rising` (長期線が安定した上昇トレンド):**
+    *   長期線が10日、20日の両方で一定のパーセンテージ以上の上昇率を示しているかを示すフラグ。これは「買い2」の根拠となります。
+
+7.  **`is_long_ma_very_strong_rising` (長期線が非常に強力な上昇トレンド):**
+    *   長期線が15日、30日の両方でさらに高い一定のパーセンテージ以上の上昇率を示しているかを示すフラグ。これは「買い3」の根拠となります。
+
+8.  **`is_short_ma_mostly_above_long_ma` (短期線がほぼ長期線の上):**
+    *   過去15日間のうち10日以上、短期線が長期線の上にあったかを示すフラグ。これは「買い3」の根拠となります。
+
+#### 各判定カテゴリの条件修正
+
+*   **買い4：逆張り下方乖離 (BUY4)**
+    *   **変更なし。** 乖離率の閾値と当日反発の条件を維持します。
+
+*   **買い1：新規買い (BUY1)**
+    *   **修正目的:** 長期線の下に長期間沈んでいた銘柄が、長期線の下降・横ばいトレンドから上向きへ転換する初動で長期線を上抜けるケースを確実に捉えます。
+    *   **新たな条件:**
+        *   `crossed_above_ma`: 株価または短期線が長期線を上抜けた。
+        *   `is_long_period_below_ma`: 長らく長期線の下に沈んでいた（過去20日中12日以上）。
+        *   `was_long_ma_flat_or_down_recent`: その期間の長期線が下降または横ばいだった。
+        *   `is_long_ma_turning_up_recently`: 直近で長期線が上向きに転換した。
+        *   `diff_rate <= 5.0`: 長期線から大きく上方に乖離していない。
+    *   **効果:** ユーザー事例4743.T, 3064.T のような、下降トレンドからの転換初動を適切に「買い1」として判断できるようになります。
+
+*   **買い2：再突き抜け (BUY2)**
+    *   **修正目的:** 安定した上昇トレンド中の一時的な調整（短期的な長期線の下抜け）からの復帰を明確に区別します。
+    *   **新たな条件:**
+        *   `is_long_ma_stable_rising`: 長期線が安定した上昇トレンド（例: `long_ma_slope_10d_pct > 0.03%` かつ `long_ma_slope_20d_pct > 0.05%`）。
+        *   `is_temp_dip`: 短期的に（過去10日中に1〜4日だけ）終値が長期線の下にあった。
+        *   `recovered_above`: 本日、終値が長期線を上抜けた。
+        *   `0.0 <= diff_rate <= 5.0`: 長期線から大きく上方に乖離していない。
+        *   `not is_long_period_below_ma`: 「買い1」の条件とは排他的にする。
+    *   **効果:** ユーザー事例4743.Tが、より厳密なトレンド判定により「買い2」から外れ、「買い1」または「NONE」に再分類されることを期待します。
+
+*   **買い3：押し目反発 / 押し目待ち伏せ (BUY3 / BUY3_PRE)**
+    *   **修正目的:** 非常に強力な上昇トレンド中での教科書通りの押し目反発のみを検出します。
+    *   **新たな条件:**
+        *   `is_long_ma_very_strong_rising`: 長期線が非常に強力な右肩上がりトレンド（例: `long_ma_slope_15d_pct > 0.08%` かつ `long_ma_slope_30d_pct > 0.1%`）。
+        *   `is_short_ma_mostly_above_long_ma`: 短期線が長期線の上で継続的に推移している（過去15日中10日以上）。
+        *   `has_pulled_back`: 過去に長期線から大きく上放れた実績がある。
+        *   `is_close_to_ma`: `0.0 < diff_rate <= 3.5` で反発。
+        *   `is_rebound`: 本日陽線かつ前日比プラス（BUY3の場合）。
+        *   `is_resting_on_ma`: `-0.5 <= diff_rate <= 1.5` で待ち伏せ（BUY3_PREの場合）。
+        *   `is_short_ma_rising`: 短期線も上向きで反発準備（BUY3_PREの場合）。
+    *   **効果:** ユーザー事例155A.T, 2130.T, 3064.T のような、トレンドが弱い銘柄を「買い3」として誤判定するのを防ぎます。
+
+#### 期待度スコアの微調整
+
+各カテゴリの特性に合わせて、既存の加減点ロジックを一部調整します。
+*   **BUY1:** トレンド転換初動の性質上、`is_slope_strong_relative` ではなく「陽線の実体の強さ」をより重視する。
+*   **BUY2:** 安定トレンド中での復帰なので、`is_slope_strong_relative` と「陽線の実体の強さ」を評価。
+*   **BUY3/BUY3_PRE:** 「支持線極近」と「陽線の実体の強さ」を評価。
+*   **BUY4:** 「大陽線反発」と「陽線の実体の強さ」を評価。
+
+---
+
+### 3. 完成版のコード
+
+以下に、上記の改善策を全て反映した「app.py」の完全版コードを提示します。
+
+```python
 import io
 import os
 import json
@@ -232,17 +406,36 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         
     df_temp['short_ma'] = df_temp['Close'].rolling(window=short_window).mean()
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
-    df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
     
-    min_len = 45 if long_window <= 25 else 130
-    if len(df_temp) < min_len:
+    # ロジックに必要な日数が確保されているか確認 (最長30日間の過去データ参照 + 長期線日数)
+    min_required_data_for_logic = max(long_window + 1, 31 + 1) # long_window + 1 (MA計算), 30 + 1 (slope_30d)
+    
+    # 初回データ不足チェック (MA計算前)
+    if len(df_temp) < min_required_data_for_logic:
         return {
             "category": "NONE", "categoryName": "データ不足",
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
-            "diffRate": 0.0, "reason": "データが不足しています。",
+            "diffRate": 0.0, "reason": "分析に必要な生データ期間が不足しています。",
             "ma_short": 0.0, "ma_long": 0.0, "score": 1,
-            "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False
+            "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False,
+            "score_reasons": []
         }
+
+    df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']) # NaN除去は移動平均線計算後
+    
+    # NaN除去後のデータ不足チェック
+    if len(df_temp) < min_required_data_for_logic:
+         return {
+            "category": "NONE", "categoryName": "データ不足",
+            "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+            "diffRate": 0.0, "reason": "移動平均線計算後、分析に必要なデータ期間が不足しています。",
+            "ma_short": 0.0, "ma_long": 0.0, "score": 1,
+            "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False,
+            "score_reasons": []
+        }
+    
+    # インデックスをリセットしてilocアクセスを安全に (末尾から-1, -2, ... のアクセスを保証)
+    df_temp = df_temp.reset_index(drop=True)
         
     today = df_temp.iloc[-1]
     yesterday = df_temp.iloc[-2]
@@ -260,15 +453,25 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
     
-    long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
-    long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
-    long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma']
+    # ------------------------------------------
+    # ★ 新規追加/修正：移動平均線の傾きと位置関係に関する詳細な判定変数
+    # ------------------------------------------
+    # 長期線の傾き (パーセンテージ変化率)
+    # df_temp.iloc[-N-1]はN日前のデータにアクセスするためのもの (iloc[-1]が本日、iloc[-2]が昨日)
+    long_ma_slope_3d_pct = ((long_ma_today - df_temp.iloc[-4]['long_ma']) / df_temp.iloc[-4]['long_ma']) * 100 if df_temp.iloc[-4]['long_ma'] != 0 else 0
+    long_ma_slope_10d_pct = ((long_ma_today - df_temp.iloc[-11]['long_ma']) / df_temp.iloc[-11]['long_ma']) * 100 if df_temp.iloc[-11]['long_ma'] != 0 else 0
+    long_ma_slope_15d_pct = ((long_ma_today - df_temp.iloc[-16]['long_ma']) / df_temp.iloc[-16]['long_ma']) * 100 if df_temp.iloc[-16]['long_ma'] != 0 else 0
+    long_ma_slope_20d_pct = ((long_ma_today - df_temp.iloc[-21]['long_ma']) / df_temp.iloc[-21]['long_ma']) * 100 if df_temp.iloc[-21]['long_ma'] != 0 else 0
+    long_ma_slope_30d_pct = ((long_ma_today - df_temp.iloc[-31]['long_ma']) / df_temp.iloc[-31]['long_ma']) * 100 if df_temp.iloc[-31]['long_ma'] != 0 else 0
+
+    # 短期線の傾き (パーセンテージ変化率)
+    short_ma_slope_3d_pct = ((short_ma_today - df_temp.iloc[-4]['short_ma']) / df_temp.iloc[-4]['short_ma']) * 100 if df_temp.iloc[-4]['short_ma'] != 0 else 0
     
     is_yang_candle = price_today > open_today
     is_price_up = price_today > price_yesterday
     
     # ------------------------------------------
-    # ★ RSI シグナル検出セクション
+    # ★ RSI シグナル検出セクション (変更なし)
     # ------------------------------------------
     rsi_series = df_temp['rsi']
     price_low_series = df_temp['Low']
@@ -367,7 +570,11 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
-    # 買い4
+    # ------------------------------------------
+    # ★ 改善された判定ロジック (ダマシ回避と人間的判断の再現)
+    # ------------------------------------------
+
+    # 買い4 (変更なし)
     if diff_rate <= oversold_threshold:
         if is_yang_candle or is_price_up:
             category = "BUY4"
@@ -375,58 +582,96 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
             reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
-    # 買い1
-    crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
-                    (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
-    is_flat_or_rising = long_ma_slope_3d >= -0.01
-    below_count_20d = (df_temp.iloc[-21:-1]['Close'] < df_temp.iloc[-21:-1]['long_ma']).sum()
-    is_new_crossover = below_count_20d >= 12
+    # 買い1 (新規買い初動)
+    # 長らく長期線の下に沈み、長期線も下降/横ばいだったものが、トレンド転換しつつ上抜ける初動
     
-    if category == "NONE" and crossed_above and is_flat_or_rising and is_new_crossover and (diff_rate <= 5.0):
+    # 条件1: 株価または短期線が長期線を上抜けた
+    crossed_above_ma = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
+                       (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
+
+    # 条件2: 長らく長期線の下に沈んでいた (過去20日中12日以上、終値が長期線の下)
+    below_count_20d = (df_temp.iloc[-21:-1]['Close'] < df_temp.iloc[-21:-1]['long_ma']).sum()
+    is_long_period_below_ma = below_count_20d >= 12
+
+    # 条件3: 長期線が過去に下降または横ばいだった (過去20日の平均傾きがほぼ0以下)
+    long_ma_history_slice_20d = df_temp.iloc[-21:-1]['long_ma']
+    was_long_ma_flat_or_down_recent = long_ma_history_slice_20d.diff().mean() <= 0.01 if len(long_ma_history_slice_20d) > 1 else True # ほぼ横ばいか下降
+    
+    # 条件4: 直近で長期線が上向きに転換した (3日間の長期線変化率がプラス)
+    is_long_ma_turning_up_recently = long_ma_slope_3d_pct > 0.01
+
+    if category == "NONE" and crossed_above_ma and is_long_period_below_ma \
+       and was_long_ma_flat_or_down_recent and is_long_ma_turning_up_recently \
+       and (diff_rate <= 5.0): # 乖離率の制限は維持
         category = "BUY1"
         category_name = "買い1：新規買い"
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-        reason = f"価格が横這い〜上昇トレンドの長期線({long_window}日線)を本日明確に上抜けました。"
+        reason = f"株価が長らく長期線の下で推移後、長期線が下落/横ばいから上向きに転換し、本日明確に上抜けました。"
 
-    # 買い2
-    is_long_ma_rising = long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)
-    below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
-    is_temp_dip = 1 <= below_count_10d <= 4
-    recovered_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
+    # 買い2 (再突き抜け) - 安定した上昇トレンド中の一時的な押し目からの復帰
+    # 「買い1」とは異なり、既に上昇トレンドが確立されている銘柄が対象
     
-    if category == "NONE" and is_long_ma_rising and is_temp_dip and recovered_above and (0.0 <= diff_rate <= 5.0):
+    # 条件1: 長期線が安定した上昇トレンド (10日と20日の傾きが両方とも正で、かつ一定の閾値以上)
+    is_long_ma_stable_rising = (long_ma_slope_10d_pct > 0.03) and \
+                               (long_ma_slope_20d_pct > 0.05) # 例: 10日で0.03%, 20日で0.05%上昇
+
+    # 条件2: 短期的に長期線を下抜けた後、本日復帰 (過去10日中に1-4日のみ下抜け)
+    below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
+    is_temp_dip = 1 <= below_count_10d <= 4 # 既存ロジックを再利用
+    recovered_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today) # 既存ロジックを再利用
+
+    # 条件3: 「買い1」の条件とは排他的 (長期間下抜けしていた銘柄は「買い1」で処理されるべき)
+    if category == "NONE" and is_long_ma_stable_rising and is_temp_dip and recovered_above \
+       and (0.0 <= diff_rate <= 5.0) and not is_long_period_below_ma: # BUY1の条件と排他
         category = "BUY2"
         category_name = "買い2：再突き抜け"
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-        reason = f"良好な上昇トレンド中、長期線を一時的に下抜け後、本日素早く上方に復帰しました。"
+        reason = f"安定した上昇トレンド中、長期線を一時的に下抜け後、本日素早く上方に復帰しました。"
 
-    # 買い3（通常：陽線＋プラス反発）
-    is_long_ma_rising_strong = long_ma_slope_15d > 0
-    max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
-    has_pulled_back = max_diff_15d >= 4.0
+    # 買い3（通常：陽線＋プラス反発）& 買い3-Pre（下落日待ち伏せ用：支持線接触）
+    # 非常に強力な上昇トレンド中での教科書通りの押し目反発のみを検出
+    
+    # 条件1: 長期線が非常に強力な右肩上がりトレンド (15日と30日の傾きが両方とも正で、かつより高い閾値以上)
+    is_long_ma_very_strong_rising = (long_ma_slope_15d_pct > 0.08) and \
+                                    (long_ma_slope_30d_pct > 0.1) # 例: 15日で0.08%, 30日で0.1%上昇
+
+    # 条件2: 短期線が長期線の上で継続的に推移している (過去15日中10日以上で短期線が長期線の上)
+    short_ma_above_long_ma_count_15d = (df_temp.iloc[-16:-1]['short_ma'] > df_temp.iloc[-16:-1]['long_ma']).sum()
+    is_short_ma_mostly_above_long_ma = short_ma_above_long_ma_count_15d >= 10
+
+    # 条件3: 過去に長期線から大きく上放れた実績がある (押し目の前提)
+    max_diff_15d_close_ma = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
+    has_pulled_back = max_diff_15d_close_ma >= 4.0
+
+    # BUY3 (通常：陽線＋プラス反発)
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
+    if category == "NONE" and is_long_ma_very_strong_rising and is_short_ma_mostly_above_long_ma \
+       and has_pulled_back and is_close_to_ma and is_rebound:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
+        reason = f"強力な上昇トレンドの長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
 
-    # 買い3-Pre（下落日待ち伏せ用：支持線接触）
+    # BUY3-Pre（下落日待ち伏せ用：支持線接触）
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_resting_on_ma:
+    # 短期線の上昇傾向も考慮 (短期線が下向きだと押し目買いにはリスクがあるため)
+    is_short_ma_rising_for_pre = short_ma_slope_3d_pct > 0.01
+
+    if category == "NONE" and is_long_ma_very_strong_rising and is_short_ma_mostly_above_long_ma \
+       and has_pulled_back and is_resting_on_ma and is_short_ma_rising_for_pre:
         category = "BUY3_PRE"
         category_name = "買い3：押し目待ち伏せ"
         badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
-        reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
+        reason = f"強力な長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
 
 # 期待度スコア (RSI・クオンツ対応・内訳記録版)
     score = 3
     score_reasons = [] # ★ 新規追加：加減点の具体的な理由を記録するリスト
     
     if category != "NONE":
-        # 1. 新しい4大RSIシグナルのスコアリング
+        # 1. 新しい4大RSIシグナルのスコアリング (変更なし)
         if is_rsi_sell_warning:
             score -= 1  # ① 過熱警戒 (-1)
             score_reasons.append("⚠️ RSI過熱警戒: -1")
@@ -440,41 +685,56 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             score += 1  # ④ 強気のダイバージェンス (+1)
             score_reasons.append("🛡️ 強気ダイバージェンス: +1")
 
-        # 2. 既存のテクニカル加減点ロジック
+        # 2. 既存のテクニカル加減点ロジック (一部調整)
         if vol_ratio >= 1.5:
             score += 1
             score_reasons.append("📊 出来高急増: +1")
+        
+        # 上髭超過の減点 (BUY4, BUY3_PRE以外に適用)
         if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0:
             score -= 1
             score_reasons.append("🕯️ 上髭超過: -1")
             
         if category == "BUY1":
-            if is_slope_strong_relative:
+            # BUY1はトレンド転換初動のため、反発実体の強さを評価
+            if candle_body_pct >= 1.0: # 陽線実体がしっかりある
                 score += 1
-                score_reasons.append("📈 長期線トレンド加速: +1")
-            if candle_body_pct < 0.5:
-                score -= 1
-                score_reasons.append("🕯️ 反発実体極小: -1")
-        elif category == "BUY2":
-            if is_slope_strong_relative:
-                score += 1
-                score_reasons.append("📈 長期線トレンド加速: +1")
-        elif category in ["BUY3", "BUY3_PRE"]:
-            if diff_rate <= 1.5:
-                score += 1
-                score_reasons.append("📏 支持線極近: +1")
-            if candle_body_pct < 1.0:
-                score -= 1
-                score_reasons.append("🕯️ 反発実体小: -1")
-        elif category == "BUY4":
-            if candle_body_pct >= 3.0:
-                score += 1
-                score_reasons.append("📈 大陽線反発: +1")
-            if candle_body_pct < 0.5:
+                score_reasons.append("📈 反発実体堅調: +1")
+            elif candle_body_pct < 0.5 and is_yang_candle: # 陽線だが実体が極小の場合
                 score -= 1
                 score_reasons.append("🕯️ 反発実体極小: -1")
             
-    score = max(1, min(5, score))
+        elif category == "BUY2":
+            # 安定トレンド中の一時的下抜けからの復帰なので、トレンド加速と反発実体の強さを評価
+            if is_slope_strong_relative: 
+                score += 1
+                score_reasons.append("📈 長期線トレンド加速: +1")
+            if candle_body_pct >= 1.0: # 陽線実体がしっかりある
+                score += 1
+                score_reasons.append("📈 反発実体堅調: +1")
+            
+        elif category in ["BUY3", "BUY3_PRE"]:
+            # 押し目なので、支持線への近さと反発実体の強さを評価
+            if diff_rate <= 1.5: # 支持線に極めて近い場所での反発/待ち伏せ
+                score += 1
+                score_reasons.append("📏 支持線極近: +1")
+            if category == "BUY3" and candle_body_pct >= 1.0: # BUY3は陽線反発が前提
+                score += 1
+                score_reasons.append("📈 反発実体堅調: +1")
+            elif category == "BUY3" and candle_body_pct < 0.5 and is_yang_candle:
+                score -= 1
+                score_reasons.append("🕯️ 反発実体極小: -1")
+            
+        elif category == "BUY4":
+            # 逆張りリバなので、強い反発（大陽線）を評価
+            if candle_body_pct >= 3.0: # 大陽線での強い反発
+                score += 1
+                score_reasons.append("📈 大陽線反発: +1")
+            elif candle_body_pct < 0.5 and is_yang_candle: # 陽線だが実体が極小の場合
+                score -= 1
+                score_reasons.append("🕯️ 反発実体極小: -1")
+            
+    score = max(1, min(5, score)) # スコアは1〜5にクランプ
     stars_str = "★" * score + "☆" * (5 - score)
 
     return {
@@ -492,7 +752,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "rsi_buy_reversal": is_rsi_buy_reversal,
         "rsi_double_bottom": is_rsi_double_bottom,
         "rsi_divergence": is_rsi_divergence,
-        # ★ 追加項目：スコアの内訳データをフロントに渡す
         "score_reasons": score_reasons
     }
 
@@ -607,10 +866,12 @@ print("各銘柄の判定ロジックを実行しています...")
 
 # 短期・中期いずれのシステムでも確実にNONE（データ不足）になる若い銘柄を
 # スキャンの初期段階で事前にスキップするための数学的最低日数（候補①：69日）
-MIN_REQUIRED_DAYS = 69
+# evaluate_logic内で min_required_data を計算するようにしたので、ここでは一旦緩和
+# ただし、yfinanceのダウンロードでデータが短い場合は処理しないため、最低限の期間は確保
+MIN_REQUIRED_DAYS_FOR_DOWNLOAD = 69 
 
 for ticker, df_stock in bulk_data.items():
-    if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
+    if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS_FOR_DOWNLOAD: 
         continue
         
     today = df_stock.iloc[-1]
@@ -693,12 +954,12 @@ all_rates = [item["changeRate"] for item in results_list if item["changeRate"] i
 market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
 print(f" -> 本日の東証全上場銘柄の騰落率中央値: {market_median_change:.2f}%")
 
-# ★【Phase 1】東証33業種 HOTセクターの自動算出を実行 (★ここに追記)
+# ★【Phase 1】東証33業種 HOTセクターの自動算出を実行
 hot_sectors, all_sector_stats = calculate_hot_sectors(bulk_data, results_list, ticker_to_sector)
 hot_sector_names = [s["sector"] for s in hot_sectors]
 print(f" -> 本日のHOT業種 ({len(hot_sectors)}件検知): {', '.join(hot_sector_names) if hot_sectors else 'なし'}")
 
-# ★【Phase 2】HOT業種に属する銘柄への期待度+1加点 ＆ 内訳理由の記録 (★ここに追記)
+# ★【Phase 2】HOT業種に属する銘柄への期待度+1加点 ＆ 内訳理由の記録
 for item in results_list:
     sector = item["sector"]
     is_hot = sector in hot_sector_names
@@ -712,11 +973,13 @@ for item in results_list:
                 new_score = min(5, sys_data["score"] + 1)
                 sys_data["score"] = new_score
                 
-                if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
+                # score_reasonsがNoneの場合は空リストで初期化
+                if sys_data["score_reasons"] is None:
                     sys_data["score_reasons"] = []
                 sys_data["score_reasons"].append(f"🔥 追い風業種 ({sector}): +1")
+                sys_data["stars"] = "★" * new_score + "☆" * (5 - new_score) # 星も更新
 
-# 地合い強気銘柄の判定および加点 (変更なし)
+# 地合い強気銘柄の判定および加点 (スコア理由と星の更新を追加)
 for item in results_list:
     is_strong_relative = False
     if market_median_change <= -1.0: # 市場が大きく下げている場合
@@ -729,16 +992,18 @@ for item in results_list:
             if item[sys_key]["category"] != "NONE":
                 new_score = min(5, item[sys_key]["score"] + 1)
                 item[sys_key]["score"] = new_score
-                item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score)
+                # score_reasonsがNoneの場合は空リストで初期化
+                if item[sys_key]["score_reasons"] is None:
+                    item[sys_key]["score_reasons"] = []
+                item[sys_key]["score_reasons"].append("🛡️ 地合い強気: +1")
+                item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score) # 星も更新
 
 json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
-hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)  # ★追記
+hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 
-# 昨日総計の集計をJSに渡す（NONEを除外した昨日各カテゴリ総計） (変更なし)
-# prev_counts["short"]["TOTAL_ACTIVE"] と prev_counts["mid"]["TOTAL_ACTIVE"] は
-# スクリプト冒頭の前日データパース処理で計算されるようになった
+# 昨日総計の集計をJSに渡す（NONEを除外した昨日各カテゴリ総計）
 prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
 
 # HTMLテンプレート (UI変更なし)
@@ -813,7 +1078,7 @@ html_template = """<!doctype html>
     <!-- メイン -->
     <main class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
 
-    <!-- ★ Phase 3: HOT業種ランキングバナー枠 (ここに追記) -->
+    <!-- ★ Phase 3: HOT業種ランキングバナー枠 -->
       <div id="hotSectorsBanner" class="hidden bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
         <!-- JavaScriptによってここにHOT業種バッジが挿入されます -->
       </div>
@@ -1003,28 +1268,25 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近10日で横誰い〜上向き(JST <span class="font-mono">&gt;=0.0%</span>)<br>
-                  ・底確認: 過去20日のうち<span class="font-mono">15日以上</span>は線の下に沈んでいたこと<br>
-                  ・本日、線の上抜け、かつ直近で線の下にいた実績あり<br>
+                  ・株価が長期線(<span class="exp-long"></span>)の下に<span class="font-mono">長期間沈み</span>、長期線自体も<span class="font-bold text-rose-300">下降/横ばい</span>だったが、<span class="font-bold text-emerald-300">本日上向きに転換しつつ</span>株価が上抜け。<br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い2：一時下抜け復帰</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)が安定した右肩上がり<br>
+                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">安定した上昇トレンド</span>中、株価が一時的に下抜け後、本日素早く復帰。<br>
                   ・一時性: 過去10日で長期線の下に沈んだのが「1〜4日のみ」<br>
-                  ・本日、再度長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+4.0%</span> 以内 (変更)
+                  ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">0.0%〜+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発（待ち伏せ含む）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">強力な右肩上がりトレンド</span>中<br>
-                  ・短期線が長期線の上で継続的に推移していること<br>
-                  ・過去に短期線が長期線から<span class="font-mono">+2.0%以上</span>上放れた実績あり<br>
+                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">非常に強力な右肩上がりトレンド</span>中、短期線も長期線の上で推移。<br>
+                  ・過去に株価が長期線から大きく上放れた実績あり。<br>
                   ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日反発。<br>
-                  ・<strong>【下落日待ち伏せPre-Buy3】</strong>: 長期線の極近(JST -0.5%〜+1.5%)にあり、短期線も上昇傾向なら特別点灯。
+                  ・<strong>【下落日待ち伏せPre-Buy3】</strong>: 長期線の極近(JST -0.5%〜+1.5%)にあり、短期線も上向きなら特別点灯。
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
@@ -1059,7 +1321,7 @@ html_template = """<!doctype html>
     <script>
       const state = {
         results: __PLACEHOLDER_RESULTS__,
-        hotSectors: __PLACEHOLDER_HOT_SECTORS__, // ★ここに追記
+        hotSectors: __PLACEHOLDER_HOT_SECTORS__, 
         prevCounts: __PLACEHOLDER_PREV_COUNTS__,
         marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
@@ -1394,7 +1656,7 @@ filtered.forEach(item => {
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
             : ``;
 
-          // ★ Phase 4: HOT業種バッジの作成
+          // HOT業種バッジの作成
           const hotSectorBadge = item.isHotSector 
             ? `<span class="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold select-none cursor-help" title="本日、大口資金が集中しているHOT業種（資金流入セクター）に属している銘柄です。">🔥 HOT業種</span>` 
             : ``;
@@ -1445,191 +1707,3 @@ filtered.forEach(item => {
               <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-slate-950/95 backdrop-blur border border-slate-800 text-left text-xs p-3 rounded-xl shadow-2xl z-30 select-none">
                 <p class="font-bold text-[10px] text-slate-400 border-b border-slate-800 pb-1 mb-1.5">🌟 期待度スコア評価内訳</p>
                 <ul class="space-y-0.5 text-[10px] font-normal leading-relaxed">
-                  ${reasonsListHtml}
-                </ul>
-              </div>
-            </td>
-            
-            <td class="p-3 font-mono font-bold text-white">
-              <div class="flex items-center gap-1.5">
-                <span>${item.ticker}</span>
-                <a href="https://kabutan.jp/stock/?code=${item.ticker}" target="_blank" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-cyan-600 text-[10px]">探</a>
-                <a href="https://finance.yahoo.co.jp/quote/${item.ticker}.T" target="_blank" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-rose-600 text-[10px]">Y!</a>
-                <a href="https://jp.tradingview.com/chart/?symbol=TSE%3A${item.ticker}" target="_blank" class="px-1 py-0.5 rounded bg-slate-800 hover:bg-indigo-600 text-[10px]" title="TradingView">C</a>
-              </div>
-            </td>
-            <td class="p-3">
-              <div class="font-bold text-slate-100 text-sm flex items-center flex-wrap gap-1">
-                <span>${item.name}</span>
-                <button onclick="openDiagnosticDialog('${item.ticker}', '${sys}')" class="text-xs hover:text-cyan-400 ml-1.5 cursor-pointer select-none focus:outline-none" title="詳細診断カルテを表示">📋</button>
-                ${volumeWarning}
-                ${rsBadge}
-              </div>
-              <!-- 業種表示部分：HOT業種バッジ（🔥 HOT業種）を並べて表示 -->
-              <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                <span>${item.sector}</span>
-                ${hotSectorBadge}
-              </div>
-            </td>
-            <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
-            <td class="p-3 text-right font-mono ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${item.change.toLocaleString()} (${isPlus ? '+' : ''}${item.changeRate}%)</td>
-            <td class="p-3 text-right font-mono text-slate-300">
-              <div>${sys==='short'?'5日':'25日'}: ${sysData.ma_short.toLocaleString()}</div>
-              <div class="text-[10px] text-slate-400">${sys==='short'?'25日':'75日'}: ${sysData.ma_long.toLocaleString()}</div>
-            </td>
-            <td class="p-3 text-right font-mono">
-              <div class="flex flex-col items-end">
-                <span class="${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'} font-bold">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</span>
-                <span class="text-[10px] text-slate-400">RSI: ${sysData.rsi}%</span>
-                ${rsiBadge}
-              </div>
-            </td>
-            <td class="p-3 text-center"><span class="${marketBadgeClass} px-2 py-0.5 rounded text-[10px] font-bold">${item.market}</span></td>
-            
-            <td class="p-3 text-center space-x-1 whitespace-nowrap">
-              <button onclick="openScoreFeedback('${item.ticker}', '${item.name}', '${sysData.score}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="期待度スコアの妥当性に対して報告">
-                ⭐ 期待度
-              </button>
-              <button onclick="openCatFeedback('${item.ticker}', '${item.name}', '${categoryShortName}')" class="px-2 py-1 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="シグナルの判定カテゴリに対して報告">
-                ✍️ 判定
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });        
-      }
-
-      // ★ 新規追加：詳細診断カルテ（HTML5 dialog）の開閉ロジック
-      function openDiagnosticDialog(ticker, sys) {
-        const item = state.results.find(r => r.ticker === ticker);
-        if (!item) return;
-        const sysData = item[sys];
-        
-        const dialog = document.getElementById('diagnosticDialog');
-        const title = document.getElementById('dialogTitle');
-        const content = document.getElementById('dialogContent');
-        
-        title.innerHTML = `📋 診断カルテ: <span class="font-mono text-cyan-400 font-bold ml-1.5">[${item.ticker}] ${item.name}</span>`;
-        
-        // スコア内訳リストの生成
-        let reasonsHtml = '';
-        if (sysData.score_reasons && sysData.score_reasons.length > 0) {
-          reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5"><span>•</span><span>${r}</span></li>`).join('');
-        } else {
-          reasonsHtml = '<li class="text-slate-500 py-0.5">※加減点なし (基本点 3)</li>';
-        }
-
-        content.innerHTML = `
-          <!-- 基礎情報 -->
-          <div class="grid grid-cols-2 gap-4 border-b border-slate-800 pb-3">
-            <div>
-              <span class="text-slate-400 text-[10px] uppercase block">本日終値</span>
-              <strong class="text-white text-base font-mono">${item.price.toLocaleString()} 円</strong>
-            </div>
-            <div>
-              <span class="text-slate-400 text-[10px] uppercase block">長期線乖離率</span>
-              <strong class="${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'} text-base font-mono">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</strong>
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-4 border-b border-slate-800 pb-3">
-            <div>
-              <span class="text-slate-400 text-[10px] uppercase block">判定カテゴリ</span>
-              <span class="px-2 py-0.5 rounded font-bold text-[10px] inline-block mt-1 ${sysData.badgeClass}">${sysData.categoryName}</span>
-            </div>
-            <div>
-              <span class="text-slate-400 text-[10px] uppercase block">RSI (14日)</span>
-              <strong class="text-white text-base font-mono">${sysData.rsi}%</strong>
-            </div>
-          </div>
-          
-          <!-- 期待度内訳 (表示をスコア数字に変更) -->
-          <div class="space-y-2 border-b border-slate-800 pb-3">
-            <span class="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">🌟 期待度スコア評価内訳 (スコア: ${sysData.score})</span>
-            <ul class="space-y-0.5 text-slate-300 text-[11px] leading-relaxed pl-1">
-              ${reasonsHtml}
-            </ul>
-          </div>
-          
-          <!-- 詳細解説 -->
-          <div class="p-3 bg-slate-950 border border-slate-800/80 rounded-xl">
-            <span class="text-[10px] text-slate-400 block mb-1">💡 判定詳細 / 推奨戦略</span>
-            <p class="text-slate-300 text-[11px] leading-relaxed">${sysData.reason}</p>
-          </div>
-          
-          <!-- フッター（将来の拡張のために情報を整理して配置） -->
-          <div class="text-[10px] text-slate-500 pt-1 text-right">
-            システム: ${(sys === 'short') ? '短期(5/25)' : '中期(25/75)'} | 市場: ${item.market} | 業種: ${item.sector}
-          </div>
-        `;
-        
-        dialog.showModal(); // HTML5標準機能で最前面にポップアップ表示 [2.1.2, 2.1.7]
-      }
-
-      function closeDiagnosticDialog() {
-        const dialog = document.getElementById('diagnosticDialog');
-        dialog.close(); // ダイアログを安全に閉じます
-      }
-      
-      // ★ Phase 3: HOT業種ランキングバナーの描画関数
-      function renderHotSectorsBanner() {
-        const container = document.getElementById('hotSectorsBanner');
-        if (!container) return;
-        
-        const sectors = state.hotSectors || [];
-        container.classList.remove('hidden');
-
-        if (sectors.length === 0) {
-          container.innerHTML = `
-            <div class="flex items-center gap-2 text-slate-400 font-medium text-xs">
-              <span class="text-amber-400 font-bold">🔥 本日のHOT業種:</span>
-              <span>該当なし（売買資金が分散中、または市場全体が警戒相場です）</span>
-            </div>
-          `;
-          return;
-        }
-
-        const badgesHtml = sectors.map((s, idx) => {
-          const rank = idx + 1;
-          const isPlus = s.changeRate >= 0;
-          const sign = isPlus ? '+' : '';
-          return `
-            <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950/80 border border-amber-500/30 rounded-xl font-mono text-xs">
-              <span class="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">#${rank}</span>
-              <span class="font-bold text-slate-200 font-sans">${s.sector}</span>
-              <span class="${isPlus ? 'text-emerald-400' : 'text-rose-400'} font-bold">${sign}${s.changeRate}%</span>
-            </div>
-          `;
-        }).join('');
-
-        container.innerHTML = `
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-amber-400 text-xs flex items-center gap-1 shrink-0">
-              <span>🔥</span> 本日のHOT業種 (資金集中セクター):
-            </span>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            ${badgesHtml}
-          </div>
-        `;
-      }          
-    </script>
-  </body>
-</html>"""
-# ==========================================
-
-# 実際の置換処理
-html_content = html_template
-html_content = html_content.replace("__LAST_UPDATE__", current_time_str)
-html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_median_change:.4f}")
-html_content = html_content.replace("__PLACEHOLDER_HOT_SECTORS__", hot_sectors_json_str)  # ★追記
-html_content = html_content.replace("__PLACEHOLDER_RESULTS__", json_data_str)
-html_content = html_content.replace("__PLACEHOLDER_PREV_COUNTS__", prev_counts_json_str)
-html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
-html_content = html_content.replace("/* PLACEHOLDER_FORM_SCORE */ {}", form_score_str)
-
-with open(html_output_path, "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print(f"\n--- HTML生成が完了しました ---")
-print(f"👉 生成されたファイル: {html_output_path} (自動更新時刻：{current_time_str})")
