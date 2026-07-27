@@ -259,7 +259,8 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     long_ma_yesterday = float(yesterday['long_ma'])
     
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
-    
+
+    long_ma_slope_5d = long_ma_today - df_temp.iloc[-6]['long_ma']  # 過去5日間の長期線変化量
     long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
     long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
     long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma']
