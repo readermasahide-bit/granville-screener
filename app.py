@@ -627,92 +627,90 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
 
     return hot_sectors, sector_data
 
-# 4. 全データの判定実行 (足切り69日・最適化版)
+# 4. 全データの判定実行 (足切り69日・最適化・安全保護版)
 results_list = []
-print("各銘柄の判定ロジックを実行しています...")
+print("各銘柄の判定ロジックを実行しています...", flush=True)
 
-# 短期・中期いずれのシステムでも確実にNONE（データ不足）になる若い銘柄を
-# スキャンの初期段階で事前にスキップするための数学的最低日数（候補①：69日）
 MIN_REQUIRED_DAYS = 69
 
 for ticker, df_stock in bulk_data.items():
-    if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
-        continue
+    try:
+        if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
+            continue
+            
+        today = df_stock.iloc[-1]
+        yesterday = df_stock.iloc[-2]
         
-    today = df_stock.iloc[-1]
-    yesterday = df_stock.iloc[-2]
-    
-    price_today = float(today['Close'])
-    price_yesterday = float(yesterday['Close'])
-    change = price_today - price_yesterday
-    change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
-    
-    volume_today = float(today['Volume'])
-    is_low_volume = volume_today <= 10000
-    
-    market_raw = ticker_to_market.get(ticker, "")
-    if "プライム" in market_raw:
-        market_short = "東Ｐ"
-    elif "スタンダード" in market_raw:
-        market_short = "東Ｓ"
-    elif "グロース" in market_raw:
-        market_short = "東Ｇ"
-    else:
-        market_short = "他"
+        price_today = float(today['Close'])
+        price_yesterday = float(yesterday['Close'])
+        change = price_today - price_yesterday
+        change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
         
-    # short_window, long_window は SYSTEM_TYPE に依存しない固定値で evaluate_logic に渡す
-    short_res = evaluate_logic(df_stock, 5, 25, market_short)
-    mid_res = evaluate_logic(df_stock, 25, 75, market_short)
-    
-    # ★【超軽量化ハック】短期・中期ともに「NONE(条件外)」の無駄データは結果リストに入れない
-    if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
-        continue
-
-# ★ 新規追加：前日データとの比較および連続日数の計算
-    ticker_clean = ticker.replace(".T", "")
-    yesterday_data = prev_results_by_ticker.get(ticker_clean)
-
-    for sys_key, sys_res in [("short", short_res), ("mid", mid_res)]:
-        if sys_res["category"] != "NONE":
-            consecutive = 1
-            prev_cat_name = None
-
-            # 前日もこのシステムでデータが存在し、かつ条件外(NONE)ではない場合
-            if yesterday_data and sys_key in yesterday_data:
-                yes_sys = yesterday_data[sys_key]
-                yes_cat = yes_sys.get("category", "NONE")
-
-                if yes_cat != "NONE":
-                    # 連続日数を1増やす
-                    yes_consecutive = yes_sys.get("consecutiveDays", 1)
-                    consecutive = yes_consecutive + 1
-
-                    # 前日と今回の条件が異なる場合のみ、前日の条件名を記録
-                    if yes_cat != sys_res["category"]:
-                        prev_cat_name = yes_sys.get("categoryName", yes_cat).split('：')[0]
-
-            sys_res["consecutiveDays"] = consecutive
-            sys_res["prevCategory"] = prev_cat_name
+        volume_today = float(today['Volume'])
+        is_low_volume = volume_today <= 10000
+        
+        market_raw = ticker_to_market.get(ticker, "")
+        if "プライム" in market_raw:
+            market_short = "東Ｐ"
+        elif "スタンダード" in market_raw:
+            market_short = "東Ｓ"
+        elif "グロース" in market_raw:
+            market_short = "東Ｇ"
         else:
-            sys_res["consecutiveDays"] = 0
-            sys_res["prevCategory"] = None
-    # ★ ここまで追加    
-    
-    stock_info = {
-        "ticker": clean_val(ticker.replace(".T", "")),
-        "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
-        "market": market_short,
-        "sector": clean_val(ticker_to_sector.get(ticker, "不明")),
-        "price": clean_val(price_today),
-        "change": clean_val(change),
-        "changeRate": clean_val(round(change_rate, 2)),
-        "volume": clean_val(volume_today),
-        "isLowVolume": clean_val(is_low_volume),
-        "isStrongRelative": False,
-        "short": short_res,
-        "mid": mid_res
-    }
-    results_list.append(stock_info)
+            market_short = "他"
+            
+        short_res = evaluate_logic(df_stock, 5, 25, market_short)
+        mid_res = evaluate_logic(df_stock, 25, 75, market_short)
+        
+        if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
+            continue
+
+        ticker_clean = ticker.replace(".T", "")
+        yesterday_data = prev_results_by_ticker.get(ticker_clean)
+
+        for sys_key, sys_res in [("short", short_res), ("mid", mid_res)]:
+            if sys_res["category"] != "NONE":
+                consecutive = 1
+                prev_cat_name = None
+
+                if yesterday_data and sys_key in yesterday_data:
+                    yes_sys = yesterday_data[sys_key]
+                    yes_cat = yes_sys.get("category", "NONE")
+
+                    if yes_cat != "NONE":
+                        yes_consecutive = yes_sys.get("consecutiveDays", 1)
+                        consecutive = yes_consecutive + 1
+
+                        if yes_cat != sys_res["category"]:
+                            prev_cat_name = yes_sys.get("categoryName", yes_cat).split('：')[0]
+
+                sys_res["consecutiveDays"] = consecutive
+                sys_res["prevCategory"] = prev_cat_name
+            else:
+                sys_res["consecutiveDays"] = 0
+                sys_res["prevCategory"] = None
+        
+        stock_info = {
+            "ticker": clean_val(ticker_clean),
+            "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
+            "market": market_short,
+            "sector": clean_val(ticker_to_sector.get(ticker, "不明")),
+            "price": clean_val(price_today),
+            "change": clean_val(change),
+            "changeRate": clean_val(round(change_rate, 2)),
+            "volume": clean_val(volume_today),
+            "isLowVolume": clean_val(is_low_volume),
+            "isStrongRelative": False,
+            "short": short_res,
+            "mid": mid_res
+        }
+        results_list.append(stock_info)
+
+    except Exception as e:
+        # エラーが起きた銘柄はスキップし、ログに原因を出力して全体クラッシュを防ぐ
+        print(f"⚠️ {ticker} の判定中にエラーが発生しスキップしました: {e}", flush=True)
+
+# 本日の東証全銘柄の騰落中央値を算出 (変更なし)
 
 # 本日の東証全銘柄の騰落中央値を算出 (変更なし)
 all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
