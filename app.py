@@ -367,55 +367,81 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
-    # 買い4
-    if diff_rate <= oversold_threshold:
-        if is_yang_candle or is_price_up:
-            category = "BUY4"
-            category_name = "買い4：逆張りリバ"
-            badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
-            reason = f"{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
+    # 共通トレンド判定（長期MAの傾き。例: 過去5日間の傾き）
+    is_long_ma_falling = long_ma_slope_5d < -0.05 # 下落トレンド
+    is_long_ma_flat_or_rising = long_ma_slope_5d >= -0.01 # 横這い〜上昇トレンド
+    is_long_ma_rising = long_ma_slope_5d > 0.05 # 明確な上昇トレンド
 
-    # 買い1
-    crossed_above = (price_yesterday < long_ma_yesterday and price_today >= long_ma_today) or \
-                    (short_ma_yesterday < long_ma_yesterday and short_ma_today >= long_ma_today)
-    is_flat_or_rising = long_ma_slope_3d >= -0.01
-    below_count_20d = (df_temp.iloc[-21:-1]['Close'] < df_temp.iloc[-21:-1]['long_ma']).sum()
-    is_new_crossover = below_count_20d >= 12
+    # 【共通】本日の「突き抜け」と「ゴールデンクロス」判定
+    price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
+    gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
+
+    # ==========================================
+    # 買い4：逆張りリバ（下落トレンド中の極端な下方乖離からの反発）
+    # ==========================================
+    # 相場全体のパニック売りなどを捉えるための重要な指標
+    if diff_rate <= oversold_threshold:
+        if is_long_ma_falling: # MA自体が下落していることを確認
+            if is_yang_candle or is_price_up:
+                category = "BUY4"
+                category_name = "買い4：逆張りリバ"
+                badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                reason = f"下落中の{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
+
+    # ==========================================
+    # 買い1：新規買い（長期底練りからの株価上抜け or ゴールデンクロス）
+    # ==========================================
+    # 過去40日間のうち、株価が32日以上(80%) または 短期MAが36日以上(90%) 長期MAの下にあったか
+    lookback_period = 40
+    price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
+    short_ma_below_count = (df_temp.iloc[-lookback_period-1:-1]['short_ma'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     
-    if category == "NONE" and crossed_above and is_flat_or_rising and is_new_crossover and (diff_rate <= 5.0):
+    is_long_bottoming = (price_below_count >= lookback_period * 0.8) or (short_ma_below_count >= lookback_period * 0.9)
+    
+    if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming and (diff_rate <= 5.0):
         category = "BUY1"
         category_name = "買い1：新規買い"
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-        reason = f"価格が横這い〜上昇トレンドの長期線({long_window}日線)を本日明確に上抜けました。"
+        cross_type = "ゴールデンクロス" if gc_occurred else "価格の突き抜け"
+        reason = f"長期間の下落・底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生しました。"
 
-    # 買い2
-    is_long_ma_rising = long_ma_slope_10d > 0 and (long_ma_today > long_ma_yesterday)
-    below_count_10d = (df_temp.iloc[-11:-1]['Close'] < df_temp.iloc[-11:-1]['long_ma']).sum()
-    is_temp_dip = 1 <= below_count_10d <= 4
-    recovered_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
+    # ==========================================
+    # 買い2：再突き抜け（上昇トレンド中の「一時的な」押し目からの上抜け）
+    # ==========================================
+    # 過去15日間のうち、長期MAを下回っていたのが「1日〜3日」のみであること
+    below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
+    is_temp_dip = 1 <= below_count_15d <= 3
     
-    if category == "NONE" and is_long_ma_rising and is_temp_dip and recovered_above and (0.0 <= diff_rate <= 5.0):
+    if category == "NONE" and price_crossed_above and is_long_ma_rising and is_temp_dip and (diff_rate <= 5.0):
         category = "BUY2"
         category_name = "買い2：再突き抜け"
         badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-        reason = f"良好な上昇トレンド中、長期線を一時的に下抜け後、本日素早く上方に復帰しました。"
+        reason = f"力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。"
 
-    # 買い3（通常：陽線＋プラス反発）
-    is_long_ma_rising_strong = long_ma_slope_15d > 0
+    # ==========================================
+    # 買い3：押し目反発（MAに接して反発、直近下抜けていない）
+    # ==========================================
+    # 過去15日で一度は長期MAから離れた（4%以上乖離）
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
+    
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_close_to_ma and is_rebound:
+    # 【ストッパー】直近5日間、終値ベースで一度もMAを下抜けていないことを保証
+    not_crossed_below_recent = (df_temp.iloc[-6:-1]['Close'] >= df_temp.iloc[-6:-1]['long_ma']).all()
+    
+    if category == "NONE" and is_long_ma_rising and has_pulled_back and is_close_to_ma and is_rebound and not_crossed_below_recent:
         category = "BUY3"
         category_name = "買い3：押し目反発"
         badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
         reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
-
-    # 買い3-Pre（下落日待ち伏せ用：支持線接触）
+        
+    # ==========================================
+    # 買い3-Pre：押し目待ち伏せ（支持線接触）
+    # ==========================================
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
-    if category == "NONE" and is_long_ma_rising_strong and has_pulled_back and is_resting_on_ma:
+    if category == "NONE" and is_long_ma_rising and has_pulled_back and is_resting_on_ma and not_crossed_below_recent:
         category = "BUY3_PRE"
         category_name = "買い3：押し目待ち伏せ"
         badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
