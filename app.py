@@ -468,6 +468,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             score_reasons.append("🛡️ 強気ダイバージェンス: +1")
 
         # 2. 既存のテクニカル加減点ロジック
+         if volume_today <= 10000:
+            score -= 1
+            score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
         if vol_ratio >= 1.5:
             score += 1
             score_reasons.append("📊 出来高急増: +1")
@@ -971,7 +974,7 @@ html_template = """<!doctype html>
         </button>
       </div>
 
-      <!-- 解説小窓 -->
+<!-- 解説小窓 -->
       <section id="explanationSection" class="pt-6 border-t border-slate-800/60 hidden space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
@@ -981,41 +984,60 @@ html_template = """<!doctype html>
               <span>⭐</span> 期待度（1〜5）の評価要件マニュアル
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              
+              <!-- 1. 基本採点 -->
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">基本採点（スタート値）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   いずれかの買いシグナルが点灯した銘柄は、すべて初期値<strong>「3」</strong>として採点されます。
                 </p>
               </div>
-              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                <span class="font-bold text-emerald-400 block mb-1">出来高急増ボーナス (+1)</span>
+
+              <!-- 2. 出来高・流動性評価（統合） -->
+              <div class="bg-slate-900/60 border border-sky-500/20 rounded-xl p-3.5">
+                <span class="font-bold text-sky-400 block mb-1">出来高・流動性評価 (+1 / -1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  本日の出来高が、過去25日間の移動平均出来高に対して <strong>1.5倍以上</strong> に急増している場合、大口の介入とみなし、星を加算。
+                  ・過去25日平均に対し出来高が1.5倍以上に急増 ➔ <strong class="text-emerald-400">+1</strong><br>
+                  ・出来高1万株以下の過疎銘柄（流動性リスク高） ➔ <strong class="text-rose-400">-1</strong>
                 </p>
               </div>
+
+              <!-- 3. 相対的変化率 -->
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-cyan-400 block mb-1">相対的変化率ボーナス (+1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   本日の長期線の変化率が、過去半年間（120日）の平均変化スピードを上回っている（＝上昇トレンドが加速している）場合に星を加算。
                 </p>
               </div>
-              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                <span class="font-bold text-purple-400 block mb-1">個別ローソク足補正 (+1 / -1)</span>
-                <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・(買い3) 線に極近(1.5%以下)で綺麗に反発 ➔ <strong>+1</strong><br>
-                  ・(買い4) 3%以上の大陽線で反発 ➔ <strong>+1</strong><br>
-                  ・(全共通) 上髭割合が40%以上 ➔ <strong>-1</strong><br>
-                  ・(全共通) 反発時の実体が極小 ➔ <strong>-1</strong>
-                </p>
-              </div>
-              <!-- 新規追加：トレンド方向性による減点 -->
+
+              <!-- 4. トレンド下降減点 -->
               <div class="bg-slate-900/60 border border-rose-500/20 rounded-xl p-3.5">
                 <span class="font-bold text-rose-400 block mb-1">トレンド下降減点 (-1〜-2)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線が直近で下降傾向にある場合 ➔ <strong>-1</strong><br>
-                  ・さらに短期線が長期線の下で下降傾向の場合 ➔ <strong>追加で -1</strong>
+                  ・長期線が直近で下降傾向にある場合 ➔ <strong class="text-rose-400">-1</strong><br>
+                  ・さらに短期線が長期線の下で下降傾向の場合 ➔ <strong class="text-rose-400">追加で -1</strong>
                 </p>
               </div>
+
+              <!-- 5. 個別ローソク足補正 -->
+              <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                <span class="font-bold text-purple-400 block mb-1">個別ローソク足補正 (+1 / -1)</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  ・(買い3) 支持線極近 / (買い4) 大陽線反発 ➔ <strong class="text-emerald-400">+1</strong><br>
+                  ・上髭割合が40%以上 / 反発時の実体が極小 ➔ <strong class="text-rose-400">-1</strong>
+                </p>
+              </div>
+
+              <!-- 6. RSIテクニカル評価（新規追加） -->
+              <div class="bg-slate-900/60 border border-teal-500/20 rounded-xl p-3.5">
+                <span class="font-bold text-teal-400 block mb-1">RSIテクニカル評価 (+1〜+2 / -1)</span>
+                <p class="text-slate-400 text-[11px] leading-relaxed">
+                  ・ゾーン反発 / 強気のダイバージェンス ➔ <strong class="text-emerald-400">+1</strong><br>
+                  ・Wボトム形成からの強力な特別反発 ➔ <strong class="text-emerald-400">+2</strong><br>
+                  ・過熱警戒ゾーンでの危険な買いシグナル ➔ <strong class="text-rose-400">-1</strong>
+                </p>
+              </div>
+
             </div>
           </div>
 
