@@ -47,9 +47,9 @@
           <div>
             <h1 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
               全自動グランビル・スクリーナー
-              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.8_ULTIMATE</span>
+              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.9_ULTIMATE</span>
             </h1>
-            <p class="text-xs text-slate-400 hidden sm:block">東証全市場自動解析・高精度ロジック（最終更新：2026-07-29 22:03:59）</p>
+            <p class="text-xs text-slate-400 hidden sm:block">東証全市場自動解析・高精度ロジック（最終更新：2026-07-29 23:40:49）</p>
           </div>
         </div>
         
@@ -85,7 +85,7 @@
           </div>
         </div>
         <div class="bg-slate-900/80 border border-sky-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">買い2 (下抜け復帰)</span>
+          <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">買い2 (初押し/再復帰)</span>
           <div class="flex items-baseline justify-between mt-2" id="statBuy2">
             <span class="text-2xl font-bold text-sky-400">0</span>
           </div>
@@ -253,28 +253,27 @@
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近10日で横誰い〜上向き(JST <span class="font-mono">&gt;=0.0%</span>)<br>
-                  ・底確認: 過去20日のうち<span class="font-mono">15日以上</span>は線の下に沈んでいたこと<br>
-                  ・本日、線の上抜け、かつ直近で線の下にいた実績あり<br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 横ばい〜上向き<br>
+                  ・底確認: 過去40日のうち<span class="font-mono">80%以上</span>は線の下に沈んでいたこと<br>
+                  ・本日、完全なる初上抜け(ゴールデンクロス含む)<br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
-                <span class="font-bold text-slate-200 block mb-1">買い2：一時下抜け復帰</span>
+                <span class="font-bold text-slate-200 block mb-1">買い2：初押し・再突き抜け</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)が安定した右肩上がり<br>
-                  ・一時性: 過去10日で長期線の下に沈んだのが「1〜4日のみ」<br>
-                  ・本日、再度長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+4.0%</span> 以内 (変更)
+                  ・通常: 安定した右肩上がりの長期線(<span class="exp-long"></span>)を過去10日で1〜3日のみ下抜けし、本日復帰。<br>
+                  ・初押し: 長期底練りからの脱却直後に、初めて長期線付近まで押して再上抜け、または反発したもの。<br>
+                  ・乖離率 <span class="font-mono">0.0%〜+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発（待ち伏せ含む）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">強力な右肩上がりトレンド</span>中<br>
-                  ・短期線が長期線の上で継続的に推移していること<br>
-                  ・過去に短期線が長期線から<span class="font-mono">+2.0%以上</span>上放れた実績あり<br>
+                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">明確な右肩上がりトレンド</span>中<br>
+                  ・過去に株価が長期線から<span class="font-mono">+4.0%以上</span>上放れた実績あり<br>
                   ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日反発。<br>
-                  ・<strong>【下落日待ち伏せPre-Buy3】</strong>: 長期線の極近(JST -0.5%〜+1.5%)にあり、短期線も上昇傾向なら特別点灯。
+                  ・<strong>【待ち伏せPre-Buy3】</strong>: 長期線の極近(-0.5%〜+1.5%)にあり、短期線も上昇傾向なら特別点灯。
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
@@ -326,7 +325,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 760.2,
       "ma_long": 756.6,
-      "score": 2,
+      "score": 3,
       "stars": "★★☆☆☆",
       "rsi": 49.5,
       "rsi_sell_warning": false,
@@ -336,10 +335,11 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -360,7 +360,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "1443",
@@ -391,7 +391,7 @@
       "score_reasons": [
         "📊 出来高急増: +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -465,7 +465,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -497,8 +497,8 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -551,7 +551,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -594,7 +594,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 643.2,
       "ma_long": 630.6,
-      "score": 1,
+      "score": 2,
       "stars": "★☆☆☆☆",
       "rsi": 59.5,
       "rsi_sell_warning": false,
@@ -604,9 +604,10 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 上髭超過: -1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -628,7 +629,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "1663",
@@ -678,10 +679,65 @@
       "score_reasons": [
         "📈 Wボトム特別反発: +2"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
+  },
+  {
+    "ticker": "167A",
+    "name": "リョーサン菱洋ホールディングス",
+    "market": "東Ｐ",
+    "sector": "卸売業",
+    "price": 2840.0,
+    "change": 15.0,
+    "changeRate": 0.53,
+    "volume": 324100.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 2.84042352873014,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 2.8%)。",
+      "ma_short": 2831.0,
+      "ma_long": 2761.6,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 58.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 3.0483940415773656,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 2761.6,
+      "ma_long": 2756.0,
+      "score": 4,
+      "stars": "★★★☆☆",
+      "rsi": 58.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📊 出来高急増: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (卸売業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": true
   },
   {
     "ticker": "1711",
@@ -713,7 +769,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -764,7 +820,7 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -838,7 +894,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "isHotSector": false
@@ -874,7 +930,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -929,8 +985,8 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -983,7 +1039,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -1038,7 +1094,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -1092,7 +1148,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -1146,7 +1202,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -1200,7 +1256,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -1222,7 +1278,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -1256,7 +1312,7 @@
       "score_reasons": [
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -1330,7 +1386,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "isHotSector": false
@@ -1362,8 +1418,8 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -1405,7 +1461,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 330.8,
       "ma_long": 329.3,
-      "score": 5,
+      "score": 4,
       "stars": "★★★★☆",
       "rsi": 46.6,
       "rsi_sell_warning": false,
@@ -1415,10 +1471,9 @@
       "score_reasons": [
         "📊 出来高急増: +1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1",
-        "🔥 追い風業種 (食料品): +1"
+        "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -1440,7 +1495,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": true
+    "isHotSector": false
   },
   {
     "ticker": "2120",
@@ -1461,7 +1516,7 @@
       "reason": "力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。",
       "ma_short": 197.2,
       "ma_long": 197.7,
-      "score": 4,
+      "score": 5,
       "stars": "★★★★☆",
       "rsi": 56.9,
       "rsi_sell_warning": false,
@@ -1469,9 +1524,10 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [
-        "📈 長期線トレンド加速: +1"
+        "📈 長期線トレンド加速: +1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -1493,7 +1549,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2130",
@@ -1514,16 +1570,18 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 1093.4,
       "ma_long": 1083.6,
-      "score": 3,
+      "score": 4,
       "stars": "★★★☆☆",
       "rsi": 54.1,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
       "rsi_divergence": false,
-      "score_reasons": [],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "score_reasons": [
+        "🔥 追い風業種 (サービス業): +1"
+      ],
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "BUY1",
@@ -1533,18 +1591,20 @@
       "reason": "長期間の下落・底練りを経て、横這い〜上昇傾向の長期線(75日線)に対して本日ゴールデンクロスが発生しました。",
       "ma_short": 1083.6,
       "ma_long": 1083.3,
-      "score": 3,
+      "score": 4,
       "stars": "★★★☆☆",
       "rsi": 54.1,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
       "rsi_divergence": false,
-      "score_reasons": [],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "score_reasons": [
+        "🔥 追い風業種 (サービス業): +1"
+      ],
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2173",
@@ -1565,7 +1625,7 @@
       "reason": "力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。",
       "ma_short": 705.0,
       "ma_long": 694.0,
-      "score": 1,
+      "score": 2,
       "stars": "★☆☆☆☆",
       "rsi": 48.8,
       "rsi_sell_warning": false,
@@ -1574,9 +1634,10 @@
       "rsi_divergence": false,
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
-        "🕯️ 上髭超過: -1"
+        "🕯️ 上髭超過: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -1598,7 +1659,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2185",
@@ -1619,7 +1680,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 1889.0,
       "ma_long": 1868.1,
-      "score": 1,
+      "score": 2,
       "stars": "★☆☆☆☆",
       "rsi": 54.4,
       "rsi_sell_warning": false,
@@ -1630,31 +1691,37 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 上髭超過: -1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
-      "category": "NONE",
-      "categoryName": "条件外",
-      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
       "diffRate": 1.6327411350068322,
-      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 1.6%)。",
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
       "ma_short": 1868.1,
       "ma_long": 1853.7,
-      "score": 3,
-      "stars": "★★★☆☆",
+      "score": 2,
+      "stars": "★☆☆☆☆",
       "rsi": 54.4,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
       "rsi_divergence": false,
-      "score_reasons": [],
-      "consecutiveDays": 0,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "🕯️ 上髭超過: -1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
+      ],
+      "consecutiveDays": 1,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2207",
@@ -1675,17 +1742,15 @@
       "reason": "力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。",
       "ma_short": 3176.0,
       "ma_long": 3176.8,
-      "score": 4,
+      "score": 3,
       "stars": "★★★☆☆",
       "rsi": 65.3,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
       "rsi_divergence": false,
-      "score_reasons": [
-        "🔥 追い風業種 (食料品): +1"
-      ],
-      "consecutiveDays": 1,
+      "score_reasons": [],
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -1707,7 +1772,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": true
+    "isHotSector": false
   },
   {
     "ticker": "2208",
@@ -1728,7 +1793,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 3180.0,
       "ma_long": 3114.6,
-      "score": 4,
+      "score": 3,
       "stars": "★★★☆☆",
       "rsi": 67.3,
       "rsi_sell_warning": false,
@@ -1737,10 +1802,9 @@
       "rsi_divergence": false,
       "score_reasons": [
         "📊 出来高急増: +1",
-        "🕯️ 反発実体小: -1",
-        "🔥 追い風業種 (食料品): +1"
+        "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -1762,7 +1826,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": true
+    "isHotSector": false
   },
   {
     "ticker": "2266",
@@ -1792,10 +1856,9 @@
       "rsi_divergence": false,
       "score_reasons": [
         "📊 出来高急増: +1",
-        "📈 長期線トレンド加速: +1",
-        "🔥 追い風業種 (食料品): +1"
+        "📈 長期線トレンド加速: +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -1815,6 +1878,118 @@
       "rsi_divergence": false,
       "score_reasons": [],
       "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "2293",
+    "name": "滝沢ハム",
+    "market": "東Ｓ",
+    "sector": "食料品",
+    "price": 2721.0,
+    "change": 1.0,
+    "changeRate": 0.04,
+    "volume": 300.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.551351031750727,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.6%)。",
+      "ma_short": 2731.4,
+      "ma_long": 2706.1,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 52.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 1.0897832817337518,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 2706.1,
+      "ma_long": 2691.7,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 52.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "2300",
+    "name": "きょくとう",
+    "market": "東Ｓ",
+    "sector": "サービス業",
+    "price": 502.0,
+    "change": 2.0,
+    "changeRate": 0.4,
+    "volume": 2300.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.46429715017611134,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.5%)。",
+      "ma_short": 502.4,
+      "ma_long": 499.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 53.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 0.6173334402308955,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 499.7,
+      "ma_long": 498.9,
+      "score": 2,
+      "stars": "★☆☆☆☆",
+      "rsi": 53.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "🕯️ 上髭超過: -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
+      ],
+      "consecutiveDays": 1,
       "prevCategory": null
     },
     "isHotSector": true
@@ -1838,7 +2013,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 1635.0,
       "ma_long": 1615.8,
-      "score": 2,
+      "score": 3,
       "stars": "★★☆☆☆",
       "rsi": 62.9,
       "rsi_sell_warning": false,
@@ -1846,9 +2021,10 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -1870,7 +2046,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2307",
@@ -1899,8 +2075,8 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -1953,7 +2129,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -1996,16 +2172,18 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 1522.0,
       "ma_long": 1499.1,
-      "score": 3,
+      "score": 4,
       "stars": "★★★☆☆",
       "rsi": 65.4,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
       "rsi_divergence": false,
-      "score_reasons": [],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "score_reasons": [
+        "🔥 追い風業種 (サービス業): +1"
+      ],
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -2026,7 +2204,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2479",
@@ -2066,7 +2244,7 @@
       "reason": "長期間の下落・底練りを経て、横這い〜上昇傾向の長期線(75日線)に対して本日ゴールデンクロスが発生しました。",
       "ma_short": 235.5,
       "ma_long": 235.4,
-      "score": 1,
+      "score": 2,
       "stars": "★☆☆☆☆",
       "rsi": 57.8,
       "rsi_sell_warning": false,
@@ -2075,12 +2253,13 @@
       "rsi_divergence": false,
       "score_reasons": [
         "🕯️ 上髭超過: -1",
-        "🕯️ 反発実体極小: -1"
+        "🕯️ 反発実体極小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2483",
@@ -2101,7 +2280,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 2295.8,
       "ma_long": 2270.9,
-      "score": 2,
+      "score": 3,
       "stars": "★★☆☆☆",
       "rsi": 57.2,
       "rsi_sell_warning": false,
@@ -2109,10 +2288,11 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [
-        "⚠️ 流動性極低(1万株以下): -1"
+        "⚠️ 流動性極低(1万株以下): -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -2133,7 +2313,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2497",
@@ -2154,7 +2334,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 521.2,
       "ma_long": 514.0,
-      "score": 3,
+      "score": 4,
       "stars": "★★★☆☆",
       "rsi": 60.1,
       "rsi_sell_warning": false,
@@ -2163,10 +2343,11 @@
       "rsi_divergence": false,
       "score_reasons": [
         "📊 出来高急増: +1",
-        "🕯️ 上髭超過: -1"
+        "🕯️ 上髭超過: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -2187,7 +2368,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2498",
@@ -2208,7 +2389,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 3165.0,
       "ma_long": 3097.0,
-      "score": 2,
+      "score": 3,
       "stars": "★★☆☆☆",
       "rsi": 53.6,
       "rsi_sell_warning": false,
@@ -2218,9 +2399,10 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -2242,7 +2424,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2499",
@@ -2263,7 +2445,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 294.2,
       "ma_long": 288.8,
-      "score": 4,
+      "score": 5,
       "stars": "★★★★☆",
       "rsi": 56.1,
       "rsi_sell_warning": false,
@@ -2273,10 +2455,11 @@
       "score_reasons": [
         "📊 出来高急増: +1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -2297,7 +2480,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "2588",
@@ -2318,7 +2501,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 3851.0,
       "ma_long": 3764.0,
-      "score": 2,
+      "score": 1,
       "stars": "★☆☆☆☆",
       "rsi": 62.1,
       "rsi_sell_warning": false,
@@ -2327,11 +2510,10 @@
       "rsi_divergence": false,
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
-        "🕯️ 反発実体小: -1",
-        "🔥 追い風業種 (食料品): +1"
+        "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -2352,7 +2534,62 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": true
+    "isHotSector": false
+  },
+  {
+    "ticker": "25935",
+    "name": "伊藤園第１種優先株式",
+    "market": "東Ｐ",
+    "sector": "食料品",
+    "price": 1802.0,
+    "change": 11.0,
+    "changeRate": 0.61,
+    "volume": 36100.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 1.5577447643093905,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 1791.4,
+      "ma_long": 1774.4,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 72.0,
+      "rsi_sell_warning": true,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ RSI過熱警戒: -1",
+        "📊 出来高急増: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.3124791247615526,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.3%)。",
+      "ma_short": 1774.4,
+      "ma_long": 1796.4,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 72.0,
+      "rsi_sell_warning": true,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
   },
   {
     "ticker": "2597",
@@ -2373,7 +2610,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 1138.8,
       "ma_long": 1129.6,
-      "score": 3,
+      "score": 2,
       "stars": "★★☆☆☆",
       "rsi": 59.7,
       "rsi_sell_warning": false,
@@ -2383,11 +2620,10 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1",
-        "🔥 追い風業種 (食料品): +1"
+        "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -2400,6 +2636,61 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 59.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "261A",
+    "name": "日水コン",
+    "market": "東Ｓ",
+    "sector": "サービス業",
+    "price": 2013.0,
+    "change": -1.0,
+    "changeRate": -0.05,
+    "volume": 44700.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.5997001499250375,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 2018.2,
+      "ma_long": 2001.0,
+      "score": 5,
+      "stars": "★★★★★",
+      "rsi": 47.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📊 出来高急増: +1",
+        "📏 支持線極近: +1",
+        "🔥 追い風業種 (サービス業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -5.489999687001161,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -5.5%)。",
+      "ma_short": 2001.0,
+      "ma_long": 2129.9,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 47.3,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -2442,7 +2733,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -2485,7 +2776,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 494.0,
       "ma_long": 486.2,
-      "score": 1,
+      "score": 2,
       "stars": "★☆☆☆☆",
       "rsi": 65.6,
       "rsi_sell_warning": false,
@@ -2495,9 +2786,10 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 上髭超過: -1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -2519,7 +2811,63 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
+  },
+  {
+    "ticker": "2722",
+    "name": "ＩＫホールディングス",
+    "market": "東Ｓ",
+    "sector": "小売業",
+    "price": 357.0,
+    "change": -1.0,
+    "changeRate": -0.28,
+    "volume": 2000.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.41629162916292145,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 357.2,
+      "ma_long": 355.5,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 48.8,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (小売業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -3.4195433394654224,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -3.4%)。",
+      "ma_short": 355.5,
+      "ma_long": 369.6,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 48.8,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
   },
   {
     "ticker": "2790",
@@ -2552,7 +2900,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -2608,7 +2956,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -2631,6 +2979,227 @@
       "prevCategory": null
     },
     "isHotSector": true
+  },
+  {
+    "ticker": "2806",
+    "name": "ユタカフーズ",
+    "market": "東Ｓ",
+    "sector": "食料品",
+    "price": 1892.0,
+    "change": 2.0,
+    "changeRate": 0.11,
+    "volume": 400.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 1.2371045760027337,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 1890.0,
+      "ma_long": 1868.9,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 52.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -3.5120524937952555,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -3.5%)。",
+      "ma_short": 1868.9,
+      "ma_long": 1960.9,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 52.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "2816",
+    "name": "ダイショー",
+    "market": "東Ｓ",
+    "sector": "食料品",
+    "price": 1413.0,
+    "change": 3.0,
+    "changeRate": 0.21,
+    "volume": 1600.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.4435724643862499,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.4%)。",
+      "ma_short": 1411.4,
+      "ma_long": 1406.8,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 62.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 0.6333801800433085,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 1406.8,
+      "ma_long": 1404.1,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 62.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "2818",
+    "name": "ピエトロ",
+    "market": "東Ｓ",
+    "sector": "食料品",
+    "price": 1750.0,
+    "change": 2.0,
+    "changeRate": 0.11,
+    "volume": 1500.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.07319639507754087,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.1%)。",
+      "ma_short": 1752.4,
+      "ma_long": 1748.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 51.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.8234878397271406,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 1748.7,
+      "ma_long": 1735.7,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 51.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "2883",
+    "name": "大冷",
+    "market": "東Ｓ",
+    "sector": "食料品",
+    "price": 2000.0,
+    "change": 1.0,
+    "changeRate": 0.05,
+    "volume": 2300.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.5570862578685883,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.6%)。",
+      "ma_short": 1997.8,
+      "ma_long": 1988.9,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 65.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.9102100950574161,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 1988.9,
+      "ma_long": 1982.0,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 65.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📊 出来高急増: +1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
   },
   {
     "ticker": "2929",
@@ -2660,10 +3229,9 @@
       "rsi_divergence": false,
       "score_reasons": [
         "📊 出来高急増: +1",
-        "📈 長期線トレンド加速: +1",
-        "🔥 追い風業種 (食料品): +1"
+        "📈 長期線トレンド加速: +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -2685,7 +3253,58 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": true
+    "isHotSector": false
+  },
+  {
+    "ticker": "2930",
+    "name": "北の達人コーポレーション",
+    "market": "東Ｐ",
+    "sector": "化学",
+    "price": 121.0,
+    "change": 2.0,
+    "changeRate": 1.68,
+    "volume": 347500.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY2",
+      "categoryName": "買い2：初押し(下抜け復帰)",
+      "badgeClass": "bg-sky-500/15 text-sky-300 border border-sky-500/30",
+      "diffRate": 0.13240648791790513,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線を一度下抜け、本日再び上方に復帰しました。",
+      "ma_short": 120.0,
+      "ma_long": 120.8,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 49.4,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -2.408861167867511,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -2.4%)。",
+      "ma_short": 120.8,
+      "ma_long": 124.0,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 49.4,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
   },
   {
     "ticker": "2935",
@@ -2706,7 +3325,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 1172.2,
       "ma_long": 1146.6,
-      "score": 3,
+      "score": 2,
       "stars": "★★☆☆☆",
       "rsi": 64.4,
       "rsi_sell_warning": false,
@@ -2714,10 +3333,9 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [
-        "🕯️ 反発実体小: -1",
-        "🔥 追い風業種 (食料品): +1"
+        "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -2739,7 +3357,63 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": true
+    "isHotSector": false
+  },
+  {
+    "ticker": "2937",
+    "name": "サンクゼール",
+    "market": "東Ｇ",
+    "sector": "食料品",
+    "price": 1708.0,
+    "change": -9.0,
+    "changeRate": -0.52,
+    "volume": 8600.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.9432401125268928,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.9%)。",
+      "ma_short": 1715.2,
+      "ma_long": 1692.0,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 56.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 1.3273006280552369,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 1692.0,
+      "ma_long": 1685.6,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 56.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📊 出来高急増: +1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
   },
   {
     "ticker": "2961",
@@ -2771,8 +3445,8 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "📏 支持線極近: +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -2825,8 +3499,8 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (不動産業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -2868,7 +3542,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 197.0,
       "ma_long": 196.0,
-      "score": 3,
+      "score": 4,
       "stars": "★★★☆☆",
       "rsi": 56.2,
       "rsi_sell_warning": false,
@@ -2877,9 +3551,10 @@
       "rsi_divergence": false,
       "score_reasons": [
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -2901,7 +3576,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "3023",
@@ -2933,7 +3608,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -2976,7 +3651,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 591.6,
       "ma_long": 578.2,
-      "score": 2,
+      "score": 3,
       "stars": "★★☆☆☆",
       "rsi": 49.8,
       "rsi_sell_warning": false,
@@ -2986,9 +3661,10 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -2999,7 +3675,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 578.2,
       "ma_long": 574.1,
-      "score": 2,
+      "score": 3,
       "stars": "★★☆☆☆",
       "rsi": 49.8,
       "rsi_sell_warning": false,
@@ -3009,12 +3685,13 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "3036",
@@ -3048,7 +3725,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -3102,7 +3779,7 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -3157,26 +3834,30 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
-      "category": "NONE",
-      "categoryName": "条件外",
-      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
       "diffRate": -0.018261504747994088,
-      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -0.0%)。",
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
       "ma_short": 291.6,
       "ma_long": 292.1,
-      "score": 3,
-      "stars": "★★★☆☆",
+      "score": 2,
+      "stars": "★★☆☆☆",
       "rsi": 50.0,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
       "rsi_divergence": false,
-      "score_reasons": [],
-      "consecutiveDays": 0,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
       "prevCategory": null
     },
     "isHotSector": false
@@ -3214,7 +3895,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -3234,6 +3915,116 @@
       "rsi_divergence": false,
       "score_reasons": [],
       "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "3059",
+    "name": "ヒラキ",
+    "market": "東Ｓ",
+    "sector": "小売業",
+    "price": 713.0,
+    "change": 0.0,
+    "changeRate": 0.0,
+    "volume": 4000.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.5471570397111907,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 712.2,
+      "ma_long": 709.1,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 51.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (小売業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -3.0916438629238328,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -3.1%)。",
+      "ma_short": 709.1,
+      "ma_long": 735.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 51.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "3067",
+    "name": "東京一番フーズ",
+    "market": "東Ｓ",
+    "sector": "小売業",
+    "price": 454.0,
+    "change": 2.0,
+    "changeRate": 0.44,
+    "volume": 2500.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.35366931918656563,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.4%)。",
+      "ma_short": 453.0,
+      "ma_long": 452.4,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 54.6,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY2",
+      "categoryName": "買い2：初押し(下抜け復帰)",
+      "badgeClass": "bg-sky-500/15 text-sky-300 border border-sky-500/30",
+      "diffRate": 0.4158188091657072,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線を一度下抜け、本日再び上方に復帰しました。",
+      "ma_short": 452.4,
+      "ma_long": 452.1,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 54.6,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "🔥 追い風業種 (小売業): +1"
+      ],
+      "consecutiveDays": 1,
       "prevCategory": null
     },
     "isHotSector": true
@@ -3270,7 +4061,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -3290,6 +4081,62 @@
       "rsi_divergence": false,
       "score_reasons": [],
       "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "3096",
+    "name": "オーシャンシステム",
+    "market": "東Ｓ",
+    "sector": "小売業",
+    "price": 1644.0,
+    "change": -7.0,
+    "changeRate": -0.42,
+    "volume": 1100.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 2.2032128114586995,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 2.2%)。",
+      "ma_short": 1644.0,
+      "ma_long": 1608.6,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 57.5,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 1.3005578514094107,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 1608.6,
+      "ma_long": 1622.9,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 57.5,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (小売業): +1"
+      ],
+      "consecutiveDays": 1,
       "prevCategory": null
     },
     "isHotSector": true
@@ -3344,7 +4191,7 @@
         "🕯️ 上髭超過: -1",
         "🕯️ 反発実体極小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -3400,7 +4247,7 @@
         "🕯️ 反発実体極小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "isHotSector": true
@@ -3434,7 +4281,7 @@
       "score_reasons": [
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -3490,7 +4337,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -3546,7 +4393,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -3600,7 +4447,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -3653,7 +4500,7 @@
       "score_reasons": [
         "🔥 追い風業種 (不動産業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -3727,7 +4574,175 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🔥 追い風業種 (不動産業): +1"
       ],
+      "consecutiveDays": 2,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "324A",
+    "name": "ブッキングリゾート",
+    "market": "東Ｇ",
+    "sector": "サービス業",
+    "price": 696.0,
+    "change": -3.0,
+    "changeRate": -0.43,
+    "volume": 9300.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.6594932315168265,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 697.2,
+      "ma_long": 691.4,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 43.8,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
+      ],
       "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -13.943750206073394,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -13.9%)。",
+      "ma_short": 691.4,
+      "ma_long": 808.8,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 43.8,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "3271",
+    "name": "ＴＨＥグローバル社",
+    "market": "東Ｓ",
+    "sector": "不動産業",
+    "price": 1270.0,
+    "change": 0.0,
+    "changeRate": 0.0,
+    "volume": 0.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.06933938477055827,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 1270.2,
+      "ma_long": 1269.1,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 56.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (不動産業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -0.16978996352660686,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -0.2%)。",
+      "ma_short": 1269.1,
+      "ma_long": 1272.2,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 56.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "3293",
+    "name": "アズマハウス",
+    "market": "東Ｓ",
+    "sector": "不動産業",
+    "price": 770.0,
+    "change": 3.0,
+    "changeRate": 0.39,
+    "volume": 2400.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 0.7853403141361256,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 767.2,
+      "ma_long": 764.0,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 59.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (不動産業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.42954280646226634,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.4%)。",
+      "ma_short": 764.0,
+      "ma_long": 766.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 59.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
       "prevCategory": null
     },
     "isHotSector": true
@@ -3764,7 +4779,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -3818,7 +4833,7 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -3874,7 +4889,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -3928,7 +4943,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -3983,7 +4998,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -4056,7 +5071,62 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
+      "consecutiveDays": 2,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "3437",
+    "name": "特殊電極",
+    "market": "東Ｓ",
+    "sector": "金属製品",
+    "price": 2717.0,
+    "change": -19.0,
+    "changeRate": -0.69,
+    "volume": 100.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 1.2883792368142417,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 2741.2,
+      "ma_long": 2682.4,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 52.0,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
       "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -3.916428157166358,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -3.9%)。",
+      "ma_short": 2682.4,
+      "ma_long": 2827.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 52.0,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
       "prevCategory": null
     },
     "isHotSector": false
@@ -4092,7 +5162,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (不動産業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -4148,7 +5218,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (不動産業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -4202,8 +5272,8 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (不動産業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -4258,7 +5328,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (不動産業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -4272,6 +5342,60 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 56.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "3538",
+    "name": "ウイルプラスホールディングス",
+    "market": "東Ｓ",
+    "sector": "小売業",
+    "price": 951.0,
+    "change": 6.0,
+    "changeRate": 0.63,
+    "volume": 25100.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 2.8330449826989668,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 943.2,
+      "ma_long": 924.8,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 63.0,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (小売業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.429456491129265,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.4%)。",
+      "ma_short": 924.8,
+      "ma_long": 946.9,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 63.0,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -4314,7 +5438,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -4369,8 +5493,8 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -4443,7 +5567,7 @@
         "🕯️ 反発実体極小: -1",
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": true
@@ -4499,10 +5623,65 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "isHotSector": true
+  },
+  {
+    "ticker": "3571",
+    "name": "ソトー",
+    "market": "東Ｓ",
+    "sector": "繊維製品",
+    "price": 713.0,
+    "change": -1.0,
+    "changeRate": -0.14,
+    "volume": 4100.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.3546897871861251,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.4%)。",
+      "ma_short": 712.4,
+      "ma_long": 710.5,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 55.4,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 1.245811007819449,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 710.5,
+      "ma_long": 704.2,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 55.4,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
   },
   {
     "ticker": "3622",
@@ -4535,7 +5714,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -4588,7 +5767,7 @@
       "score_reasons": [
         "📊 出来高急増: +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -4641,8 +5820,8 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1"
       ],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -4655,6 +5834,61 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 59.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "3634",
+    "name": "ソケッツ",
+    "market": "東Ｓ",
+    "sector": "情報・通信業",
+    "price": 575.0,
+    "change": 0.0,
+    "changeRate": 0.0,
+    "volume": 4000.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.7428691569135906,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 578.0,
+      "ma_long": 570.8,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 49.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -5.953549231272485,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -6.0%)。",
+      "ma_short": 570.8,
+      "ma_long": 611.4,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 49.3,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -4696,7 +5930,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -4751,7 +5985,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -4802,8 +6036,8 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -4857,7 +6091,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -4929,7 +6163,7 @@
       "score_reasons": [
         "🕯️ 反発実体極小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -4965,7 +6199,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -5018,7 +6252,7 @@
       "score_reasons": [
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -5061,7 +6295,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 2268.8,
       "ma_long": 2230.6,
-      "score": 3,
+      "score": 4,
       "stars": "★★★☆☆",
       "rsi": 50.2,
       "rsi_sell_warning": false,
@@ -5070,9 +6304,10 @@
       "rsi_divergence": false,
       "score_reasons": [
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -5094,7 +6329,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "3744",
@@ -5147,8 +6382,8 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "isHotSector": false
   },
@@ -5182,7 +6417,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -5235,7 +6470,7 @@
       "score_reasons": [
         "🔄 RSIゾーン反発: +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -5256,7 +6491,7 @@
       "score_reasons": [
         "🔄 RSIゾーン反発: +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "isHotSector": false
@@ -5290,7 +6525,7 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -5346,8 +6581,8 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -5399,7 +6634,7 @@
       "score_reasons": [
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -5452,7 +6687,7 @@
       "score_reasons": [
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -5505,8 +6740,8 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1"
       ],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -5560,7 +6795,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -5613,7 +6848,7 @@
       "score_reasons": [
         "📊 出来高急増: +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -5686,7 +6921,7 @@
         "📊 出来高急増: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -5720,8 +6955,8 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1"
       ],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -5794,8 +7029,8 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "isHotSector": false
   },
@@ -5829,8 +7064,8 @@
         "📊 出来高急増: +1",
         "🕯️ 上髭超過: -1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -5885,7 +7120,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -5899,6 +7134,61 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 55.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "3948",
+    "name": "光ビジネスフォーム",
+    "market": "東Ｓ",
+    "sector": "パルプ・紙",
+    "price": 1140.0,
+    "change": 0.0,
+    "changeRate": 0.0,
+    "volume": 300.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：初押し(待ち伏せ)",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 1.067413738075815,
+      "reason": "長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。",
+      "ma_short": 1145.2,
+      "ma_long": 1128.0,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 53.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -0.5628954224041719,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -0.6%)。",
+      "ma_short": 1128.0,
+      "ma_long": 1146.5,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 53.7,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -5940,8 +7230,8 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -5994,7 +7284,7 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -6067,7 +7357,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -6103,7 +7393,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -6117,6 +7407,59 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 45.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "3981",
+    "name": "ビーグリー",
+    "market": "東Ｓ",
+    "sector": "情報・通信業",
+    "price": 1234.0,
+    "change": 24.0,
+    "changeRate": 1.98,
+    "volume": 3700.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 2.165849781428011,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 1216.8,
+      "ma_long": 1207.8,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 60.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.020533658989959874,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.0%)。",
+      "ma_short": 1207.8,
+      "ma_long": 1233.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 60.7,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -6154,8 +7497,8 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -6207,8 +7550,8 @@
       "score_reasons": [
         "📈 長期線トレンド加速: +1"
       ],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -6263,7 +7606,7 @@
         "🕯️ 上髭超過: -1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -6316,8 +7659,8 @@
       "score_reasons": [
         "📈 長期線トレンド加速: +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -6369,7 +7712,7 @@
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -6442,7 +7785,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -6493,7 +7836,7 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -6529,7 +7872,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -6580,7 +7923,7 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -6635,7 +7978,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -6691,7 +8034,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -6747,7 +8090,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -6790,7 +8133,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 4853.0,
       "ma_long": 4798.0,
-      "score": 3,
+      "score": 4,
       "stars": "★★★☆☆",
       "rsi": 49.0,
       "rsi_sell_warning": false,
@@ -6801,9 +8144,10 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "📊 出来高急増: +1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -6825,7 +8169,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "416A",
@@ -6859,7 +8203,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (卸売業): +1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -6913,7 +8257,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -6964,8 +8308,8 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -7018,7 +8362,7 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -7072,7 +8416,7 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -7126,7 +8470,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -7180,7 +8524,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -7236,7 +8580,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -7250,6 +8594,60 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 52.8,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4262",
+    "name": "ニフティライフスタイル",
+    "market": "東Ｇ",
+    "sector": "情報・通信業",
+    "price": 1370.0,
+    "change": 8.0,
+    "changeRate": 0.59,
+    "volume": 7100.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 3.091231977846667,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 1357.2,
+      "ma_long": 1328.9,
+      "score": 1,
+      "stars": "★☆☆☆☆",
+      "rsi": 61.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.21261654897983692,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.2%)。",
+      "ma_short": 1328.9,
+      "ma_long": 1367.1,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 61.7,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -7289,7 +8687,7 @@
       "score_reasons": [
         "🔄 RSIゾーン反発: +1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -7310,7 +8708,7 @@
       "score_reasons": [
         "🔄 RSIゾーン反発: +1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "isHotSector": false
@@ -7334,7 +8732,7 @@
       "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
       "ma_short": 499.6,
       "ma_long": 486.5,
-      "score": 4,
+      "score": 5,
       "stars": "★★★★☆",
       "rsi": 50.6,
       "rsi_sell_warning": false,
@@ -7344,9 +8742,10 @@
       "score_reasons": [
         "📊 出来高急増: +1",
         "📏 支持線極近: +1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -7368,7 +8767,61 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
+  },
+  {
+    "ticker": "4331",
+    "name": "テイクアンドギヴ・ニーズ",
+    "market": "東Ｐ",
+    "sector": "サービス業",
+    "price": 690.0,
+    "change": 12.0,
+    "changeRate": 1.77,
+    "volume": 136100.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 3.2501346740887094,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 678.0,
+      "ma_long": 668.3,
+      "score": 5,
+      "stars": "★★★★☆",
+      "rsi": 64.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📊 出来高急増: +1",
+        "🔥 追い風業種 (サービス業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 1.4705882352941175,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 1.5%)。",
+      "ma_short": 668.3,
+      "ma_long": 680.0,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 64.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
   },
   {
     "ticker": "4341",
@@ -7408,7 +8861,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 880.6,
       "ma_long": 845.0,
-      "score": 1,
+      "score": 2,
       "stars": "★☆☆☆☆",
       "rsi": 50.3,
       "rsi_sell_warning": false,
@@ -7417,12 +8870,13 @@
       "rsi_divergence": false,
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "4350",
@@ -7456,7 +8910,7 @@
         "🕯️ 反発実体小: -1",
         "🔥 追い風業種 (小売業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -7511,8 +8965,8 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -7584,7 +9038,7 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 反発実体極小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -7621,7 +9075,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -7672,7 +9126,7 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -7715,7 +9169,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 1912.6,
       "ma_long": 1873.3,
-      "score": 2,
+      "score": 1,
       "stars": "★☆☆☆☆",
       "rsi": 60.1,
       "rsi_sell_warning": false,
@@ -7724,10 +9178,9 @@
       "rsi_divergence": false,
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
-        "🕯️ 反発実体小: -1",
-        "🔥 追い風業種 (食料品): +1"
+        "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -7749,7 +9202,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": true
+    "isHotSector": false
   },
   {
     "ticker": "4414",
@@ -7778,7 +9231,7 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -7833,8 +9286,8 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
-      "prevCategory": "買い3"
+      "consecutiveDays": 3,
+      "prevCategory": null
     },
     "mid": {
       "category": "BUY3",
@@ -7855,7 +9308,7 @@
         "📊 出来高急増: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -7910,7 +9363,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "isHotSector": false
@@ -7946,8 +9399,8 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -7989,7 +9442,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 891.6,
       "ma_long": 877.2,
-      "score": 2,
+      "score": 3,
       "stars": "★★☆☆☆",
       "rsi": 66.5,
       "rsi_sell_warning": false,
@@ -7997,9 +9450,10 @@
       "rsi_double_bottom": false,
       "rsi_divergence": false,
       "score_reasons": [
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -8021,7 +9475,7 @@
       "consecutiveDays": 0,
       "prevCategory": null
     },
-    "isHotSector": false
+    "isHotSector": true
   },
   {
     "ticker": "4439",
@@ -8053,7 +9507,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -8108,7 +9562,7 @@
         "🕯️ 上髭超過: -1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -8162,7 +9616,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -8184,7 +9638,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
@@ -8219,7 +9673,7 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -8273,7 +9727,7 @@
         "⚠️ 流動性極低(1万株以下): -1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 3,
+      "consecutiveDays": 4,
       "prevCategory": null
     },
     "mid": {
@@ -8327,7 +9781,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -8341,6 +9795,59 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 49.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4521",
+    "name": "科研製薬",
+    "market": "東Ｐ",
+    "sector": "医薬品",
+    "price": 3990.0,
+    "change": 80.0,
+    "changeRate": 2.05,
+    "volume": 266300.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 3.4643709158800933,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 3915.0,
+      "ma_long": 3856.4,
+      "score": 4,
+      "stars": "★★★★☆",
+      "rsi": 65.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📊 出来高急増: +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.8611537100389274,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.9%)。",
+      "ma_short": 3856.4,
+      "ma_long": 3955.9,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 65.7,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -8380,8 +9887,8 @@
       "score_reasons": [
         "📊 出来高急増: +1"
       ],
-      "consecutiveDays": 3,
-      "prevCategory": "買い3"
+      "consecutiveDays": 4,
+      "prevCategory": null
     },
     "mid": {
       "category": "NONE",
@@ -8435,7 +9942,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 2,
+      "consecutiveDays": 3,
       "prevCategory": null
     },
     "mid": {
@@ -8460,6 +9967,274 @@
     "isHotSector": false
   },
   {
+    "ticker": "4565",
+    "name": "ネクセラファーマ",
+    "market": "東Ｐ",
+    "sector": "医薬品",
+    "price": 870.0,
+    "change": 3.0,
+    "changeRate": 0.35,
+    "volume": 871600.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -6.560123727284448,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -6.6%)。",
+      "ma_short": 889.2,
+      "ma_long": 931.1,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 36.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY4",
+      "categoryName": "買い4：逆張りリバ",
+      "badgeClass": "bg-purple-500/15 text-purple-300 border border-purple-500/30",
+      "diffRate": -13.219843064237264,
+      "reason": "下落中の75日移動平均線(1,003円)から下方に大きく乖離(-13.2%)。本日反発しました。",
+      "ma_short": 931.1,
+      "ma_long": 1002.5,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 36.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "🕯️ 反発実体極小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4577",
+    "name": "ダイト",
+    "market": "東Ｐ",
+    "sector": "医薬品",
+    "price": 1293.0,
+    "change": 18.0,
+    "changeRate": 1.41,
+    "volume": 72200.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：押し目反発",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 2.2360680624960443,
+      "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
+      "ma_short": 1283.8,
+      "ma_long": 1264.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 56.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 3.2890602532832083,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 3.3%)。",
+      "ma_short": 1264.7,
+      "ma_long": 1251.8,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 56.7,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4591",
+    "name": "リボミック",
+    "market": "東Ｇ",
+    "sector": "医薬品",
+    "price": 71.0,
+    "change": 0.0,
+    "changeRate": 0.0,
+    "volume": 842300.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：押し目待ち伏せ",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.680657969370397,
+      "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
+      "ma_short": 73.4,
+      "ma_long": 70.5,
+      "score": 4,
+      "stars": "★★★★☆",
+      "rsi": 49.4,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📏 支持線極近: +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -2.4725274725274686,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -2.5%)。",
+      "ma_short": 70.5,
+      "ma_long": 72.8,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 49.4,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4617",
+    "name": "中国塗料",
+    "market": "東Ｐ",
+    "sector": "化学",
+    "price": 3600.0,
+    "change": -180.0,
+    "changeRate": -4.76,
+    "volume": 447300.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：押し目待ち伏せ",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.9704380995119737,
+      "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
+      "ma_short": 3686.0,
+      "ma_long": 3565.4,
+      "score": 4,
+      "stars": "★★★★☆",
+      "rsi": 51.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📊 出来高急増: +1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 6.9082529211690185,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 6.9%)。",
+      "ma_short": 3565.4,
+      "ma_long": 3367.4,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 51.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4673",
+    "name": "川崎地質",
+    "market": "東Ｓ",
+    "sector": "サービス業",
+    "price": 4675.0,
+    "change": -25.0,
+    "changeRate": -0.53,
+    "volume": 5900.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：押し目待ち伏せ",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.23155096265169126,
+      "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
+      "ma_short": 4753.0,
+      "ma_long": 4664.2,
+      "score": 3,
+      "stars": "★★☆☆☆",
+      "rsi": 50.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -4.753820033955852,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -4.8%)。",
+      "ma_short": 4664.2,
+      "ma_long": 4908.3,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 50.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
     "ticker": "4678",
     "name": "秀英予備校",
     "market": "東Ｓ",
@@ -8478,7 +10253,7 @@
       "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
       "ma_short": 322.0,
       "ma_long": 317.0,
-      "score": 1,
+      "score": 2,
       "stars": "★☆☆☆☆",
       "rsi": 58.8,
       "rsi_sell_warning": false,
@@ -8487,9 +10262,10 @@
       "rsi_divergence": false,
       "score_reasons": [
         "⚠️ 流動性極低(1万株以下): -1",
-        "🕯️ 反発実体小: -1"
+        "🕯️ 反発実体小: -1",
+        "🔥 追い風業種 (サービス業): +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -8503,6 +10279,432 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 58.8,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "471A",
+    "name": "ＮＳグループ",
+    "market": "東Ｐ",
+    "sector": "その他金融業",
+    "price": 1513.0,
+    "change": 18.0,
+    "changeRate": 1.2,
+    "volume": 205900.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY2",
+      "categoryName": "買い2：再突き抜け",
+      "badgeClass": "bg-sky-500/15 text-sky-300 border border-sky-500/30",
+      "diffRate": 0.7833524286589746,
+      "reason": "力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。",
+      "ma_short": 1505.0,
+      "ma_long": 1501.2,
+      "score": 4,
+      "stars": "★★★☆☆",
+      "rsi": 54.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "🔥 追い風業種 (その他金融業): +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "データ不足",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.0,
+      "reason": "データが不足しています。",
+      "ma_short": 0.0,
+      "ma_long": 0.0,
+      "score": 1,
+      "rsi": 50.0,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "rsi_sell_warning": false,
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": true
+  },
+  {
+    "ticker": "4769",
+    "name": "ＩＣ",
+    "market": "東Ｓ",
+    "sector": "情報・通信業",
+    "price": 1110.0,
+    "change": 21.0,
+    "changeRate": 1.93,
+    "volume": 400.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -0.24444604213099677,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -0.2%)。",
+      "ma_short": 1110.2,
+      "ma_long": 1112.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 50.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY3",
+      "categoryName": "買い3：押し目反発",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 3.0296279795054675,
+      "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
+      "ma_short": 1112.7,
+      "ma_long": 1077.4,
+      "score": 1,
+      "stars": "★☆☆☆☆",
+      "rsi": 50.3,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1",
+        "🕯️ 上髭超過: -1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4783",
+    "name": "ＮＣＤ",
+    "market": "東Ｓ",
+    "sector": "情報・通信業",
+    "price": 2508.0,
+    "change": 29.0,
+    "changeRate": 1.17,
+    "volume": 9100.0,
+    "isLowVolume": true,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：押し目反発",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 2.2154839340734633,
+      "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
+      "ma_short": 2494.0,
+      "ma_long": 2453.6,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 57.9,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "⚠️ 流動性極低(1万株以下): -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 2.07847180767352,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 2.1%)。",
+      "ma_short": 2453.6,
+      "ma_long": 2456.9,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 57.9,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4813",
+    "name": "ＡＣＣＥＳＳ",
+    "market": "東Ｐ",
+    "sector": "情報・通信業",
+    "price": 343.0,
+    "change": 2.0,
+    "changeRate": 0.59,
+    "volume": 268700.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 0.0816993464052208,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 0.1%)。",
+      "ma_short": 340.6,
+      "ma_long": 342.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 38.8,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "BUY4",
+      "categoryName": "買い4：逆張りリバ",
+      "badgeClass": "bg-purple-500/15 text-purple-300 border border-purple-500/30",
+      "diffRate": -23.045858386430947,
+      "reason": "下落中の75日移動平均線(446円)から下方に大きく乖離(-23.0%)。本日反発しました。",
+      "ma_short": 342.7,
+      "ma_long": 445.7,
+      "score": 2,
+      "stars": "★★☆☆☆",
+      "rsi": 38.8,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "🕯️ 反発実体極小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4814",
+    "name": "ネクストウェア",
+    "market": "東Ｓ",
+    "sector": "情報・通信業",
+    "price": 152.0,
+    "change": -2.0,
+    "changeRate": -1.3,
+    "volume": 22000.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：押し目待ち伏せ",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 0.7156109196925606,
+      "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
+      "ma_short": 153.6,
+      "ma_long": 150.9,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 48.0,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -7.684832779982187,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -7.7%)。",
+      "ma_short": 150.9,
+      "ma_long": 164.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 48.0,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4839",
+    "name": "ＷＯＷＯＷ",
+    "market": "東Ｐ",
+    "sector": "情報・通信業",
+    "price": 1030.0,
+    "change": 12.0,
+    "changeRate": 1.18,
+    "volume": 64900.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：初押し(支持線反発)",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 2.316525608932337,
+      "reason": "長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。",
+      "ma_short": 1020.0,
+      "ma_long": 1006.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 56.6,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -4.456235390152496,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -4.5%)。",
+      "ma_short": 1006.7,
+      "ma_long": 1078.0,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 56.6,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4890",
+    "name": "坪田ラボ",
+    "market": "東Ｇ",
+    "sector": "医薬品",
+    "price": 240.0,
+    "change": 3.0,
+    "changeRate": 1.27,
+    "volume": 61900.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：押し目反発",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 0.9421265141319015,
+      "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
+      "ma_short": 247.4,
+      "ma_long": 237.8,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 50.0,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "🕯️ 上髭超過: -1",
+        "📏 支持線極近: +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -6.803355079217141,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -6.8%)。",
+      "ma_short": 237.8,
+      "ma_long": 257.5,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 50.0,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4893",
+    "name": "ノイルイミューン・バイオテック",
+    "market": "東Ｇ",
+    "sector": "医薬品",
+    "price": 133.0,
+    "change": -10.0,
+    "changeRate": -6.99,
+    "volume": 188200.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3_PRE",
+      "categoryName": "買い3：押し目待ち伏せ",
+      "badgeClass": "bg-amber-600/10 text-amber-400 border border-amber-500/20",
+      "diffRate": 1.4338010982306248,
+      "reason": "長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。",
+      "ma_short": 140.0,
+      "ma_long": 131.1,
+      "score": 4,
+      "stars": "★★★★☆",
+      "rsi": 49.1,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📊 出来高急増: +1",
+        "📏 支持線極近: +1",
+        "🕯️ 反発実体小: -1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": -1.7918676774638251,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: -1.8%)。",
+      "ma_short": 131.1,
+      "ma_long": 135.4,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 49.1,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -8544,7 +10746,7 @@
         "📏 支持線極近: +1",
         "🕯️ 反発実体小: -1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "mid": {
@@ -8558,6 +10760,59 @@
       "score": 3,
       "stars": "★★★☆☆",
       "rsi": 49.2,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [],
+      "consecutiveDays": 0,
+      "prevCategory": null
+    },
+    "isHotSector": false
+  },
+  {
+    "ticker": "4936",
+    "name": "アクシージア",
+    "market": "東Ｓ",
+    "sector": "化学",
+    "price": 352.0,
+    "change": 3.0,
+    "changeRate": 0.86,
+    "volume": 192700.0,
+    "isLowVolume": false,
+    "isStrongRelative": false,
+    "short": {
+      "category": "BUY3",
+      "categoryName": "買い3：押し目反発",
+      "badgeClass": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+      "diffRate": 2.972150713784234,
+      "reason": "上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。",
+      "ma_short": 353.2,
+      "ma_long": 341.8,
+      "score": 4,
+      "stars": "★★★★☆",
+      "rsi": 57.9,
+      "rsi_sell_warning": false,
+      "rsi_buy_reversal": false,
+      "rsi_double_bottom": false,
+      "rsi_divergence": false,
+      "score_reasons": [
+        "📊 出来高急増: +1"
+      ],
+      "consecutiveDays": 1,
+      "prevCategory": null
+    },
+    "mid": {
+      "category": "NONE",
+      "categoryName": "条件外",
+      "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+      "diffRate": 3.610675039246463,
+      "reason": "シグナル(1〜4)条件からは外れています(長期線乖離: 3.6%)。",
+      "ma_short": 341.8,
+      "ma_long": 339.7,
+      "score": 3,
+      "stars": "★★★☆☆",
+      "rsi": 57.9,
       "rsi_sell_warning": false,
       "rsi_buy_reversal": false,
       "rsi_double_bottom": false,
@@ -8616,14 +10871,14 @@
       "score_reasons": [
         "📊 出来高急増: +1"
       ],
-      "consecutiveDays": 1,
+      "consecutiveDays": 2,
       "prevCategory": null
     },
     "isHotSector": false
   }
 ],
-        hotSectors: [{"sector": "卸売業", "score": 60.3, "changeRate": 3.3, "signalDensity": 2.9}, {"sector": "小売業", "score": 56.7, "changeRate": 2.78, "signalDensity": 0.2}, {"sector": "不動産業", "score": 56.6, "changeRate": 3.46, "signalDensity": 0.7}, {"sector": "食料品", "score": 55.5, "changeRate": 2.47, "signalDensity": 0.4}],
-        prevCounts: {"short": {"BUY1": 2, "BUY2": 9, "BUY3": 64, "BUY3_PRE": 157, "BUY4": 4, "TOTAL": 282, "TOTAL_ACTIVE": 236}, "mid": {"BUY1": 4, "BUY2": 2, "BUY3": 13, "BUY3_PRE": 33, "BUY4": 6, "TOTAL": 282, "TOTAL_ACTIVE": 58}},
+        hotSectors: [{"sector": "その他金融業", "score": 66.0, "changeRate": 1.6, "signalDensity": 73.1}, {"sector": "卸売業", "score": 64.0, "changeRate": 3.3, "signalDensity": 4.8}, {"sector": "サービス業", "score": 56.9, "changeRate": 2.82, "signalDensity": 0.7}, {"sector": "小売業", "score": 56.7, "changeRate": 2.78, "signalDensity": 0.2}, {"sector": "不動産業", "score": 56.4, "changeRate": 3.41, "signalDensity": 0.7}],
+        prevCounts: {"short": {"BUY1": 0, "BUY2": 11, "BUY3": 55, "BUY3_PRE": 62, "BUY4": 3, "TOTAL": 153, "TOTAL_ACTIVE": 131}, "mid": {"BUY1": 6, "BUY2": 2, "BUY3": 4, "BUY3_PRE": 12, "BUY4": 5, "TOTAL": 153, "TOTAL_ACTIVE": 29}},
         marketMedian: 0.1500,
         currentSystem: 'mid',
         activeTab: 'BUY1',
