@@ -165,7 +165,6 @@ for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     try:
-        # 以前のバージョンと同じ period="2y" 方式
         data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
         for ticker in chunk:
             if ticker in data.columns.levels[0]:
@@ -191,7 +190,6 @@ def calculate_rsi(series, period=14):
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
     
-    # ワイルダーの平滑化：alpha = 1 / period の指数移動平均(EMA)を使用
     avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
     
@@ -201,33 +199,26 @@ def calculate_rsi(series, period=14):
 
 # 2. ヘルパー：先読みバイアスを排除したスイングロー（極小値）検出関数
 def find_swing_lows(series, window=25):
-    """
-    直近の指定ウインドウ内における、前後2営業日で最小値となる極小値のインデックス(位置)を返します。
-    本日(N-1)、昨日(N-2)は将来のデータがないため極小値の判定対象から除外し、先読みバイアスを防ぎます。
-    """
     n = len(series)
     low_indices = []
     
-    # 25営業日前から3営業日前までの範囲を探索 (今日がN-1)
     start_idx = max(2, n - window)
-    end_idx = n - 2  # n-2は含まないため、探索は n-3 (3営業日前) まで
+    end_idx = n - 2
     
     for i in range(start_idx, end_idx):
         val = series.iloc[i]
-        # 前後2営業日の計5日間で、自身が最小値であるかを判定
         if (val < series.iloc[i-1] and val < series.iloc[i-2] and 
             val < series.iloc[i+1] and val < series.iloc[i+2]):
             low_indices.append(i)
             
     return low_indices
 
-# 3. 判定および採点ロジック関数（プロンプト要件・完全対応版）
+# 3. 判定および採点ロジック関数
 def evaluate_logic(df_temp, short_window, long_window, market_type):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
         
-    # 生データから正確なRSIを算出
     df_temp['rsi'] = calculate_rsi(df_temp['Close'], 14)
         
     df_temp['short_ma'] = df_temp['Close'].rolling(window=short_window).mean()
@@ -252,6 +243,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     open_today = float(today['Open'])
     high_today = float(today['High'])
     low_today = float(today['Low'])
+    volume_today = float(today['Volume'])
     
     short_ma_today = float(today['short_ma'])
     short_ma_yesterday = float(yesterday['short_ma'])
@@ -260,7 +252,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
 
-    long_ma_slope_5d = long_ma_today - df_temp.iloc[-6]['long_ma']  # 過去5日間の長期線変化量
+    long_ma_slope_5d = long_ma_today - df_temp.iloc[-6]['long_ma']
     long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
     long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
     long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma']
@@ -282,29 +274,25 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     if rsi_today >= 70:
         is_rsi_sell_warning = True
     else:
-        # 直近5営業日以内に70を超えた履歴があり、本日70を下抜け、かつ前日比RSI低下
         recent_rsi_5d = rsi_series.iloc[-6:-1]
         if (recent_rsi_5d > 70).any() and (rsi_yesterday >= 70) and (rsi_today < 70) and (rsi_today < rsi_yesterday):
             is_rsi_sell_warning = True
 
     # --- ② 通常反発 (加点 +1) ---
     is_rsi_buy_reversal = False
-    recent_rsi_3d = rsi_series.iloc[-4:-1]  # 過去3営業日
+    recent_rsi_3d = rsi_series.iloc[-4:-1]
     if (recent_rsi_3d <= 30).any():
-        # 本日RSIが前日比+2.0%以上向上、または本日のローソク足が陽線
         if (rsi_today >= rsi_yesterday + 2.0) or is_yang_candle:
             is_rsi_buy_reversal = True
 
     # --- ③ 底値切り上がりダブルボトム (加点 +2) ---
     is_rsi_double_bottom = False
     rsi_lows = find_swing_lows(rsi_series, 25)
-    # RSIが30%以下の領域に制限
     rsi_lows_30 = [i for i in rsi_lows if rsi_series.iloc[i] <= 30]
     
     if len(rsi_lows_30) >= 2:
         t1 = rsi_lows_30[-2]
         t2 = rsi_lows_30[-1]
-        # 成立条件チェック
         if (5 <= (t2 - t1) <= 20) and (rsi_series.iloc[t2] > rsi_series.iloc[t1]):
             if (rsi_today > rsi_series.iloc[t2]) and (rsi_today > rsi_yesterday):
                 is_rsi_double_bottom = True
@@ -316,10 +304,8 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     if len(price_lows) >= 2:
         d1 = price_lows[-2]
         d2 = price_lows[-1]
-        # 成立条件チェック
         if (5 <= (d2 - d1) <= 20) and (price_low_series.iloc[d2] < price_low_series.iloc[d1]):
             if rsi_series.iloc[d2] > rsi_series.iloc[d1]:
-                # 本日が底打ち反発局面
                 if (rsi_today <= 45) and (rsi_today > rsi_yesterday):
                     is_rsi_divergence = True
 
@@ -368,21 +354,18 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
-    # 共通トレンド判定（長期MAの傾き。例: 過去5日間の傾き）
-    is_long_ma_falling = long_ma_slope_5d < -0.05 # 下落トレンド
-    is_long_ma_flat_or_rising = long_ma_slope_5d >= -0.01 # 横這い〜上昇トレンド
-    is_long_ma_rising = long_ma_slope_5d > 0.05 # 明確な上昇トレンド
+    is_long_ma_falling = long_ma_slope_5d < -0.05
+    is_long_ma_flat_or_rising = long_ma_slope_5d >= -0.01
+    is_long_ma_rising = long_ma_slope_5d > 0.05
 
-    # 【共通】本日の「突き抜け」と「ゴールデンクロス」判定
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
 
     # ==========================================
-    # 買い4：逆張りリバ（下落トレンド中の極端な下方乖離からの反発）
+    # 買い4：逆張りリバ
     # ==========================================
-    # 相場全体のパニック売りなどを捉えるための重要な指標
     if diff_rate <= oversold_threshold:
-        if is_long_ma_falling: # MA自体が下落していることを確認
+        if is_long_ma_falling:
             if is_yang_candle or is_price_up:
                 category = "BUY4"
                 category_name = "買い4：逆張りリバ"
@@ -390,9 +373,8 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
                 reason = f"下落中の{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
     # ==========================================
-    # 買い1：新規買い（長期底練りからの株価上抜け or ゴールデンクロス）
+    # 買い1：新規買い
     # ==========================================
-    # 過去40日間のうち、株価が32日以上(80%) または 短期MAが36日以上(90%) 長期MAの下にあったか
     lookback_period = 40
     price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     short_ma_below_count = (df_temp.iloc[-lookback_period-1:-1]['short_ma'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
@@ -407,9 +389,8 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         reason = f"長期間の下落・底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生しました。"
 
     # ==========================================
-    # 買い2：再突き抜け（上昇トレンド中の「一時的な」押し目からの上抜け）
+    # 買い2：再突き抜け
     # ==========================================
-    # 過去15日間のうち、長期MAを下回っていたのが「1日〜3日」のみであること
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_15d <= 3
     
@@ -420,16 +401,14 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         reason = f"力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。"
 
     # ==========================================
-    # 買い3：押し目反発（MAに接して反発、直近下抜けていない）
+    # 買い3：押し目反発
     # ==========================================
-    # 過去15日で一度は長期MAから離れた（4%以上乖離）
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     
-    # 【ストッパー】直近5日間、終値ベースで一度もMAを下抜けていないことを保証
     not_crossed_below_recent = (df_temp.iloc[-6:-1]['Close'] >= df_temp.iloc[-6:-1]['long_ma']).all()
     
     if category == "NONE" and is_long_ma_rising and has_pulled_back and is_close_to_ma and is_rebound and not_crossed_below_recent:
@@ -439,7 +418,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
         
     # ==========================================
-    # 買い3-Pre：押し目待ち伏せ（支持線接触）
+    # 買い3-Pre：押し目待ち伏せ
     # ==========================================
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
     if category == "NONE" and is_long_ma_rising and has_pulled_back and is_resting_on_ma and not_crossed_below_recent:
@@ -448,27 +427,27 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
         reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
 
-# 期待度スコア (RSI・クオンツ対応・内訳記録版)
+    # 期待度スコア (RSI・クオンツ対応・内訳記録版)
     score = 3
-    score_reasons = [] # ★ 新規追加：加減点の具体的な理由を記録するリスト
+    score_reasons = []
     
     if category != "NONE":
         # 1. 新しい4大RSIシグナルのスコアリング
         if is_rsi_sell_warning:
-            score -= 1  # ① 過熱警戒 (-1)
+            score -= 1
             score_reasons.append("⚠️ RSI過熱警戒: -1")
         if is_rsi_buy_reversal:
-            score += 1  # ② 通常反発 (+1)
+            score += 1
             score_reasons.append("🔄 RSIゾーン反発: +1")
         if is_rsi_double_bottom:
-            score += 2  # ③ Wボトム特別反発 (+2)
+            score += 2
             score_reasons.append("📈 Wボトム特別反発: +2")
         if is_rsi_divergence:
-            score += 1  # ④ 強気のダイバージェンス (+1)
+            score += 1
             score_reasons.append("🛡️ 強気ダイバージェンス: +1")
 
         # 2. 既存のテクニカル加減点ロジック
-         if volume_today <= 10000:
+        if volume_today <= 10000:
             score -= 1
             score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
         if vol_ratio >= 1.5:
@@ -522,7 +501,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "rsi_buy_reversal": is_rsi_buy_reversal,
         "rsi_double_bottom": is_rsi_double_bottom,
         "rsi_divergence": is_rsi_divergence,
-        # ★ 追加項目：スコアの内訳データをフロントに渡す
         "score_reasons": score_reasons
     }
 
@@ -530,13 +508,8 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
 # ★【Phase 1】東証33業種 HOTセクター自動算出関数 (時価総額/売買代金加重モデル)
 # ----------------------------------------------------------------------
 def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
-    """
-    東証33業種ごとに資金流入度をスコア化(0〜100点)し、
-    閾値を超えた「本日のHOT業種」を最大5業種まで抽出します。
-    """
     sector_data = {}
     
-    # 1. 業種ごとに全銘柄のパフォーマンスと売買代金をグループ集計
     for ticker, df in bulk_data.items():
         if df.empty or len(df) < 25:
             continue
@@ -554,9 +527,8 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
             continue
             
         change_rate = ((price_today - price_yesterday) / price_yesterday) * 100
-        trading_value = price_today * float(today['Volume'])  # 本日の売買代金(ウェイト)
+        trading_value = price_today * float(today['Volume'])
         
-        # 5日移動平均線の傾き(短期モメンタム)
         ma5_today = df['Close'].tail(5).mean()
         ma5_5days_ago = df['Close'].iloc[-10:-5].mean() if len(df) >= 10 else ma5_today
         is_ma5_up = ma5_today > ma5_5days_ago
@@ -579,7 +551,6 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
     if not sector_data:
         return [], {}
 
-    # 2. シグナル点灯銘柄の売買代金シェアを集計
     for item in results_list:
         ticker = item["ticker"] + ".T"
         sector = item["sector"]
@@ -588,30 +559,18 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
             today_vol = item["volume"]
             sector_data[sector]["signal_value"] += (today_price * today_vol)
 
-    # 3. 各業種の総合スコア(0〜100点)の算出
     scored_sectors = []
     
     for sector, s_info in sector_data.items():
         if s_info["total_value"] <= 0 or s_info["total_stocks"] < 3:
             continue
             
-        # ① 加重平均騰落率 (%)
         weighted_change = s_info["weighted_change_sum"] / s_info["total_value"]
-        
-        # ② 加重シグナル密度 (%)：業種全体の売買代金に対するシグナル点灯銘柄のシェア
         signal_density = (s_info["signal_value"] / s_info["total_value"]) * 100
-        
-        # ③ 短期モメンタム比率 (%)：5日線が上向きの銘柄割合
         ma5_up_ratio = (s_info["ma5_up_count"] / s_info["total_stocks"]) * 100
 
-        # --- 0〜100点への標準化スコアリング ---
-        # パフォーマンス点 (最大40点) : 騰落率 +3%で満点
         score_perf = min(40.0, max(0.0, (weighted_change + 1.0) * 10.0))
-        
-        # シグナル密度点 (最大40点) : 点灯シェア 20%で満点
         score_density = min(40.0, max(0.0, signal_density * 2.0))
-        
-        # モメンタム点 (最大20点) : 5日線上向き率 70%で満点
         score_momentum = min(20.0, max(0.0, ma5_up_ratio * 0.285))
         
         total_score = round(score_perf + score_density + score_momentum, 1)
@@ -623,15 +582,14 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
             "signalDensity": round(signal_density, 1)
         })
 
-    # 4. スコア順にソートし、絶対閾値(55.0点以上)を満たす上位最大5業種を判定
     scored_sectors.sort(key=lambda x: x["score"], reverse=True)
     
-    HOT_THRESHOLD = 55.0  # 絶対閾値
+    HOT_THRESHOLD = 55.0
     hot_sectors = [s for s in scored_sectors if s["score"] >= HOT_THRESHOLD][:5]
 
     return hot_sectors, sector_data
 
-# 4. 全データの判定実行 (足切り69日・最適化・安全保護版)
+# 4. 全データの判定実行
 results_list = []
 print("各銘柄の判定ロジックを実行しています...", flush=True)
 
@@ -711,22 +669,16 @@ for ticker, df_stock in bulk_data.items():
         results_list.append(stock_info)
 
     except Exception as e:
-        # エラーが起きた銘柄はスキップし、ログに原因を出力して全体クラッシュを防ぐ
         print(f"⚠️ {ticker} の判定中にエラーが発生しスキップしました: {e}", flush=True)
 
-# 本日の東証全銘柄の騰落中央値を算出 (変更なし)
-
-# 本日の東証全銘柄の騰落中央値を算出 (変更なし)
 all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
 market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
 print(f" -> 本日の東証全上場銘柄の騰落率中央値: {market_median_change:.2f}%")
 
-# ★【Phase 1】東証33業種 HOTセクターの自動算出を実行 (★ここに追記)
 hot_sectors, all_sector_stats = calculate_hot_sectors(bulk_data, results_list, ticker_to_sector)
 hot_sector_names = [s["sector"] for s in hot_sectors]
 print(f" -> 本日のHOT業種 ({len(hot_sectors)}件検知): {', '.join(hot_sector_names) if hot_sectors else 'なし'}")
 
-# ★【Phase 2】HOT業種に属する銘柄への期待度+1加点 ＆ 内訳理由の記録 (★ここに追記)
 for item in results_list:
     sector = item["sector"]
     is_hot = sector in hot_sector_names
@@ -736,7 +688,6 @@ for item in results_list:
         for sys_key in ["short", "mid"]:
             sys_data = item[sys_key]
             if sys_data["category"] != "NONE":
-                # 期待度を+1（最大5点にクランプ）
                 new_score = min(5, sys_data["score"] + 1)
                 sys_data["score"] = new_score
                 
@@ -744,11 +695,9 @@ for item in results_list:
                     sys_data["score_reasons"] = []
                 sys_data["score_reasons"].append(f"🔥 追い風業種 ({sector}): +1")
 
-# 地合い強気銘柄の判定および加点 (変更なし)
 for item in results_list:
     is_strong_relative = False
-    if market_median_change <= -1.0: # 市場が大きく下げている場合
-        # この銘柄が市場平均より1.5%以上良い成績の場合に「地合い強気」と判断
+    if market_median_change <= -1.0:
         is_strong_relative = item["changeRate"] >= (market_median_change + 1.5)
         
     if is_strong_relative:
@@ -760,16 +709,11 @@ for item in results_list:
                 item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score)
 
 json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
-hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)  # ★追記
+hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
-
-# 昨日総計の集計をJSに渡す（NONEを除外した昨日各カテゴリ総計） (変更なし)
-# prev_counts["short"]["TOTAL_ACTIVE"] と prev_counts["mid"]["TOTAL_ACTIVE"] は
-# スクリプト冒頭の前日データパース処理で計算されるようになった
 prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
 
-# HTMLテンプレート (UI変更なし)
 html_template = """<!doctype html>
 <html lang="ja">
   <head>
@@ -812,7 +756,6 @@ html_template = """<!doctype html>
   </head>
   <body class="min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-16">
     
-    <!-- ヘッダー -->
     <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur sticky top-0 z-30">
       <div class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div class="flex items-center space-x-3">
@@ -826,7 +769,6 @@ html_template = """<!doctype html>
           </div>
         </div>
         
-        <!-- 短期・中期切り替え -->
         <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex gap-1 text-xs">
           <button id="btnSystemShort" class="px-4 py-1.5 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-100 cursor-pointer">
             短期 (5日/25日線)
@@ -838,15 +780,11 @@ html_template = """<!doctype html>
       </div>
     </header>
 
-    <!-- メイン -->
     <main class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
 
-    <!-- ★ Phase 3: HOT業種ランキングバナー枠 (ここに追記) -->
       <div id="hotSectorsBanner" class="hidden bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-        <!-- JavaScriptによってここにHOT業種バッジが挿入されます -->
       </div>
       
-      <!-- サマリーカード -->
       <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
           <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">東証判定シグナル数</span>
@@ -882,14 +820,11 @@ html_template = """<!doctype html>
         </div>
       </section>
 
-      <!-- メインタスクエリア -->
       <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col">
         
-        <!-- 複合コントロールバー -->
         <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           
           <div class="flex flex-wrap items-center gap-3">
-            <!-- 判定タブ -->
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
               <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
               <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
@@ -898,7 +833,6 @@ html_template = """<!doctype html>
               <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-500 hover:text-slate-300 cursor-pointer">すべて</button>
             </div>
 
-            <!-- 市場フィルターボタン -->
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
               <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
               <button data-market="ALL" class="market-btn px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-white cursor-pointer">すべて</button>
@@ -908,7 +842,6 @@ html_template = """<!doctype html>
             </div>
           </div>
 
-          <!-- 検索 ＆ エクスポート -->
           <div class="flex items-center gap-3 w-full xl:w-auto">
             <div class="relative flex-1 xl:w-72">
               <input type="text" id="searchInput" placeholder="コード、銘柄名、業種で検索..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
@@ -918,18 +851,15 @@ html_template = """<!doctype html>
           </div>
         </div>
 
-        <!-- パフォーマンス警告バナー -->
         <div id="performanceWarning" class="mt-4 hidden bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] p-2.5 rounded-xl">
           ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンや検索窓を使って絞り込むとスムーズに閲覧できます。
         </div>
 
-<!-- テーブル -->
         <div class="mt-6 overflow-x-auto">
           <table class="w-full text-left">
            <thead>
               <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
                 <th class="p-3 w-20 whitespace-nowrap">判定</th>
-                <!-- 幅を w-24 から w-16 に縮小 -->
                 <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-16 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
                   <div class="flex items-center justify-center gap-1.5">
                     <span>期待度</span>
@@ -955,7 +885,6 @@ html_template = """<!doctype html>
           </table>
         </div>
 
-        <!-- テーブルフッター -->
         <div class="mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
           <span id="displayCountLabel" class="font-medium text-slate-300">表示中: 0 件</span>
           <div class="flex items-center gap-3 text-slate-500 font-mono text-[10px]">
@@ -967,25 +896,21 @@ html_template = """<!doctype html>
 
       </section>
 
-      <!-- 解説開閉ボタン -->
       <div class="flex justify-center mt-6">
         <button id="btnToggleExplanation" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md">
           📖 解説を表示
         </button>
       </div>
 
-<!-- 解説小窓 -->
       <section id="explanationSection" class="pt-6 border-t border-slate-800/60 hidden space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
-          <!-- 左側：期待度マニュアル -->
           <div class="space-y-4">
             <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
               <span>⭐</span> 期待度（1〜5）の評価要件マニュアル
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               
-              <!-- 1. 基本採点 -->
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">基本採点（スタート値）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
@@ -993,7 +918,6 @@ html_template = """<!doctype html>
                 </p>
               </div>
 
-              <!-- 2. 出来高・流動性評価（統合） -->
               <div class="bg-slate-900/60 border border-sky-500/20 rounded-xl p-3.5">
                 <span class="font-bold text-sky-400 block mb-1">出来高・流動性評価 (+1 / -1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
@@ -1002,7 +926,6 @@ html_template = """<!doctype html>
                 </p>
               </div>
 
-              <!-- 3. 相対的変化率 -->
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-cyan-400 block mb-1">相対的変化率ボーナス (+1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
@@ -1010,7 +933,6 @@ html_template = """<!doctype html>
                 </p>
               </div>
 
-              <!-- 4. トレンド下降減点 -->
               <div class="bg-slate-900/60 border border-rose-500/20 rounded-xl p-3.5">
                 <span class="font-bold text-rose-400 block mb-1">トレンド下降減点 (-1〜-2)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
@@ -1019,7 +941,6 @@ html_template = """<!doctype html>
                 </p>
               </div>
 
-              <!-- 5. 個別ローソク足補正 -->
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-purple-400 block mb-1">個別ローソク足補正 (+1 / -1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
@@ -1028,7 +949,6 @@ html_template = """<!doctype html>
                 </p>
               </div>
 
-              <!-- 6. RSIテクニカル評価（新規追加） -->
               <div class="bg-slate-900/60 border border-teal-500/20 rounded-xl p-3.5">
                 <span class="font-bold text-teal-400 block mb-1">RSIテクニカル評価 (+1〜+2 / -1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
@@ -1041,7 +961,6 @@ html_template = """<!doctype html>
             </div>
           </div>
 
-          <!-- 右側：グランビル判定条件マニュアル -->
           <div class="space-y-4">
             <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
               <span>📖</span> グランビル買いシグナル（1〜4）詳細判定要件
@@ -1090,14 +1009,12 @@ html_template = """<!doctype html>
         </div>
       </section>
 
-　　　 <!-- 詳細診断カルテ用ダイアログ (HTML5標準・ z-50で最前面) -->
       <dialog id="diagnosticDialog" class="bg-slate-900 border border-slate-800 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-md w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
         <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
           <h3 id="dialogTitle" class="text-sm font-bold text-white tracking-tight flex items-center gap-2">📋 銘柄診断カルテ</h3>
           <button onclick="closeDiagnosticDialog()" class="text-slate-400 hover:text-white font-bold text-lg select-none cursor-pointer focus:outline-none">✕</button>
         </div>
         <div id="dialogContent" class="space-y-4 text-xs">
-          <!-- JavaScriptによってここに情報が書き込まれます -->
         </div>
       </dialog>
 
@@ -1106,7 +1023,7 @@ html_template = """<!doctype html>
     <script>
       const state = {
         results: __PLACEHOLDER_RESULTS__,
-        hotSectors: __PLACEHOLDER_HOT_SECTORS__, // ★ここに追記
+        hotSectors: __PLACEHOLDER_HOT_SECTORS__,
         prevCounts: __PLACEHOLDER_PREV_COUNTS__,
         marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
@@ -1168,15 +1085,13 @@ html_template = """<!doctype html>
 
       function openCatFeedback(ticker, name, category) {
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
-        // 「?viewform&」を「?」に修正し、標準的なプリフィルURLにします
         const targetUrl = `${FORM_CAT_CFG.baseUrl}?${FORM_CAT_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_CAT_CFG.entryName}=${encodeURIComponent(name)}&${FORM_CAT_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_CAT_CFG.entryCat}=${encodeURIComponent(category)}`;
         window.open(targetUrl, '_blank', 'width=620,height=750');
       }
 
        function openScoreFeedback(ticker, name, score) {
         if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          // ダブルクォーテーション " " を、改行に強いバッククォート ` ` に書き換えます
-          alert(`【初期設定が必要です】\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。`);
+          alert(`【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。`);
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
@@ -1347,7 +1262,6 @@ html_template = """<!doctype html>
           ${getDiffBadge(counts.BUY4, state.prevCounts[sys].BUY4 || 0)}
         `;
         
-        // statTotalの表示を修正: フィルター適用前の全銘柄数ではなく、シグナル点灯銘柄の合計数
         document.getElementById('statTotal').textContent = totalToday.toLocaleString();
         const totalDiffEl = document.getElementById('statTotalDiff');
         if (totalDiffEl) {
@@ -1360,7 +1274,7 @@ html_template = """<!doctype html>
           const t = btn.dataset.tab;
           let count = 0;
           if (t === 'ALL') {
-            count = totalToday; // 全アクティブシグナル数
+            count = totalToday;
           } else if (t === 'BUY3') {
             count = counts.BUY3 + counts.BUY3_PRE;
           } else {
@@ -1419,7 +1333,7 @@ html_template = """<!doctype html>
           return;
         }
         
-filtered.forEach(item => {
+        filtered.forEach(item => {
           const sysData = item[sys];
           const isPlus = item.change >= 0;
           const tr = document.createElement('tr');
@@ -1431,34 +1345,28 @@ filtered.forEach(item => {
 
           const categoryShortName = sysData.categoryName.split('：')[0];
 
-          // 出来高警告の基準値を10,000株以下に適用
           const volumeWarning = item.isLowVolume 
             ? `<span class="ml-1 px-1 text-rose-400 font-bold select-none cursor-help" title="本日出来高: ${item.volume.toLocaleString()}株 (流動性リスク極めて高：10,000株以下)">⚠️</span>` 
             : ``;
 
-          // 地合い強気バッジ
           const rsBadge = item.isStrongRelative 
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="本日市場中央値が ${state.marketMedian.toFixed(2)}% の大幅下落相場の中、この銘柄は ${item.changeRate}% で踏み止まり、大口の買い支えが確認されます。">🛡️ 地合い強気</span>` 
             : ``;
 
-          // ★ Phase 4: HOT業種バッジの作成
           const hotSectorBadge = item.isHotSector 
             ? `<span class="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold select-none cursor-help" title="本日、大口資金が集中しているHOT業種（資金流入セクター）に属している銘柄です。">🔥 HOT業種</span>` 
             : ``;
 
-          // 連続日数・初点灯バッジ
           const consecutiveBadge = sysData.consecutiveDays === 1 
             ? `<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1 w-max">🆕 初点灯</span>` 
             : sysData.consecutiveDays >= 2 
               ? `<span class="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold block mt-1 w-max">🔥 ${sysData.consecutiveDays}日連続</span>` 
               : ``;
 
-          // 前日カテゴリ名ラベル
           const prevCatLabel = sysData.prevCategory 
             ? `<span class="text-[9px] text-slate-400 font-medium block mt-1">前日: ${sysData.prevCategory}</span>` 
             : ``;
 
-          // 4大RSI指標のステータスバッジ
           const rsiBadge = sysData.rsi_divergence
             ? `<span class="text-[9px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold block mt-1" title="株価の底値が切り下がっているにもかかわらず、RSIの底値が切り上がっている強気の逆行現象です。強い上昇転換の予兆です。">🛡️ 強気ダイバージェンス</span>`
             : sysData.rsi_double_bottom
@@ -1469,7 +1377,6 @@ filtered.forEach(item => {
                   ? `<span class="text-[9px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold block mt-1" title="本日RSIが70%以上の買われすぎ圏に達しているか、または過去5日以内に70%を超えた後本日デッドクロスして下落に転じているため、過熱警戒です。">⚠️ RSI過熱警戒</span>`
                   : ``;
 
-          // 期待度ホバー時の加減点内訳リスト（HTML）
           let reasonsListHtml = '';
           if (sysData.score_reasons && sysData.score_reasons.length > 0) {
             reasonsListHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5 text-slate-300"><span>•</span><span>${r}</span></li>`).join('');
@@ -1512,7 +1419,6 @@ filtered.forEach(item => {
                 ${volumeWarning}
                 ${rsBadge}
               </div>
-              <!-- 業種表示部分：HOT業種バッジ（🔥 HOT業種）を並べて表示 -->
               <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
                 <span>${item.sector}</span>
                 ${hotSectorBadge}
@@ -1546,7 +1452,6 @@ filtered.forEach(item => {
         });        
       }
 
-      // ★ 新規追加：詳細診断カルテ（HTML5 dialog）の開閉ロジック
       function openDiagnosticDialog(ticker, sys) {
         const item = state.results.find(r => r.ticker === ticker);
         if (!item) return;
@@ -1558,7 +1463,6 @@ filtered.forEach(item => {
         
         title.innerHTML = `📋 診断カルテ: <span class="font-mono text-cyan-400 font-bold ml-1.5">[${item.ticker}] ${item.name}</span>`;
         
-        // スコア内訳リストの生成
         let reasonsHtml = '';
         if (sysData.score_reasons && sysData.score_reasons.length > 0) {
           reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5"><span>•</span><span>${r}</span></li>`).join('');
@@ -1567,7 +1471,6 @@ filtered.forEach(item => {
         }
 
         content.innerHTML = `
-          <!-- 基礎情報 -->
           <div class="grid grid-cols-2 gap-4 border-b border-slate-800 pb-3">
             <div>
               <span class="text-slate-400 text-[10px] uppercase block">本日終値</span>
@@ -1590,7 +1493,6 @@ filtered.forEach(item => {
             </div>
           </div>
           
-          <!-- 期待度内訳 (表示をスコア数字に変更) -->
           <div class="space-y-2 border-b border-slate-800 pb-3">
             <span class="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">🌟 期待度スコア評価内訳 (スコア: ${sysData.score})</span>
             <ul class="space-y-0.5 text-slate-300 text-[11px] leading-relaxed pl-1">
@@ -1598,27 +1500,24 @@ filtered.forEach(item => {
             </ul>
           </div>
           
-          <!-- 詳細解説 -->
           <div class="p-3 bg-slate-950 border border-slate-800/80 rounded-xl">
             <span class="text-[10px] text-slate-400 block mb-1">💡 判定詳細 / 推奨戦略</span>
             <p class="text-slate-300 text-[11px] leading-relaxed">${sysData.reason}</p>
           </div>
           
-          <!-- フッター（将来の拡張のために情報を整理して配置） -->
           <div class="text-[10px] text-slate-500 pt-1 text-right">
             システム: ${(sys === 'short') ? '短期(5/25)' : '中期(25/75)'} | 市場: ${item.market} | 業種: ${item.sector}
           </div>
         `;
         
-        dialog.showModal(); // HTML5標準機能で最前面にポップアップ表示 [2.1.2, 2.1.7]
+        dialog.showModal();
       }
 
       function closeDiagnosticDialog() {
         const dialog = document.getElementById('diagnosticDialog');
-        dialog.close(); // ダイアログを安全に閉じます
+        dialog.close();
       }
       
-      // ★ Phase 3: HOT業種ランキングバナーの描画関数
       function renderHotSectorsBanner() {
         const container = document.getElementById('hotSectorsBanner');
         if (!container) return;
@@ -1663,13 +1562,12 @@ filtered.forEach(item => {
     </script>
   </body>
 </html>"""
-# ==========================================
 
 # 実際の置換処理
 html_content = html_template
 html_content = html_content.replace("__LAST_UPDATE__", current_time_str)
 html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_median_change:.4f}")
-html_content = html_content.replace("__PLACEHOLDER_HOT_SECTORS__", hot_sectors_json_str)  # ★追記
+html_content = html_content.replace("__PLACEHOLDER_HOT_SECTORS__", hot_sectors_json_str)
 html_content = html_content.replace("__PLACEHOLDER_RESULTS__", json_data_str)
 html_content = html_content.replace("__PLACEHOLDER_PREV_COUNTS__", prev_counts_json_str)
 html_content = html_content.replace("/* PLACEHOLDER_FORM_CAT */ {}", form_cat_str)
