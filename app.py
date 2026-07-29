@@ -74,7 +74,6 @@ if os.path.exists(html_output_path):
         with open(html_output_path, "r", encoding="utf-8") as f:
             old_html = f.read()
         
-        # results: [ ... ] の配列だけをカッコの深さを追って正確に抽出する安全な関数
         def extract_results_json(text):
             start_pos = text.find("results:")
             if start_pos == -1: return None
@@ -109,7 +108,6 @@ if os.path.exists(html_output_path):
         if prev_results_json:
             prev_results = json.loads(prev_results_json)
             
-            # 各システムの昨日点灯数を集計＆銘柄ルックアップを作成
             for item in prev_results:
                 for sys_key in ["short", "mid"]:
                     cat = item.get(sys_key, {}).get("category", "NONE")
@@ -120,7 +118,6 @@ if os.path.exists(html_output_path):
                 if ticker_key:
                     prev_results_by_ticker[ticker_key] = item
                         
-            # アクティブな合計数を計算 (NONEを除外)
             for sys_key in ["short", "mid"]:
                 prev_counts[sys_key]["TOTAL"] = len(prev_results)
                 total_active = 0
@@ -170,7 +167,6 @@ for i in range(0, len(tickers), chunk_size):
             if ticker in data.columns.levels[0]:
                 df_single = data[ticker].dropna(subset=['Close']).copy()
                 
-                # タイムゾーン情報を剥離して平坦化
                 if df_single.index.tz is not None:
                     df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
                 else:
@@ -193,7 +189,7 @@ def calculate_rsi(series, period=14):
     avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
     
-    rs = avg_gain / avg_loss.replace(0, 1e-10) # ゼロ除算防止
+    rs = avg_gain / avg_loss.replace(0, 1e-10)
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
@@ -269,7 +265,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     rsi_today = float(rsi_series.iloc[-1])
     rsi_yesterday = float(rsi_series.iloc[-2])
     
-    # --- ① 過熱警戒 (減点 -1) ---
     is_rsi_sell_warning = False
     if rsi_today >= 70:
         is_rsi_sell_warning = True
@@ -278,14 +273,12 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         if (recent_rsi_5d > 70).any() and (rsi_yesterday >= 70) and (rsi_today < 70) and (rsi_today < rsi_yesterday):
             is_rsi_sell_warning = True
 
-    # --- ② 通常反発 (加点 +1) ---
     is_rsi_buy_reversal = False
     recent_rsi_3d = rsi_series.iloc[-4:-1]
     if (recent_rsi_3d <= 30).any():
         if (rsi_today >= rsi_yesterday + 2.0) or is_yang_candle:
             is_rsi_buy_reversal = True
 
-    # --- ③ 底値切り上がりダブルボトム (加点 +2) ---
     is_rsi_double_bottom = False
     rsi_lows = find_swing_lows(rsi_series, 25)
     rsi_lows_30 = [i for i in rsi_lows if rsi_series.iloc[i] <= 30]
@@ -297,7 +290,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             if (rsi_today > rsi_series.iloc[t2]) and (rsi_today > rsi_yesterday):
                 is_rsi_double_bottom = True
 
-    # --- ④ 強気のダイバージェンス (加点 +1) ---
     is_rsi_divergence = False
     price_lows = find_swing_lows(price_low_series, 25)
     
@@ -309,14 +301,12 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
                 if (rsi_today <= 45) and (rsi_today > rsi_yesterday):
                     is_rsi_divergence = True
 
-    # 急騰判定
     df_recent_40d = df_temp.tail(40)
     max_price_40d = df_recent_40d['Close'].max()
     min_price_40d = df_recent_40d['Close'].min()
     price_surge_ratio = max_price_40d / min_price_40d if min_price_40d > 0 else 1.0
     is_surged_stock = price_surge_ratio >= 1.50
     
-    # 乖離率しきい値
     warning_suffix = ""
     if market_type == "東Ｐ":
         if is_surged_stock:
@@ -331,18 +321,15 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     else:
         oversold_threshold = -10.0 if long_window <= 25 else -15.0
     
-    # 出来高25日平均比
     recent_volumes = df_temp['Volume'].iloc[-26:-1]
     vol_ma25 = recent_volumes.mean() if len(recent_volumes) > 0 else 0
     vol_ratio = today['Volume'] / vol_ma25 if vol_ma25 > 0 else 1.0
     
-    # 相対長期線変化率
     ma_change_series = df_temp['long_ma'].pct_change()
     ma_change_today = ma_change_series.iloc[-1]
     baseline_change_120d = ma_change_series.abs().tail(120).mean()
     is_slope_strong_relative = (ma_change_today > 0) and (ma_change_today > baseline_change_120d)
     
-    # ローソク足形状
     candle_body_pct = ((price_today - open_today) / open_today) * 100 if open_today > 0 else 0.0
     max_body = max(price_today, open_today)
     upper_shadow = high_today - max_body
@@ -361,6 +348,23 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
 
+　　# ==========================================
+    # ★ ベースのフラグ計算（底練り・初動実績）
+    # ==========================================
+    lookback_period = 40
+    # ① 直近40日での底練り判定（完全な新規初動用）
+    price_below_count_recent = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
+    short_ma_below_count_recent = (df_temp.iloc[-lookback_period-1:-1]['short_ma'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
+    is_long_bottoming_recent = (price_below_count_recent >= lookback_period * 0.8) or (short_ma_below_count_recent >= lookback_period * 0.9)
+    
+    # ② 少し前（10日前〜50日前）での底練り判定（上抜けで滞在割合が薄まる「初押し」救済用）
+    offset = 10
+    if len(df_temp) >= lookback_period + offset + 1:
+        price_below_count_past = (df_temp.iloc[-lookback_period-offset-1:-offset-1]['Close'] < df_temp.iloc[-lookback_period-offset-1:-offset-1]['long_ma']).sum()
+        is_long_bottoming_past = (price_below_count_past >= lookback_period * 0.8)
+    else:
+        is_long_bottoming_past = False
+
     # ==========================================
     # 買い4：逆張りリバ
     # ==========================================
@@ -372,16 +376,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
                 badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
                 reason = f"下落中の{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
+     # ==========================================
+    # 買い1：新規買い（正真正銘の初動クロス）
     # ==========================================
-    # 買い1：新規買い
-    # ==========================================
-    lookback_period = 40
-    price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
-    short_ma_below_count = (df_temp.iloc[-lookback_period-1:-1]['short_ma'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
-    
-    is_long_bottoming = (price_below_count >= lookback_period * 0.8) or (short_ma_below_count >= lookback_period * 0.9)
-    
-    if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming and (diff_rate <= 5.0):
+    if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming_recent and (diff_rate <= 5.0):
         category = "BUY1"
         category_name = "買い1：新規買い"
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
@@ -389,50 +387,83 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         reason = f"長期間の下落・底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生しました。"
 
     # ==========================================
-    # 買い2：再突き抜け
+    # 買い2：再突き抜け ＆ 初押し(下抜け復帰)
     # ==========================================
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
-    is_temp_dip = 1 <= below_count_15d <= 3
+    is_temp_dip = 1 <= below_count_15d <= 3  # 通常の一時下抜け
     
-    if category == "NONE" and price_crossed_above and is_long_ma_rising and is_temp_dip and (diff_rate <= 5.0):
-        category = "BUY2"
-        category_name = "買い2：再突き抜け"
-        badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-        reason = f"力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。"
+    # 初押しの下抜け（過去に底練りがあり、直近で一度上にいて、今回下抜けて復帰した）
+    was_above_recently = (df_temp.iloc[-21:-1]['Close'] >= df_temp.iloc[-21:-1]['long_ma']).any()
+    is_initial_dip_crossed = is_long_bottoming_past and was_above_recently and price_crossed_above
+
+    if category == "NONE" and (diff_rate <= 5.0):
+        # パターンA：力強い上昇トレンド中の一時下抜け再クロス
+        if price_crossed_above and is_long_ma_rising and is_temp_dip:
+            category = "BUY2"
+            category_name = "買い2：再突き抜け"
+            badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
+            reason = f"力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。"
+        # パターンB：底練り脱却後の「初押し」で下抜けて再クロス
+        elif is_long_ma_flat_or_rising and is_initial_dip_crossed:
+            category = "BUY2"
+            category_name = "買い2：初押し(下抜け復帰)"
+            badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
+            reason = f"長期の底練りから脱却後、最初の押し目で長期線を一度下抜け、本日再び上方に復帰しました。"
 
     # ==========================================
-    # 買い3：押し目反発
+    # 買い3：押し目反発 ＆ 初押し(支持線反発)
     # ==========================================
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
-    has_pulled_back = max_diff_15d >= 4.0
+    has_pulled_back = max_diff_15d >= 4.0  # 通常の買い3で要求される上放れ実績
     
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
-    
     not_crossed_below_recent = (df_temp.iloc[-6:-1]['Close'] >= df_temp.iloc[-6:-1]['long_ma']).all()
-    
-    if category == "NONE" and is_long_ma_rising and has_pulled_back and is_close_to_ma and is_rebound and not_crossed_below_recent:
-        category = "BUY3"
-        category_name = "買い3：押し目反発"
-        badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-        reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
+
+    # 初押しの反発（過去に底練りがあり、下抜けずにMA付近で反発。4%の乖離実績や強い上昇トレンドを要求しない）
+    is_initial_dip_rebound = is_long_bottoming_past and was_above_recently and is_close_to_ma and is_rebound and not_crossed_below_recent
+
+    if category == "NONE" and not_crossed_below_recent:
+        # パターンA：明確な上昇トレンド中のオーソドックスな押し目反発
+        if is_long_ma_rising and has_pulled_back and is_close_to_ma and is_rebound:
+            category = "BUY3"
+            category_name = "買い3：押し目反発"
+            badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+            reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
+        # パターンB：底練り脱却後の「初押し」で下抜けずに反発
+        elif is_long_ma_flat_or_rising and is_initial_dip_rebound:
+            category = "BUY3"
+            category_name = "買い3：初押し(支持線反発)"
+            badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+            reason = f"長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。"
         
-    # ==========================================
-    # 買い3-Pre：押し目待ち伏せ
+   # ==========================================
+    # 買い3-Pre：押し目待ち伏せ ＆ 初押し(待ち伏せ)
     # ==========================================
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
-    if category == "NONE" and is_long_ma_rising and has_pulled_back and is_resting_on_ma and not_crossed_below_recent:
-        category = "BUY3_PRE"
-        category_name = "買い3：押し目待ち伏せ"
-        badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
-        reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
+    
+    # 初押しの待ち伏せ（反発はまだしていないが、MA極近まで押してきている状態）
+    is_initial_dip_resting = is_long_bottoming_past and was_above_recently and is_resting_on_ma and not_crossed_below_recent
+
+    if category == "NONE" and not_crossed_below_recent:
+        # パターンA：明確な上昇トレンド中のオーソドックスな待ち伏せ
+        if is_long_ma_rising and has_pulled_back and is_resting_on_ma:
+            category = "BUY3_PRE"
+            category_name = "買い3：押し目待ち伏せ"
+            badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
+            reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
+        # パターンB：底練り脱却後の「初押し」で長期線付近で待機中
+        elif is_long_ma_flat_or_rising and is_initial_dip_resting:
+            category = "BUY3_PRE"
+            category_name = "買い3：初押し(待ち伏せ)"
+            badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
+            reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
 
     # 期待度スコア (RSI・クオンツ対応・内訳記録版)
     score = 3
     score_reasons = []
     
     if category != "NONE":
-        # 1. 新しい4大RSIシグナルのスコアリング
         if is_rsi_sell_warning:
             score -= 1
             score_reasons.append("⚠️ RSI過熱警戒: -1")
@@ -446,7 +477,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             score += 1
             score_reasons.append("🛡️ 強気ダイバージェンス: +1")
 
-        # 2. 既存のテクニカル加減点ロジック
         if volume_today <= 10000:
             score -= 1
             score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
@@ -763,7 +793,7 @@ html_template = """<!doctype html>
           <div>
             <h1 class="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
               全自動グランビル・スクリーナー
-              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.8_ULTIMATE</span>
+              <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v3.9_ULTIMATE</span>
             </h1>
             <p class="text-xs text-slate-400 hidden sm:block">東証全市場自動解析・高精度ロジック（最終更新：__LAST_UPDATE__）</p>
           </div>
@@ -801,7 +831,7 @@ html_template = """<!doctype html>
           </div>
         </div>
         <div class="bg-slate-900/80 border border-sky-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">買い2 (下抜け復帰)</span>
+          <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">買い2 (初押し/再復帰)</span>
           <div class="flex items-baseline justify-between mt-2" id="statBuy2">
             <span class="text-2xl font-bold text-sky-400">0</span>
           </div>
@@ -969,28 +999,27 @@ html_template = """<!doctype html>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)の傾き: 直近10日で横誰い〜上向き(JST <span class="font-mono">&gt;=0.0%</span>)<br>
-                  ・底確認: 過去20日のうち<span class="font-mono">15日以上</span>は線の下に沈んでいたこと<br>
-                  ・本日、線の上抜け、かつ直近で線の下にいた実績あり<br>
+                  ・長期線(<span class="exp-long"></span>)の傾き: 横ばい〜上向き<br>
+                  ・底確認: 過去40日のうち<span class="font-mono">80%以上</span>は線の下に沈んでいたこと<br>
+                  ・本日、完全なる初上抜け(ゴールデンクロス含む)<br>
                   ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
-                <span class="font-bold text-slate-200 block mb-1">買い2：一時下抜け復帰</span>
+                <span class="font-bold text-slate-200 block mb-1">買い2：初押し・再突き抜け</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)が安定した右肩上がり<br>
-                  ・一時性: 過去10日で長期線の下に沈んだのが「1〜4日のみ」<br>
-                  ・本日、再度長期線の上に復帰し、乖離率が <span class="font-mono">0.0%〜+4.0%</span> 以内 (変更)
+                  ・通常: 安定した右肩上がりの長期線(<span class="exp-long"></span>)を過去10日で1〜3日のみ下抜けし、本日復帰。<br>
+                  ・初押し: 長期底練りからの脱却直後に、初めて長期線付近まで押して再上抜け、または反発したもの。<br>
+                  ・乖離率 <span class="font-mono">0.0%〜+5.0%</span> 以内
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発（待ち伏せ含む）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">強力な右肩上がりトレンド</span>中<br>
-                  ・短期線が長期線の上で継続的に推移していること<br>
-                  ・過去に短期線が長期線から<span class="font-mono">+2.0%以上</span>上放れた実績あり<br>
+                  ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">明確な右肩上がりトレンド</span>中<br>
+                  ・過去に株価が長期線から<span class="font-mono">+4.0%以上</span>上放れた実績あり<br>
                   ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日反発。<br>
-                  ・<strong>【下落日待ち伏せPre-Buy3】</strong>: 長期線の極近(JST -0.5%〜+1.5%)にあり、短期線も上昇傾向なら特別点灯。
+                  ・<strong>【待ち伏せPre-Buy3】</strong>: 長期線の極近(-0.5%〜+1.5%)にあり、短期線も上昇傾向なら特別点灯。
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
