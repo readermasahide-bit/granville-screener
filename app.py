@@ -348,7 +348,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
 
-　　# ==========================================
+    # ==========================================
     # ★ ベースのフラグ計算（底練り・初動実績）
     # ==========================================
     lookback_period = 40
