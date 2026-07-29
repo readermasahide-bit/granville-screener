@@ -437,7 +437,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
             reason = f"長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。"
         
-   # ==========================================
+# ==========================================
     # 買い3-Pre：押し目待ち伏せ ＆ 初押し(待ち伏せ)
     # ==========================================
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
