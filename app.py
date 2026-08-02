@@ -16,7 +16,6 @@ html_output_path = "index.html" # ホームページとして公開するため 
 
 # 【Googleフォーム1：判定カテゴリ改善用】
 FORM_CONFIG_CAT = {
-    # 末尾を「QOw」に修正します
     "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
     "entryCode": "entry.1616153480",
     "entryName": "entry.639288663",
@@ -359,16 +358,11 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
 
-    # ==========================================
-    # ★ ベースのフラグ計算（底練り・初動実績）
-    # ==========================================
     lookback_period = 40
-    # ① 直近40日での底練り判定（完全な新規初動用）
     price_below_count_recent = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     short_ma_below_count_recent = (df_temp.iloc[-lookback_period-1:-1]['short_ma'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     is_long_bottoming_recent = (price_below_count_recent >= lookback_period * 0.8) or (short_ma_below_count_recent >= lookback_period * 0.9)
     
-    # ② 少し前（10日前〜50日前）での底練り判定（上抜けで滞在割合が薄まる「初押し」救済用）
     offset = 10
     if len(df_temp) >= lookback_period + offset + 1:
         price_below_count_past = (df_temp.iloc[-lookback_period-offset-1:-offset-1]['Close'] < df_temp.iloc[-lookback_period-offset-1:-offset-1]['long_ma']).sum()
@@ -376,9 +370,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     else:
         is_long_bottoming_past = False
 
-    # ==========================================
     # 買い4：逆張りリバ
-    # ==========================================
     if diff_rate <= oversold_threshold:
         if is_long_ma_falling:
             if is_yang_candle or is_price_up:
@@ -387,9 +379,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
                 badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
                 reason = f"下落中の{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
-     # ==========================================
-    # 買い1：新規買い（正真正銘の初動クロス）
-    # ==========================================
+    # 買い1：新規買い
     if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming_recent and (diff_rate <= 5.0):
         category = "BUY1"
         category_name = "買い1：新規買い"
@@ -397,80 +387,64 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         cross_type = "ゴールデンクロス" if gc_occurred else "価格の突き抜け"
         reason = f"長期間の下落・底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生しました。"
 
-    # ==========================================
     # 買い2：再突き抜け ＆ 初押し(下抜け復帰)
-    # ==========================================
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
-    is_temp_dip = 1 <= below_count_15d <= 3  # 通常の一時下抜け
+    is_temp_dip = 1 <= below_count_15d <= 3
     
-    # 初押しの下抜け（過去に底練りがあり、直近で一度上にいて、今回下抜けて復帰した）
     was_above_recently = (df_temp.iloc[-21:-1]['Close'] >= df_temp.iloc[-21:-1]['long_ma']).any()
     is_initial_dip_crossed = is_long_bottoming_past and was_above_recently and price_crossed_above
 
     if category == "NONE" and (diff_rate <= 5.0):
-        # パターンA：力強い上昇トレンド中の一時下抜け再クロス
         if price_crossed_above and is_long_ma_rising and is_temp_dip:
             category = "BUY2"
             category_name = "買い2：再突き抜け"
             badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
             reason = f"力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。"
-        # パターンB：底練り脱却後の「初押し」で下抜けて再クロス
         elif is_long_ma_flat_or_rising and is_initial_dip_crossed:
             category = "BUY2"
             category_name = "買い2：初押し(下抜け復帰)"
             badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
             reason = f"長期の底練りから脱却後、最初の押し目で長期線を一度下抜け、本日再び上方に復帰しました。"
 
-    # ==========================================
     # 買い3：押し目反発 ＆ 初押し(支持線反発)
-    # ==========================================
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
-    has_pulled_back = max_diff_15d >= 4.0  # 通常の買い3で要求される上放れ実績
+    has_pulled_back = max_diff_15d >= 4.0
     
     is_close_to_ma = 0.0 < diff_rate <= 3.5
     is_rebound = is_yang_candle and is_price_up
     not_crossed_below_recent = (df_temp.iloc[-6:-1]['Close'] >= df_temp.iloc[-6:-1]['long_ma']).all()
 
-    # 初押しの反発（過去に底練りがあり、下抜けずにMA付近で反発。4%の乖離実績や強い上昇トレンドを要求しない）
     is_initial_dip_rebound = is_long_bottoming_past and was_above_recently and is_close_to_ma and is_rebound and not_crossed_below_recent
 
     if category == "NONE" and not_crossed_below_recent:
-        # パターンA：明確な上昇トレンド中のオーソドックスな押し目反発
         if is_long_ma_rising and has_pulled_back and is_close_to_ma and is_rebound:
             category = "BUY3"
             category_name = "買い3：押し目反発"
             badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
             reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
-        # パターンB：底練り脱却後の「初押し」で下抜けずに反発
         elif is_long_ma_flat_or_rising and is_initial_dip_rebound:
             category = "BUY3"
             category_name = "買い3：初押し(支持線反発)"
             badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
             reason = f"長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。"
         
-# ==========================================
     # 買い3-Pre：押し目待ち伏せ ＆ 初押し(待ち伏せ)
-    # ==========================================
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
-    
-    # 初押しの待ち伏せ（反発はまだしていないが、MA極近まで押してきている状態）
     is_initial_dip_resting = is_long_bottoming_past and was_above_recently and is_resting_on_ma and not_crossed_below_recent
 
     if category == "NONE" and not_crossed_below_recent:
-        # パターンA：明確な上昇トレンド中のオーソドックスな待ち伏せ
         if is_long_ma_rising and has_pulled_back and is_resting_on_ma:
             category = "BUY3_PRE"
             category_name = "買い3：押し目待ち伏せ"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
-        # パターンB：底練り脱却後の「初押し」で長期線付近で待機中
         elif is_long_ma_flat_or_rising and is_initial_dip_resting:
             category = "BUY3_PRE"
             category_name = "買い3：初押し(待ち伏せ)"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
 
-    # 期待度スコア (RSI・クオンツ対応・内訳記録版)
+    # 期待度スコア
     score = 3
     score_reasons = []
     
@@ -546,7 +520,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     }
 
 # ----------------------------------------------------------------------
-# ★【Phase 1】東証33業種 HOTセクター自動算出関数 (時価総額/売買代金加重モデル)
+# ★【Phase 1】東証33業種 HOTセクター自動算出関数
 # ----------------------------------------------------------------------
 def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
     sector_data = {}
@@ -750,7 +724,7 @@ for item in results_list:
                 item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score)
 
 # ==========================================
-# ★【Phase 3】全銘柄のAI相談用履歴データ分割出力 (100分割シャーディング)
+# ★ AI相談用履歴データ分割出力 (100分割シャーディング)
 # ==========================================
 print("AI相談用の履歴データを分割出力しています...")
 history_dir = "history_data"
@@ -764,9 +738,8 @@ for ticker, df in bulk_data.items():
     ticker_num = ''.join(filter(str.isdigit, ticker))
     if len(ticker_num) < 2:
         continue
-    shard_key = ticker_num[-2:] # 下2桁で100個のバケツに振り分け
+    shard_key = ticker_num[-2:]
     
-    # 全データで計算してから直近120日分を切り出す（MAやRSIの欠損を防ぐため）
     df_calc = df.copy()
     df_calc['ma_short'] = df_calc['Close'].rolling(window=5).mean().round(1)
     df_calc['ma_mid'] = df_calc['Close'].rolling(window=25).mean().round(1)
@@ -784,30 +757,27 @@ for ticker, df in bulk_data.items():
         m75 = float(row['ma_long']) if pd.notna(row['ma_long']) else None
         rsi = float(row['rsi']) if pd.notna(row['rsi']) else None
         
-        # AI用に25日線を基準とした乖離率を算出
         diff = round(((c - m25) / m25) * 100, 1) if c and m25 else None
-        
-        # キーを省いた軽量配列
         records.append([dt_str, c, m5, m25, m75, diff, rsi])
         
     shards[shard_key][ticker.replace(".T", "")] = records
 
-# JSONファイルとして一括保存（容量削減のため改行なし設定）
 for shard_key, data_dict in shards.items():
     if data_dict:
         file_path = os.path.join(history_dir, f"data_{shard_key}.json")
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data_dict, f, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
-# ==========================================
 
-json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
+# JSON埋め込み文字列の作成（compactにするため indent なし）
+json_data_str = json.dumps(results_list, ensure_ascii=False)
 hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
 form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
 
-html_template = """<!doctype html>
+# ★ PythonのRaw String (r""") を用いてJSエスケープの崩れを防止
+html_template = r"""<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
@@ -919,11 +889,11 @@ html_template = """<!doctype html>
           
           <div class="flex flex-wrap items-center gap-3">
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
-              <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
+              <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い1</button>
               <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
               <button data-tab="BUY3" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
               <button data-tab="BUY4" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い4</button>
-              <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-500 hover:text-slate-300 cursor-pointer">すべて</button>
+              <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">すべて</button>
             </div>
 
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
@@ -949,7 +919,7 @@ html_template = """<!doctype html>
         </div>
 
         <div id="performanceWarning" class="mt-4 hidden bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] p-2.5 rounded-xl">
-          ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンや検索窓を使って絞り込むとスムーズに閲覧できます。
+          ⚠️ 該当数が多いため最初の150件のみ表示しています。上の「市場別」「判定別」ボタンを使って絞り込むとスムーズに閲覧できます。
         </div>
 
         <div class="mt-6 overflow-x-auto">
@@ -1117,13 +1087,13 @@ html_template = """<!doctype html>
     </main>
 
     <script>
-        const state = {
+      const state = {
         results: __PLACEHOLDER_RESULTS__,
         hotSectors: __PLACEHOLDER_HOT_SECTORS__,
         prevCounts: __PLACEHOLDER_PREV_COUNTS__,
         marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
-        activeTab: 'ALL', // ← 'BUY1' から 'ALL' (すべて) に変更して初期表示時の0件化を防ぐ
+        activeTab: 'ALL',
         activeMarket: 'ALL',
         searchQuery: '',
         sortOrder: 'none',
@@ -1135,12 +1105,9 @@ html_template = """<!doctype html>
       const MAX_RENDER_ROWS = 150;
 
       document.addEventListener('DOMContentLoaded', () => {
-        // AI個別抽出ボタンの処理（従来の検索窓は廃止）
         document.getElementById('btnAiExtract').addEventListener('click', () => {
           const input = document.getElementById('aiExtractInput').value.trim();
           if (!input) return;
-          
-          // 名前が分かる場合は取得（NONE銘柄の場合は名前なしで処理）
           const item = state.results.find(r => r.ticker === input);
           const name = item ? item.name : "";
           copyAiData(input, name);
@@ -1174,7 +1141,8 @@ html_template = """<!doctype html>
         renderHotSectorsBanner();
         switchSystem('mid');
       });
-        async function copyAiData(ticker, name) {
+
+      async function copyAiData(ticker, name) {
         if (!ticker) return;
         
         const tickerNum = ticker.replace(/[^0-9]/g, '');
@@ -1215,6 +1183,7 @@ html_template = """<!doctype html>
           alert(`エラーが発生しました:\n${err.message}`);
         }
       }
+
       function toggleExplanation() {
         const expSec = document.getElementById('explanationSection');
         const btn = document.getElementById('btnToggleExplanation');
@@ -1233,15 +1202,16 @@ html_template = """<!doctype html>
         window.open(targetUrl, '_blank', 'width=620,height=750');
       }
 
-       function openScoreFeedback(ticker, name, score) {
+      function openScoreFeedback(ticker, name, score) {
         if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          alert(`【初期設定が必要です】\\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。`);
+          alert("【初期設定が必要です】\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
           return;
         }
         const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
         const targetUrl = `${FORM_SCORE_CFG.baseUrl}?${FORM_SCORE_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_SCORE_CFG.entryName}=${encodeURIComponent(name)}&${FORM_SCORE_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_SCORE_CFG.entryScore}=${encodeURIComponent(score)}`;
         window.open(targetUrl, '_blank', 'width=620,height=750');
       }
+
       function togglePriceSort() {
         state.sortScoreOrder = 'none';
         document.getElementById('sortScoreIcon').textContent = '↕';
@@ -1297,8 +1267,8 @@ html_template = """<!doctype html>
           alert("出力対象のデータがありません。");
           return;
         }
-        let csvContent = "\\uFEFF";
-        csvContent += "カテゴリ,期待度スコア,証券コード,銘柄名,株価,前日比,前日比率,本日出来高,市場,業種\\r\\n";
+        let csvContent = "\uFEFF";
+        csvContent += "カテゴリ,期待度スコア,証券コード,銘柄名,株価,前日比,前日比率,本日出来高,市場,業種\r\n";
         filtered.forEach(item => {
           const sysData = item[sys];
           const isPlus = item.change >= 0;
@@ -1315,7 +1285,7 @@ html_template = """<!doctype html>
             `"${item.market}"`,
             `"${item.sector}"`
           ].join(",");
-          csvContent += row + "\\r\\n";
+          csvContent += row + "\r\n";
         });
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
