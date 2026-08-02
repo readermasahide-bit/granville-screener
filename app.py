@@ -163,13 +163,12 @@ for i in range(0, len(tickers), chunk_size):
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     try:
         data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
-for ticker in chunk:
+        
+        for ticker in chunk:
             df_single = None
             if isinstance(data.columns, pd.MultiIndex):
-                # 銘柄コードが Level 0 にある場合（従来仕様）
                 if ticker in data.columns.get_level_values(0):
                     df_single = data[ticker].copy()
-                # 銘柄コードが Level 1 にある場合（最新yfinance仕様）
                 elif ticker in data.columns.get_level_values(1):
                     df_single = data.xs(ticker, axis=1, level=1).copy()
             else:
