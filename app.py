@@ -738,6 +738,58 @@ for item in results_list:
                 item[sys_key]["score"] = new_score
                 item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score)
 
+# ==========================================
+# ★【Phase 3】全銘柄のAI相談用履歴データ分割出力 (100分割シャーディング)
+# ==========================================
+print("AI相談用の履歴データを分割出力しています...")
+history_dir = "history_data"
+os.makedirs(history_dir, exist_ok=True)
+shards = {f"{i:02d}": {} for i in range(100)}
+
+for ticker, df in bulk_data.items():
+    if df.empty:
+        continue
+    
+    ticker_num = ''.join(filter(str.isdigit, ticker))
+    if len(ticker_num) < 2:
+        continue
+    shard_key = ticker_num[-2:] # 下2桁で100個のバケツに振り分け
+    
+    # 全データで計算してから直近120日分を切り出す（MAやRSIの欠損を防ぐため）
+    df_calc = df.copy()
+    df_calc['ma_short'] = df_calc['Close'].rolling(window=5).mean().round(1)
+    df_calc['ma_mid'] = df_calc['Close'].rolling(window=25).mean().round(1)
+    df_calc['ma_long'] = df_calc['Close'].rolling(window=75).mean().round(1)
+    df_calc['rsi'] = calculate_rsi(df_calc['Close'], 14).round(1)
+    
+    df_recent = df_calc.tail(120)
+    
+    records = []
+    for date, row in df_recent.iterrows():
+        dt_str = date.strftime("%m/%d")
+        c = round(float(row['Close']), 1) if pd.notna(row['Close']) else None
+        m5 = float(row['ma_short']) if pd.notna(row['ma_short']) else None
+        m25 = float(row['ma_mid']) if pd.notna(row['ma_mid']) else None
+        m75 = float(row['ma_long']) if pd.notna(row['ma_long']) else None
+        rsi = float(row['rsi']) if pd.notna(row['rsi']) else None
+        
+        # AI用に25日線を基準とした乖離率を算出
+        diff = round(((c - m25) / m25) * 100, 1) if c and m25 else None
+        
+        # キーを省いた軽量配列
+        records.append([dt_str, c, m5, m25, m75, diff, rsi])
+        
+    shards[shard_key][ticker.replace(".T", "")] = records
+
+# JSONファイルとして一括保存（容量削減のため改行なし設定）
+for shard_key, data_dict in shards.items():
+    if data_dict:
+        file_path = os.path.join(history_dir, f"data_{shard_key}.json")
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data_dict, f, separators=(',', ':'))
+print(" -> AI履歴データの出力を完了しました")
+# ==========================================
+
 json_data_str = json.dumps(results_list, ensure_ascii=False, indent=2)
 hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
 form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
@@ -872,12 +924,16 @@ html_template = """<!doctype html>
             </div>
           </div>
 
+          <!-- AI個別抽出 ＆ エクスポート -->
           <div class="flex items-center gap-3 w-full xl:w-auto">
-            <div class="relative flex-1 xl:w-72">
-              <input type="text" id="searchInput" placeholder="コード、銘柄名、業種で検索..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition">
-              <span class="absolute left-2.5 top-2 text-slate-500 text-xs">🔍</span>
+            <div class="flex items-center gap-1.5 flex-1 xl:w-auto">
+              <input type="text" id="aiExtractInput" placeholder="個別抽出 (例: 7974)" class="w-full xl:w-40 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest">
+              <button id="btnAiExtract" class="bg-indigo-900/50 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-700/50 hover:border-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1.5 shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                AI抽出
+              </button>
             </div>
-            <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer">📥 結果CSV出力</button>
+            <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shrink-0">📥 CSV出力</button>
           </div>
         </div>
 
@@ -1068,10 +1124,17 @@ html_template = """<!doctype html>
       const MAX_RENDER_ROWS = 150;
 
       document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-          state.searchQuery = e.target.value.trim().toLowerCase();
-          renderTable();
+        // AI個別抽出ボタンの処理（従来の検索窓は廃止）
+        document.getElementById('btnAiExtract').addEventListener('click', () => {
+          const input = document.getElementById('aiExtractInput').value.trim();
+          if (!input) return;
+          
+          // 名前が分かる場合は取得（NONE銘柄の場合は名前なしで処理）
+          const item = state.results.find(r => r.ticker === input);
+          const name = item ? item.name : "";
+          copyAiData(input, name);
         });
+        
         document.getElementById('btnSystemShort').addEventListener('click', () => switchSystem('short'));
         document.getElementById('btnSystemMid').addEventListener('click', () => switchSystem('mid'));
         document.getElementById('thPrice').addEventListener('click', togglePriceSort);
@@ -1100,6 +1163,47 @@ html_template = """<!doctype html>
         renderHotSectorsBanner();
         switchSystem('mid');
       });
+        async function copyAiData(ticker, name) {
+        if (!ticker) return;
+        
+        const tickerNum = ticker.replace(/[^0-9]/g, '');
+        if (tickerNum.length < 2) {
+          alert("無効な銘柄コードです。");
+          return;
+        }
+        const shardKey = tickerNum.slice(-2);
+        const url = `history_data/data_${shardKey}.json`;
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error("データの取得に失敗しました。まだファイルが生成されていない可能性があります。");
+          const data = await response.json();
+          
+          const history = data[ticker];
+          if (!history || history.length === 0) {
+            alert(`銘柄コード [${ticker}] の履歴データが見つかりません。`);
+            return;
+          }
+
+          let md = `【対象銘柄: ${ticker} ${name || ""}】\n`;
+          md += `【システム設定: 短期(5/25) & 中期(25/75)】\n\n`;
+          md += "| 日付 | 終値 | 5日線 | 25日線 | 75日線 | 25日線乖離率 | RSI(14) |\n";
+          md += "|---|---|---|---|---|---|---|\n";
+          
+          history.forEach(row => {
+             const [dt, close, ma5, ma25, ma75, diff, rsi] = row;
+             const diffStr = diff > 0 ? `+${diff}%` : (diff !== null ? `${diff}%` : '-');
+             md += `| ${dt} | ${close || '-'} | ${ma5 || '-'} | ${ma25 || '-'} | ${ma75 || '-'} | ${diffStr} | ${rsi || '-'} |\n`;
+          });
+
+          await navigator.clipboard.writeText(md);
+          alert(`✅ [${ticker}] のAI相談用データをコピーしました！\n\nChatGPTやClaudeの入力欄にそのまま「貼り付け（ペースト）」して分析させてください。`);
+          
+        } catch (err) {
+          console.error(err);
+          alert(`エラーが発生しました:\n${err.message}`);
+        }
+      }
       function toggleExplanation() {
         const expSec = document.getElementById('explanationSection');
         const btn = document.getElementById('btnToggleExplanation');
@@ -1472,8 +1576,9 @@ html_template = """<!doctype html>
               <button onclick="openScoreFeedback('${item.ticker}', '${item.name}', '${sysData.score}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="期待度スコアの妥当性に対して報告">
                 ⭐ 期待度
               </button>
-              <button onclick="openCatFeedback('${item.ticker}', '${item.name}', '${categoryShortName}')" class="px-2 py-1 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="シグナルの判定カテゴリに対して報告">
-                ✍️ 判定
+              <button onclick="copyAiData('${item.ticker}', '${item.name}')" class="flex items-center gap-1 px-2 py-1 bg-indigo-950/80 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded border border-indigo-800/50 hover:border-indigo-500 text-[10px] font-bold transition duration-200 cursor-pointer shadow-sm" title="AIに相談するための時系列データをコピー">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                AI抽出
               </button>
             </td>
           `;
