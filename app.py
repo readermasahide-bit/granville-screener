@@ -379,13 +379,35 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
                 badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
                 reason = f"下落中の{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
-    # 買い1：新規買い
-    if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming_recent and (diff_rate <= 5.0):
+    # ==========================================
+    # 買い1：新規買い（トレンド転換・底練りからの上抜け）
+    # ==========================================
+    
+    # 1. 過去の沈み込み条件（厳しすぎず甘すぎない 70%）
+    lookback_period = 40
+    price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
+    is_long_bottoming = price_below_count >= (lookback_period * 0.7) # 40日中28日以上沈んでいればOK
+
+    # ★新規：レンジ相場排除フィルター（過去に大きく上に飛び出していないか）
+    # 過去40日間における「長期MAからの最大上方乖離率」を取得（※当日は含めない）
+    past_max_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).max()
+    is_not_range_bound = past_max_diff < 5.0 # 過去に+5%以上も上に離れた履歴があれば、レンジとみなして弾く
+
+    # 2. 本日の突き抜け（昨日下、今日上）
+    price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
+    gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
+
+    # 3. トレンド転換の裏付け：短期MAの位置関係
+    # 短期MAが長期MAの「すぐ下（-2%以内）まで迫ってきている」または「すでに上にある」状態
+    short_long_diff = ((short_ma_today - long_ma_today) / long_ma_today) * 100
+    is_trend_reversing = short_long_diff >= -2.0 
+
+    if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming and is_not_range_bound and is_trend_reversing and (diff_rate <= 5.0):
         category = "BUY1"
         category_name = "買い1：新規買い"
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         cross_type = "ゴールデンクロス" if gc_occurred else "価格の突き抜け"
-        reason = f"長期間の下落・底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生しました。"
+        reason = f"底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生。短期線も追従しておりトレンド転換の兆しです。"
 
     # 買い2：再突き抜け ＆ 初押し(下抜け復帰)
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
