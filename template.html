@@ -116,13 +116,13 @@
         <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           
           <div class="flex flex-wrap items-center gap-3">
-            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
-              <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い1</button>
-              <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
-              <button data-tab="BUY3" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
-              <button data-tab="BUY4" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い4</button>
-              <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">すべて</button>
-            </div>
+          <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
+          <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
+          <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
+          <button data-tab="BUY3" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
+          <button data-tab="BUY4" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い4</button>
+          <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">すべて</button>
+         </div>
 
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
               <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
@@ -316,18 +316,18 @@
 
     <script>
       // ★手立て2：JSONタグから安全にParseして読み込む
-      const state = {
-        results: JSON.parse(document.getElementById('data-results').textContent),
-        hotSectors: JSON.parse(document.getElementById('data-hot-sectors').textContent),
-        prevCounts: JSON.parse(document.getElementById('data-prev-counts').textContent),
-        marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
-        currentSystem: 'mid',
-        activeTab: 'ALL',
-        activeMarket: 'ALL',
-        searchQuery: '',
-        sortOrder: 'none',
-        sortScoreOrder: 'none'
-      };
+  const state = {
+  results: JSON.parse(document.getElementById('data-results').textContent),
+  hotSectors: JSON.parse(document.getElementById('data-hot-sectors').textContent),
+  prevCounts: JSON.parse(document.getElementById('data-prev-counts').textContent),
+  marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
+  currentSystem: 'mid',
+  activeTab: 'BUY1',
+  activeMarket: 'ALL',
+  searchQuery: '',
+  sortOrder: 'none',
+  sortScoreOrder: 'none'
+};
       
       const FORM_CAT_CFG = JSON.parse(document.getElementById('data-form-cat').textContent);
       const FORM_SCORE_CFG = JSON.parse(document.getElementById('data-form-score').textContent);
