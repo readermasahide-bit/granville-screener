@@ -238,6 +238,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
             "diffRate": 0.0, "reason": "データが不足しています。",
             "ma_short": 0.0, "ma_long": 0.0, "score": 1,
+            "stars": "★☆☆☆☆",
             "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False
         }
         
@@ -382,23 +383,16 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     # ==========================================
     # 買い1：新規買い（トレンド転換・底練りからの上抜け）
     # ==========================================
-    
-    # 1. 過去の沈み込み条件（厳しすぎず甘すぎない 70%）
     lookback_period = 40
     price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
-    is_long_bottoming = price_below_count >= (lookback_period * 0.7) # 40日中28日以上沈んでいればOK
+    is_long_bottoming = price_below_count >= (lookback_period * 0.7)
 
-    # ★新規：レンジ相場排除フィルター（過去に大きく上に飛び出していないか）
-    # 過去40日間における「長期MAからの最大上方乖離率」を取得（※当日は含めない）
     past_max_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).max()
-    is_not_range_bound = past_max_diff < 5.0 # 過去に+5%以上も上に離れた履歴があれば、レンジとみなして弾く
+    is_not_range_bound = past_max_diff < 5.0
 
-    # 2. 本日の突き抜け（昨日下、今日上）
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
 
-    # 3. トレンド転換の裏付け：短期MAの位置関係
-    # 短期MAが長期MAの「すぐ下（-2%以内）まで迫ってきている」または「すでに上にある」状態
     short_long_diff = ((short_ma_today - long_ma_today) / long_ma_today) * 100
     is_trend_reversing = short_long_diff >= -2.0 
 
@@ -466,53 +460,45 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
 
-# ==========================================
-    # 期待度スコア (10段階スケール解放版)
-    # ユーザー様のオリジナル配点を尊重
     # ==========================================
-    # スケール拡大に合わせて、基準（初期値）を「5」に引き上げ
+    # 期待度スコア (10段階スケール解放版)
+    # ==========================================
     score = 5 
     score_reasons = []
     
     if category != "NONE":
-       # 1. RSIスコア（Wボトム削除版）
         if is_rsi_sell_warning:
             score -= 1
             score_reasons.append("⚠️ RSI過熱警戒: -1")
         else:
             if is_rsi_divergence:
-                score += 1  # ダイバージェンスを優先評価
+                score += 1
                 score_reasons.append("🛡️ 強気ダイバージェンス: +1")
             elif is_rsi_buy_reversal:
-                score += 1  # なければ通常の反発を評価
+                score += 1
                 score_reasons.append("🔄 RSIゾーン反発: +1")
 
-        # 2. 流動性・出来高
         if volume_today <= 10000:
-            score -= 1  # 元の配点
+            score -= 1
             score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
             
-        # 出来高急増は「陽線」の時だけ評価
         if vol_ratio >= 1.5:
             if is_yang_candle:
-                score += 1  # 元の配点
+                score += 1
                 score_reasons.append("📊 陽線で出来高急増: +1")
             else:
-                score -= 1  # 陰線での大商いは売り抜け警戒
+                score -= 1
                 score_reasons.append("⚠️ 陰線で出来高急増: -1")
 
-        # 3. 高値掴み・ダマシ回避フィルター
         if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0:
-            score -= 1  # 元の配点
+            score -= 1
             score_reasons.append("🕯️ 上髭超過: -1")
             
-        # 短期線（例:5日線）からの乖離ペナルティ
         short_diff_rate = ((price_today - short_ma_today) / short_ma_today) * 100
         if category in ["BUY1", "BUY2"] and short_diff_rate >= 5.0:
-            score -= 1  # ユーザー様の基本配点(-1)に合わせる
+            score -= 1
             score_reasons.append("🚀 短期的な飛びすぎ警戒: -1")
 
-        # 4. カテゴリ別の詳細判定（トレンド・実体）
         if category == "BUY1":
             if is_slope_strong_relative:
                 score += 1
@@ -536,14 +522,15 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
 
         elif category == "BUY4":
             if candle_body_pct >= 3.0:
-                score += 1  # 元の配点に戻す
+                score += 1
                 score_reasons.append("📈 大陽線反発: +1")
             elif candle_body_pct < 0.5:
                 score -= 1
                 score_reasons.append("🕯️ 反発実体極小: -1")
                 
-    # スコアの下限・上限を 1〜10 の範囲に設定
     score = max(1, min(10, score))
+    # 星表記（互換性確保）
+    stars_str = "★" * min(5, score) + "☆" * max(0, 5 - min(5, score))
     
     return {
         "category": clean_val(category),
@@ -747,7 +734,7 @@ for item in results_list:
         for sys_key in ["short", "mid"]:
             sys_data = item[sys_key]
             if sys_data["category"] != "NONE":
-                new_score = min(5, sys_data["score"] + 1)
+                new_score = min(10, sys_data["score"] + 1)
                 sys_data["score"] = new_score
                 
                 if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
@@ -763,9 +750,8 @@ for item in results_list:
         item["isStrongRelative"] = True
         for sys_key in ["short", "mid"]:
             if item[sys_key]["category"] != "NONE":
-                new_score = min(5, item[sys_key]["score"] + 1)
+                new_score = min(10, item[sys_key]["score"] + 1)
                 item[sys_key]["score"] = new_score
-                item[sys_key]["stars"] = "★" * new_score + "☆" * (5 - new_score)
 
 # ==========================================
 # ★ AI相談用履歴データ分割出力 (100分割シャーディング)
@@ -812,13 +798,6 @@ for shard_key, data_dict in shards.items():
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(data_dict, f, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
-
-# JSON埋め込み文字列の作成（compactにするため indent なし）
-json_data_str = json.dumps(results_list, ensure_ascii=False)
-hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
-form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
-form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
-prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
 
 # ==========================================
 # ★【最終出力】template.html を読み込んで index.html を生成
