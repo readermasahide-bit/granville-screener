@@ -545,9 +545,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     # スコアの下限・上限を 1〜10 の範囲に設定
     score = max(1, min(10, score))
     
-    # 視覚的な星表示（最大10個の星を出力）
-    stars_str = "★" * score + "☆" * (10 - score)
-    
     return {
         "category": clean_val(category),
         "categoryName": clean_val(category_name),
