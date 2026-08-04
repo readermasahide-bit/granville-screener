@@ -466,34 +466,53 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
 
-    # 期待度スコア
-    score = 3
+# ==========================================
+    # 期待度スコア (10段階スケール解放版)
+    # ユーザー様のオリジナル配点を尊重
+    # ==========================================
+    # スケール拡大に合わせて、基準（初期値）を「5」に引き上げ
+    score = 5 
     score_reasons = []
     
     if category != "NONE":
+       # 1. RSIスコア（Wボトム削除版）
         if is_rsi_sell_warning:
             score -= 1
             score_reasons.append("⚠️ RSI過熱警戒: -1")
-        if is_rsi_buy_reversal:
-            score += 1
-            score_reasons.append("🔄 RSIゾーン反発: +1")
-        if is_rsi_double_bottom:
-            score += 2
-            score_reasons.append("📈 Wボトム特別反発: +2")
-        if is_rsi_divergence:
-            score += 1
-            score_reasons.append("🛡️ 強気ダイバージェンス: +1")
+        else:
+            if is_rsi_divergence:
+                score += 1  # ダイバージェンスを優先評価
+                score_reasons.append("🛡️ 強気ダイバージェンス: +1")
+            elif is_rsi_buy_reversal:
+                score += 1  # なければ通常の反発を評価
+                score_reasons.append("🔄 RSIゾーン反発: +1")
 
+        # 2. 流動性・出来高
         if volume_today <= 10000:
-            score -= 1
+            score -= 1  # 元の配点
             score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
+            
+        # 出来高急増は「陽線」の時だけ評価
         if vol_ratio >= 1.5:
-            score += 1
-            score_reasons.append("📊 出来高急増: +1")
+            if is_yang_candle:
+                score += 1  # 元の配点
+                score_reasons.append("📊 陽線で出来高急増: +1")
+            else:
+                score -= 1  # 陰線での大商いは売り抜け警戒
+                score_reasons.append("⚠️ 陰線で出来高急増: -1")
+
+        # 3. 高値掴み・ダマシ回避フィルター
         if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0:
-            score -= 1
+            score -= 1  # 元の配点
             score_reasons.append("🕯️ 上髭超過: -1")
             
+        # 短期線（例:5日線）からの乖離ペナルティ
+        short_diff_rate = ((price_today - short_ma_today) / short_ma_today) * 100
+        if category in ["BUY1", "BUY2"] and short_diff_rate >= 5.0:
+            score -= 1  # ユーザー様の基本配点(-1)に合わせる
+            score_reasons.append("🚀 短期的な飛びすぎ警戒: -1")
+
+        # 4. カテゴリ別の詳細判定（トレンド・実体）
         if category == "BUY1":
             if is_slope_strong_relative:
                 score += 1
@@ -501,10 +520,12 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             if candle_body_pct < 0.5:
                 score -= 1
                 score_reasons.append("🕯️ 反発実体極小: -1")
+
         elif category == "BUY2":
             if is_slope_strong_relative:
                 score += 1
                 score_reasons.append("📈 長期線トレンド加速: +1")
+
         elif category in ["BUY3", "BUY3_PRE"]:
             if diff_rate <= 1.5:
                 score += 1
@@ -512,17 +533,21 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             if candle_body_pct < 1.0:
                 score -= 1
                 score_reasons.append("🕯️ 反発実体小: -1")
+
         elif category == "BUY4":
             if candle_body_pct >= 3.0:
-                score += 1
+                score += 1  # 元の配点に戻す
                 score_reasons.append("📈 大陽線反発: +1")
-            if candle_body_pct < 0.5:
+            elif candle_body_pct < 0.5:
                 score -= 1
                 score_reasons.append("🕯️ 反発実体極小: -1")
-            
-    score = max(1, min(5, score))
-    stars_str = "★" * score + "☆" * (5 - score)
-
+                
+    # スコアの下限・上限を 1〜10 の範囲に設定
+    score = max(1, min(10, score))
+    
+    # 視覚的な星表示（最大10個の星を出力）
+    stars_str = "★" * score + "☆" * (10 - score)
+    
     return {
         "category": clean_val(category),
         "categoryName": clean_val(category_name),
