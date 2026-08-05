@@ -384,25 +384,38 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     # 買い1：新規買い（トレンド転換・底練りからの上抜け）
     # ==========================================
     lookback_period = 40
+    
+    # 1. 底練り・位置関係（過去40日中28日以上沈んでいたこと）
     price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     is_long_bottoming = price_below_count >= (lookback_period * 0.7)
 
+    # 2. レンジ相場排除フィルター（過去40日間に+5.0%以上上に飛び出した履歴がないこと）
     past_max_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).max()
     is_not_range_bound = past_max_diff < 5.0
 
+    # 3. 本日の突き抜け / GC判定
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
 
+    # 4. トレンド転換の裏付け（短期MAが長期MAのすぐ近くまで肉薄しているか）
     short_long_diff = ((short_ma_today - long_ma_today) / long_ma_today) * 100
     is_trend_reversing = short_long_diff >= -2.0 
 
+    # 5. 長期MAの傾き判定（過去3日間の傾き、または単日での上向き転換）
+    long_ma_3d_ago = df_temp.iloc[-4]['long_ma'] # 3営業日前
+    long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100
+    
+    # 【改定ポイント】「単日で長期MAが上向き」または「過去3日間の傾きが -0.2% 以上（ほぼ水平）」なら合格
+    is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
+
+    # 6. 統合判定
     if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming and is_not_range_bound and is_trend_reversing and (diff_rate <= 5.0):
         category = "BUY1"
         category_name = "買い1：新規買い"
         badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
         cross_type = "ゴールデンクロス" if gc_occurred else "価格の突き抜け"
         reason = f"底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生。短期線も追従しておりトレンド転換の兆しです。"
-
+        
     # 買い2：再突き抜け ＆ 初押し(下抜け復帰)
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_15d <= 3
