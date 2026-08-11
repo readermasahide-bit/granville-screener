@@ -435,7 +435,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
             reason = f"長期の底練りから脱却後、最初の押し目で長期線を一度下抜け、本日再び上方に復帰しました。"
 
-    # 買い3：押し目反発 ＆ 初押し(支持線反発)
+# 買い3：押し目反発 ＆ 初押し(支持線反発)
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     
@@ -445,13 +445,14 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
 
     is_initial_dip_rebound = is_long_bottoming_past and was_above_recently and is_close_to_ma and is_rebound and not_crossed_below_recent
 
-    if category == "NONE" and not_crossed_below_recent:
-        if is_long_ma_rising and has_pulled_back and is_close_to_ma and is_rebound:
+    # ★【修正】外枠の条件に「is_long_ma_rising (完全右肩上がり)」を必須条件化
+    if category == "NONE" and not_crossed_below_recent and is_long_ma_rising:
+        if has_pulled_back and is_close_to_ma and is_rebound:
             category = "BUY3"
             category_name = "買い3：押し目反発"
             badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
             reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
-        elif is_long_ma_flat_or_rising and is_initial_dip_rebound:
+        elif is_initial_dip_rebound: # ★【修正】is_long_ma_flat_or_rising を削除
             category = "BUY3"
             category_name = "買い3：初押し(支持線反発)"
             badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
@@ -461,13 +462,14 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
     is_initial_dip_resting = is_long_bottoming_past and was_above_recently and is_resting_on_ma and not_crossed_below_recent
 
-    if category == "NONE" and not_crossed_below_recent:
-        if is_long_ma_rising and has_pulled_back and is_resting_on_ma:
+    # ★【修正】外枠の条件に「is_long_ma_rising (完全右肩上がり)」を必須条件化
+    if category == "NONE" and not_crossed_below_recent and is_long_ma_rising:
+        if has_pulled_back and is_resting_on_ma:
             category = "BUY3_PRE"
             category_name = "買い3：押し目待ち伏せ"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
-        elif is_long_ma_flat_or_rising and is_initial_dip_resting:
+        elif is_initial_dip_resting: # ★【修正】is_long_ma_flat_or_rising を削除
             category = "BUY3_PRE"
             category_name = "買い3：初押し(待ち伏せ)"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
