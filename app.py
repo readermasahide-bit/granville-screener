@@ -546,7 +546,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     score = max(1, min(10, score))
     # 星表記（互換性確保）
     stars_str = "★" * min(5, score) + "☆" * max(0, 5 - min(5, score))
-    
+
+# ==========================================
+# ★ 最終出力パーツ
+# ==========================================
     return {
         "category": clean_val(category),
         "categoryName": clean_val(category_name),
