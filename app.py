@@ -56,44 +56,47 @@ if os.path.exists(html_output_path):
         with open(html_output_path, "r", encoding="utf-8") as f:
             old_html = f.read()
         
+        # ★ここから下（def〜return Noneまで）のインデント（スペース8個）を揃えました
         def extract_results_json(text):
             start_tag = '<script id="data-results" type="application/json">'
             end_tag = '</script>'
-    
+            
             start_pos = text.find(start_tag)
             if start_pos != -1:
-               b_start = start_pos + len(start_tag)
-               end_pos = text.find(end_tag, b_start)
-               if end_pos != -1:
-                  return text[b_start:end_pos].strip()
-            
-    # 古い形式(results:)との互換性バックアップ
-           start_pos = text.find("results:")
-           if start_pos != -1:
-              b_start = text.find("[", start_pos)
-              if b_start != -1:
-                 depth = 0
-                 in_string = False
-                 escape = False
-                 for i in range(b_start, len(text)):
-                     char = text[i]
-                     if escape:
-                        escape = False
-                        continue
-                     if char == '\\':
-                        escape = True
-                        continue
-                     if char == '"':
-                        in_string = not in_string
-                        continue
-                     if not in_string:
-                        if char == '[':
-                           depth += 1
-                        elif char == ']':
-                             depth -= 1
-                             if depth == 0:
-                                return text[b_start:i+1]
-    return None
+                b_start = start_pos + len(start_tag)
+                end_pos = text.find(end_tag, b_start)
+                if end_pos != -1:
+                    return text[b_start:end_pos].strip()
+                    
+            # 古い形式(results:)との互換性バックアップ
+            start_pos = text.find("results:")
+            if start_pos != -1:
+                b_start = text.find("[", start_pos)
+                if b_start != -1:
+                    depth = 0
+                    in_string = False
+                    escape = False
+                    for i in range(b_start, len(text)):
+                        char = text[i]
+                        if escape:
+                            escape = False
+                            continue
+                        if char == '\\':
+                            escape = True
+                            continue
+                        if char == '"':
+                            in_string = not in_string
+                            continue
+                        if not in_string:
+                            if char == '[':
+                                depth += 1
+                            elif char == ']':
+                                depth -= 1
+                                if depth == 0:
+                                    return text[b_start:i+1]
+            return None
+
+        prev_results_json = extract_results_json(old_html)
 
         prev_results_json = extract_results_json(old_html)
         
