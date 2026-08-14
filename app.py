@@ -9,6 +9,13 @@ import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
+# ==========================================
+# ★ 設定パラメータ（クラウド対応）
+# ==========================================
+SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
+html_output_path = "index.html" # ホームページとして公開するため index.html に固定
+# ==========================================
+
 # 日本時間(JST)の現在時刻をベースに動的な日付を計算
 JST = timezone(timedelta(hours=+9))
 now_jst = datetime.now(JST)
