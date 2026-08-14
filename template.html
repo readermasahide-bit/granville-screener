@@ -42,8 +42,6 @@
     <script id="data-results" type="application/json">__PLACEHOLDER_RESULTS__</script>
     <script id="data-hot-sectors" type="application/json">__PLACEHOLDER_HOT_SECTORS__</script>
     <script id="data-prev-counts" type="application/json">__PLACEHOLDER_PREV_COUNTS__</script>
-    <script id="data-form-cat" type="application/json">__PLACEHOLDER_FORM_CAT__</script>
-    <script id="data-form-score" type="application/json">__PLACEHOLDER_FORM_SCORE__</script>
   </head>
   <body class="min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-16">
     
@@ -116,13 +114,13 @@
         <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           
           <div class="flex flex-wrap items-center gap-3">
-          <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
-          <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
-          <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
-          <button data-tab="BUY3" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
-          <button data-tab="BUY4" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い4</button>
-          <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">すべて</button>
-         </div>
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
+              <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
+              <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
+              <button data-tab="BUY3" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
+              <button data-tab="BUY4" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い4</button>
+              <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">すべて</button>
+            </div>
 
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
               <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
@@ -133,16 +131,20 @@
             </div>
           </div>
 
-          <!-- AI個別抽出 ＆ エクスポート -->
-          <div class="flex items-center gap-3 w-full xl:w-auto">
+          <!-- AI個別抽出 ＆ 緊急株数計算 ＆ エクスポート -->
+          <div class="flex items-center gap-2 w-full xl:w-auto flex-wrap sm:flex-nowrap">
             <div class="flex items-center gap-1.5 flex-1 xl:w-auto">
-              <input type="text" id="aiExtractInput" placeholder="個別抽出 (例: 7974)" class="w-full xl:w-40 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest">
-              <button id="btnAiExtract" class="bg-indigo-900/50 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-700/50 hover:border-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1.5 shrink-0">
+              <input type="text" id="aiExtractInput" placeholder="銘柄コード (例: 7974)" class="w-full xl:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest">
+              <button id="btnAiExtract" class="bg-indigo-900/50 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-700/50 hover:border-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0" title="AI相談用時系列データをコピー">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 AI抽出
               </button>
+              <!-- ★新設：条件外銘柄の個別緊急株数計算ボタン -->
+              <button id="btnCalcShares" class="bg-emerald-900/50 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-700/50 hover:border-emerald-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0" title="入力銘柄の推奨購入株数を計算">
+                📊 株数
+              </button>
             </div>
-            <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shrink-0">📥 CSV出力</button>
+            <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shrink-0">📥 CSV</button>
           </div>
         </div>
 
@@ -162,18 +164,19 @@
                   </div>
                 </th>
                 <th class="p-3 w-28">コード</th>
-                <th class="p-3 min-w-[200px]">銘柄名 / 業種</th>
-                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-right w-32 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
+                <th class="p-3 min-w-[180px]">銘柄名 / 業種</th>
+                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-right w-28 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
                   <div class="flex items-center justify-end gap-1.5">
                     <span>株価</span>
                     <span id="sortIcon" class="text-cyan-400 font-mono text-[11px] w-3 text-center">↕</span>
                   </div>
                 </th>
-                <th class="p-3 text-right w-36">前日比</th>
-                <th class="p-3 text-right w-44" id="thma">5日線 / 25日線</th>
+                <th class="p-3 text-right w-32">前日比</th>
+                <!-- ★「移動平均線」列を「購入目安(打診/最大)」列に置き換え -->
+                <th class="p-3 text-right w-40 text-emerald-400 font-bold whitespace-nowrap">購入目安 (打診/最大)</th>
                 <th class="p-3 text-right w-24">乖離率</th>
-                <th class="p-3 text-center w-24">市場</th>
-                <th class="p-3 text-center w-32">改善報告</th>
+                <th class="p-3 text-center w-20">市場</th>
+                <th class="p-3 text-center w-20">AI相談</th>
               </tr>
             </thead>
             <tbody id="resultTableBody" class="divide-y divide-slate-800/60 text-xs"></tbody>
@@ -183,19 +186,55 @@
         <div class="mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
           <span id="displayCountLabel" class="font-medium text-slate-300">表示中: 0 件</span>
           <div class="flex items-center gap-3 text-slate-500 font-mono text-[10px]">
-            <span id="footerFormula">乖離率 = (株価 - 25日線) ÷ 25日線</span>
+            <span id="footerFormula">乖離率 = (株価 - 基準MA) ÷ 基準MA</span>
             <span>•</span>
-            <span id="footerBase">基準線: 25日移動平均線</span>
+            <span id="footerBase">ポジションサイズ: Wブレーキ(許容リスク✕買付枠)</span>
           </div>
         </div>
 
       </section>
 
-      <div class="flex justify-center mt-6">
+      <!-- ボタンエリア：「解説を表示」の右隣に「⚙️ 資金設定」ボタンを配置 -->
+      <div class="flex justify-center items-center gap-3 mt-6 flex-wrap">
         <button id="btnToggleExplanation" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md">
           📖 解説を表示
         </button>
+        <!-- ★新設：資金管理設定アコーディオンボタン -->
+        <button id="btnToggleSettings" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md flex items-center gap-1.5">
+          <span>⚙️</span> 資金設定
+        </button>
       </div>
+
+      <!-- ★新設：資金管理設定アコーディオンエリア -->
+      <section id="settingsSection" class="pt-4 hidden">
+        <div class="max-w-3xl mx-auto bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+              <span>⚙️</span> ポジションサイジング（資金管理・リスク許容度）設定
+            </h3>
+            <span class="text-[10px] text-slate-400 font-mono">設定値はブラウザに自動保存されます</span>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div>
+              <label class="block text-slate-400 font-medium mb-1">総資産額 [円]</label>
+              <input type="number" id="settingTotalAssets" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="100000" min="100000">
+            </div>
+            <div>
+              <label class="block text-slate-400 font-medium mb-1">許容リスク率 [%]</label>
+              <input type="number" id="settingRiskTolerance" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="0.5" min="0.5" max="20">
+            </div>
+            <div>
+              <label class="block text-slate-400 font-medium mb-1">1銘柄買付枠上限 [%]</label>
+              <input type="number" id="settingMaxPosition" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="5" min="5" max="100">
+            </div>
+          </div>
+          
+          <p class="text-[10px] text-slate-400 leading-relaxed border-t border-slate-800/60 pt-2">
+            💡 <strong>計算ロジック</strong>: 許容リスク額 (総資産✕リスク率) から求めた株数と、1銘柄買付枠 (総資産✕上限率) から求めた株数のうち、<strong>より少ない安全な方（Wブレーキ）</strong>を最大保有株数とし、初回はその 50%（100株救済付）を打診買い株数として自動出力します。
+          </p>
+        </div>
+      </section>
 
       <section id="explanationSection" class="pt-6 border-t border-slate-800/60 hidden space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -209,14 +248,14 @@
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">基本採点（スタート値）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  いずれかの買いシグナルが点灯した銘柄は、すべて初期値<strong>「3」</strong>として採点されます。
+                  いずれかの買いシグナルが点灯した銘柄は、すべて初期値<strong>「5」</strong>（10段階拡張）として採点されます。
                 </p>
               </div>
 
               <div class="bg-slate-900/60 border border-sky-500/20 rounded-xl p-3.5">
                 <span class="font-bold text-sky-400 block mb-1">出来高・流動性評価 (+1 / -1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・過去25日平均に対し出来高が1.5倍以上に急増 ➔ <strong class="text-emerald-400">+1</strong><br>
+                  ・陽線で過去25日平均比出来高1.5倍以上に急増 ➔ <strong class="text-emerald-400">+1</strong><br>
                   ・出来高1万株以下の過疎銘柄（流動性リスク高） ➔ <strong class="text-rose-400">-1</strong>
                 </p>
               </div>
@@ -245,10 +284,9 @@
               </div>
 
               <div class="bg-slate-900/60 border border-teal-500/20 rounded-xl p-3.5">
-                <span class="font-bold text-teal-400 block mb-1">RSIテクニカル評価 (+1〜+2 / -1)</span>
+                <span class="font-bold text-teal-400 block mb-1">RSIテクニカル評価 (+1 / -1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・ゾーン反発 / 強気のダイバージェンス ➔ <strong class="text-emerald-400">+1</strong><br>
-                  ・Wボトム形成からの強力な特別反発 ➔ <strong class="text-emerald-400">+2</strong><br>
                   ・過熱警戒ゾーンでの危険な買いシグナル ➔ <strong class="text-rose-400">-1</strong>
                 </p>
               </div>
@@ -265,36 +303,32 @@
                 <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)の傾き: 横ばい〜上向き<br>
-                  ・底確認: 過去40日のうち<span class="font-mono">80%以上</span>は線の下に沈んでいたこと<br>
+                  ・底確認: 過去40日のうち<span class="font-mono">70%以上</span>沈んでいたこと<br>
                   ・本日、完全なる初上抜け(ゴールデンクロス含む)<br>
-                  ・上抜け乖離率: 当日終値が長期線から <span class="font-mono">+5.0%</span> 以内
+                  ・損切りライン: 直近20日最安値✕0.995 (切り捨て)
                 </p>
               </div>
               <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い2：初押し・再突き抜け</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・通常: 安定した右肩上がりの長期線(<span class="exp-long"></span>)を過去10日で1〜3日のみ下抜けし、本日復帰。<br>
-                  ・初押し: 長期底練りからの脱却直後に、初めて長期線付近まで押して再上抜け、または反発したもの。<br>
-                  ・乖離率 <span class="font-mono">0.0%〜+5.0%</span> 以内
+                  ・初押し: 長期底練りからの脱却直後に、初めて長期線付近まで押して再上抜け。<br>
+                  ・損切りライン: 直近5日最安値✕0.995 (切り捨て)
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発（待ち伏せ含む）</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">明確な右肩上がりトレンド</span>中<br>
-                  ・過去に株価が長期線から<span class="font-mono">+4.0%以上</span>上放れた実績あり<br>
                   ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日反発。<br>
-                  ・<strong>【待ち伏せPre-Buy3】</strong>: 長期線の極近(-0.5%〜+1.5%)にあり、短期線も上昇傾向なら特別点灯。
+                  ・損切りライン: 長期移動平均線✕0.985 (切り捨て)
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い4：逆張り下方乖離</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  下げ止まり(陽線または前日比プラス)を条件にリバウンド抽出。<br>
-                  ・東Ｐ（通常）: <span id="expPNormal" class="font-mono"></span> 以下<br>
-                  ・東Ｐ（急騰例外）: <span id="expPSurge" class="font-mono"></span> 以下<br>
-                  ・東Ｓ: <span id="expS" class="font-mono"></span> 以下<br>
-                  ・東Ｇ: <span id="expG" class="font-mono"></span> 以下
+                  下落中の長期線から大きく下方に下方乖離して本日反発。<br>
+                  ・損切りライン: 当日安値✕0.99 (切り捨て)
                 </p>
               </div>
             </div>
@@ -316,24 +350,33 @@
 
     <script>
       // ★手立て2：JSONタグから安全にParseして読み込む
-  const state = {
-  results: JSON.parse(document.getElementById('data-results').textContent),
-  hotSectors: JSON.parse(document.getElementById('data-hot-sectors').textContent),
-  prevCounts: JSON.parse(document.getElementById('data-prev-counts').textContent),
-  marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
-  currentSystem: 'mid',
-  activeTab: 'BUY1',
-  activeMarket: 'ALL',
-  searchQuery: '',
-  sortOrder: 'none',
-  sortScoreOrder: 'none'
-};
+      const state = {
+        results: JSON.parse(document.getElementById('data-results').textContent),
+        hotSectors: JSON.parse(document.getElementById('data-hot-sectors').textContent),
+        prevCounts: JSON.parse(document.getElementById('data-prev-counts').textContent),
+        marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
+        currentSystem: 'mid',
+        activeTab: 'BUY1',
+        activeMarket: 'ALL',
+        searchQuery: '',
+        sortOrder: 'none',
+        sortScoreOrder: 'none'
+      };
       
-      const FORM_CAT_CFG = JSON.parse(document.getElementById('data-form-cat').textContent);
-      const FORM_SCORE_CFG = JSON.parse(document.getElementById('data-form-score').textContent);
       const MAX_RENDER_ROWS = 150;
 
+      // ★資金管理（ポジションサイジング）デフォルトパラメータ設定
+      const posConfig = {
+        totalAssets: 3000000,
+        riskToleranceRate: 5.0,
+        maxPositionRate: 30.0,
+        unitShare: 100
+      };
+
       document.addEventListener('DOMContentLoaded', () => {
+        // 設定値の復元（localStorage）
+        loadPosConfig();
+
         document.getElementById('btnAiExtract').addEventListener('click', () => {
           const input = document.getElementById('aiExtractInput').value.trim();
           if (!input) return;
@@ -341,6 +384,9 @@
           const name = item ? item.name : "";
           copyAiData(input, name);
         });
+
+        // ★新設：条件外銘柄の個別緊急株数計算ボタンイベント
+        document.getElementById('btnCalcShares').addEventListener('click', handleCalcIndividualShares);
         
         document.getElementById('btnSystemShort').addEventListener('click', () => switchSystem('short'));
         document.getElementById('btnSystemMid').addEventListener('click', () => switchSystem('mid'));
@@ -348,6 +394,12 @@
         document.getElementById('thScore').addEventListener('click', toggleScoreSort);
         document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
         document.getElementById('btnToggleExplanation').addEventListener('click', toggleExplanation);
+        document.getElementById('btnToggleSettings').addEventListener('click', toggleSettings);
+
+        // 設定フォーム入力値のリアルタイム変更イベント
+        document.getElementById('settingTotalAssets').addEventListener('input', updatePosConfigFromUI);
+        document.getElementById('settingRiskTolerance').addEventListener('input', updatePosConfigFromUI);
+        document.getElementById('settingMaxPosition').addEventListener('input', updatePosConfigFromUI);
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -370,6 +422,237 @@
         renderHotSectorsBanner();
         switchSystem('mid');
       });
+
+      // ★ポジションサイジング計算コアエンジン
+      function calculatePositionSizing(price, stopLossPrice) {
+        const unit = posConfig.unitShare;
+        
+        if (!price || price <= 0 || !stopLossPrice || stopLossPrice >= price || stopLossPrice <= 0) {
+          return {
+            status: "REJECTED",
+            rejectReason: "損切り価格エラー (買値以下に設定不可)",
+            maxShares: 0,
+            initialShares: 0,
+            initialBuyAmount: 0,
+            maxBuyAmount: 0,
+            riskPerShare: 0,
+            appliedRule: "なし",
+            isTightStop: false
+          };
+        }
+
+        const riskPerShare = price - stopLossPrice;
+        const maxRiskAmount = posConfig.totalAssets * (posConfig.riskToleranceRate / 100);
+        const sharesByRisk = Math.floor(maxRiskAmount / riskPerShare / unit) * unit;
+
+        const maxBuyAmountLimit = posConfig.totalAssets * (posConfig.maxPositionRate / 100);
+        const sharesByPositionLimit = Math.floor(maxBuyAmountLimit / price / unit) * unit;
+
+        const maxShares = Math.min(sharesByRisk, sharesByPositionLimit);
+        const appliedRule = sharesByRisk < sharesByPositionLimit ? "リスク上限" : "資金枠上限(30%)";
+
+        // ★100株救済例外ルール
+        let initialShares = 0;
+        if (maxShares === unit) {
+          initialShares = unit;
+        } else {
+          initialShares = Math.floor((maxShares * 0.5) / unit) * unit;
+        }
+
+        if (maxShares < unit || initialShares < unit) {
+          return {
+            status: "REJECTED",
+            rejectReason: `買付資金不足 (最低100株約${Math.round(price * unit / 10000 * 10) / 10}万円必要)`,
+            maxShares: 0,
+            initialShares: 0,
+            initialBuyAmount: 0,
+            maxBuyAmount: 0,
+            riskPerShare,
+            appliedRule,
+            isTightStop: (riskPerShare / price) < 0.005
+          };
+        }
+
+        return {
+          status: "OK",
+          rejectReason: "",
+          maxShares,
+          initialShares,
+          initialBuyAmount: initialShares * price,
+          maxBuyAmount: maxShares * price,
+          riskPerShare,
+          appliedRule,
+          isTightStop: (riskPerShare / price) < 0.005
+        };
+      }
+
+      function loadPosConfig() {
+        try {
+          const saved = localStorage.getItem('granville_pos_config');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.totalAssets) posConfig.totalAssets = Number(parsed.totalAssets);
+            if (parsed.riskToleranceRate) posConfig.riskToleranceRate = Number(parsed.riskToleranceRate);
+            if (parsed.maxPositionRate) posConfig.maxPositionRate = Number(parsed.maxPositionRate);
+          }
+        } catch(e) {}
+        document.getElementById('settingTotalAssets').value = posConfig.totalAssets;
+        document.getElementById('settingRiskTolerance').value = posConfig.riskToleranceRate;
+        document.getElementById('settingMaxPosition').value = posConfig.maxPositionRate;
+      }
+
+      function updatePosConfigFromUI() {
+        const vAssets = Number(document.getElementById('settingTotalAssets').value);
+        const vRisk = Number(document.getElementById('settingRiskTolerance').value);
+        const vMaxPos = Number(document.getElementById('settingMaxPosition').value);
+
+        if (vAssets > 0) posConfig.totalAssets = vAssets;
+        if (vRisk > 0) posConfig.riskToleranceRate = vRisk;
+        if (vMaxPos > 0) posConfig.maxPositionRate = vMaxPos;
+
+        try {
+          localStorage.setItem('granville_pos_config', JSON.stringify(posConfig));
+        } catch(e) {}
+
+        renderTable();
+      }
+
+      function toggleSettings() {
+        const sec = document.getElementById('settingsSection');
+        if (sec.classList.contains('hidden')) {
+          sec.classList.remove('hidden');
+        } else {
+          sec.classList.add('hidden');
+        }
+      }
+
+      // ★個別の緊急株数計算処理（コード入力 ➔ 株数ボタン）
+      async function handleCalcIndividualShares() {
+        const input = document.getElementById('aiExtractInput').value.trim();
+        if (!input) {
+          alert("銘柄コードを入力してください。（例: 7974）");
+          return;
+        }
+
+        const sys = state.currentSystem;
+        let price = 0;
+        let stopLossPrice = 0;
+        let name = "";
+        let categoryName = "条件外（個別緊急計算）";
+
+        const matchItem = state.results.find(r => r.ticker === input);
+        if (matchItem) {
+          price = matchItem.price;
+          name = matchItem.name;
+          const sysData = matchItem[sys];
+          if (sysData && sysData.category !== "NONE") {
+            stopLossPrice = sysData.stop_loss_price;
+            categoryName = sysData.categoryName;
+          }
+        }
+
+        // スクリーナーで点灯していない銘柄の場合、裏の履歴データから取得
+        if (!price || !stopLossPrice) {
+          const tickerNum = input.replace(/[^0-9]/g, '');
+          if (tickerNum.length < 2) {
+            alert("無効な銘柄コードです。");
+            return;
+          }
+          const shardKey = tickerNum.slice(-2);
+          const url = `history_data/data_${shardKey}.json`;
+
+          try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("データの取得に失敗しました。");
+            const data = await res.json();
+            const history = data[input];
+
+            if (!history || history.length === 0) {
+              alert(`銘柄コード [${input}] のデータが見つかりません。`);
+              return;
+            }
+
+            const latestRow = history[history.length - 1];
+            price = latestRow[1]; // 終値
+
+            // 直近20日安値（または過去データ中の最小終値）✕ 0.995 (切り捨て)
+            const recentLows = history.slice(-20).map(r => r[1]).filter(v => v !== null);
+            const minLow = Math.min(...recentLows);
+            stopLossPrice = Math.floor(minLow * 0.995);
+
+          } catch(err) {
+            alert(`データ取得エラー: ${err.message}`);
+            return;
+          }
+        }
+
+        const pos = calculatePositionSizing(price, stopLossPrice);
+        showIndividualSharesModal(input, name, price, stopLossPrice, categoryName, pos);
+      }
+
+      function showIndividualSharesModal(ticker, name, price, stopLossPrice, categoryName, pos) {
+        const dialog = document.getElementById('diagnosticDialog');
+        const title = document.getElementById('dialogTitle');
+        const content = document.getElementById('dialogContent');
+
+        title.innerHTML = `📊 ポジション計算: <span class="font-mono text-emerald-400 font-bold ml-1.5">[${ticker}] ${name || ""}</span>`;
+
+        let resultHtml = "";
+        if (pos.status === "OK") {
+          const initAmountMan = (pos.initialBuyAmount / 10000).toFixed(1);
+          const maxAmountMan = (pos.maxBuyAmount / 10000).toFixed(1);
+          const riskAmount = Math.round(pos.initialShares * pos.riskPerShare);
+
+          resultHtml = `
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-emerald-500/30 space-y-2">
+              <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span class="text-slate-400">🌱 初回打診買い (50%)</span>
+                <strong class="text-emerald-400 text-sm font-mono">${pos.initialShares} 株 (約 ${initAmountMan} 万円)</strong>
+              </div>
+              <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span class="text-slate-400">🌲 本玉最大保有上限</span>
+                <strong class="text-white text-sm font-mono">${pos.maxShares} 株 (約 ${maxAmountMan} 万円)</strong>
+              </div>
+              <div class="flex justify-between items-center text-[10px] text-slate-400">
+                <span>打診損切り時想定損失</span>
+                <span class="text-rose-400 font-mono font-bold">- ${riskAmount.toLocaleString()} 円</span>
+              </div>
+            </div>
+            ${pos.isTightStop ? `<div class="p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-[10px]">⚠️ 損切り幅が極小（0.5%未満）のためノイズ狩りに注意してください</div>` : ''}
+          `;
+        } else {
+          resultHtml = `
+            <div class="bg-rose-950/40 p-3 rounded-xl border border-rose-800/40 text-rose-300 font-bold">
+              🚫 買付不可: ${pos.rejectReason}
+            </div>
+          `;
+        }
+
+        content.innerHTML = `
+          <div class="grid grid-cols-2 gap-3 border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-slate-400 text-[10px] uppercase block">想定株価</span>
+              <strong class="text-white text-sm font-mono">${price.toLocaleString()} 円</strong>
+            </div>
+            <div>
+              <span class="text-slate-400 text-[10px] uppercase block">適用損切り価格</span>
+              <strong class="text-rose-400 text-sm font-mono">${stopLossPrice.toLocaleString()} 円</strong>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <span class="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">🎯 推奨ポジショニング結果</span>
+            ${resultHtml}
+          </div>
+
+          <div class="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] text-slate-400 space-y-1">
+            <div class="flex justify-between"><span>適用ルール:</span> <span class="text-white font-mono">${pos.appliedRule}</span></div>
+            <div class="flex justify-between"><span>設定枠:</span> 資産${(posConfig.totalAssets/10000)}万 / リスク${posConfig.riskToleranceRate}% / 枠${posConfig.maxPositionRate}%</div>
+          </div>
+        `;
+
+        dialog.showModal();
+      }
 
       async function copyAiData(ticker, name) {
         if (!ticker) return;
@@ -423,22 +706,6 @@
           expSec.classList.add('hidden');
           btn.textContent = '📖 解説を表示';
         }
-      }
-
-      function openCatFeedback(ticker, name, category) {
-        const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
-        const targetUrl = `${FORM_CAT_CFG.baseUrl}?${FORM_CAT_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_CAT_CFG.entryName}=${encodeURIComponent(name)}&${FORM_CAT_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_CAT_CFG.entryCat}=${encodeURIComponent(category)}`;
-        window.open(targetUrl, '_blank', 'width=620,height=750');
-      }
-
-      function openScoreFeedback(ticker, name, score) {
-        if (!FORM_SCORE_CFG.baseUrl || FORM_SCORE_CFG.baseUrl === "YOUR_SCORE_FORM_URL_HERE") {
-          alert("【初期設定が必要です】\nコード冒頭の「FORM_CONFIG_SCORE」にご自身の2つ目のGoogleフォームのURLとIDを設定してください。");
-          return;
-        }
-        const sysLabel = (state.currentSystem === 'short') ? "短期(5/25)" : "中期(25/75)";
-        const targetUrl = `${FORM_SCORE_CFG.baseUrl}?${FORM_SCORE_CFG.entryCode}=${encodeURIComponent(ticker)}&${FORM_SCORE_CFG.entryName}=${encodeURIComponent(name)}&${FORM_SCORE_CFG.entrySys}=${encodeURIComponent(sysLabel)}&${FORM_SCORE_CFG.entryScore}=${encodeURIComponent(score)}`;
-        window.open(targetUrl, '_blank', 'width=620,height=750');
       }
 
       function togglePriceSort() {
@@ -497,11 +764,12 @@
           return;
         }
         let csvContent = "\uFEFF";
-        csvContent += "カテゴリ,期待度スコア,証券コード,銘柄名,株価,前日比,前日比率,本日出来高,市場,業種\r\n";
+        csvContent += "カテゴリ,期待度スコア,証券コード,銘柄名,株価,前日比,前日比率,打診買い推奨株数,最大保有株数,本日出来高,市場,業種\r\n";
         filtered.forEach(item => {
           const sysData = item[sys];
           const isPlus = item.change >= 0;
           const sign = isPlus ? "+" : "";
+          const pos = calculatePositionSizing(item.price, sysData.stop_loss_price);
           const row = [
             `"${sysData.categoryName.split('：')[0]}"`,
             `"${sysData.score}"`,
@@ -510,6 +778,8 @@
             `"${item.price}"`,
             `"${sign}${item.change}"`,
             `"${sign}${item.changeRate}%"`,
+            `"${pos.status === 'OK' ? pos.initialShares : 0}"`,
+            `"${pos.status === 'OK' ? pos.maxShares : 0}"`,
             `"${item.volume}"`,
             `"${item.market}"`,
             `"${item.sector}"`
@@ -532,7 +802,6 @@
         state.currentSystem = system;
         const btnShort = document.getElementById('btnSystemShort');
         const btnMid = document.getElementById('btnSystemMid');
-        const thma = document.getElementById('thma');
         const expsLong = document.querySelectorAll('.exp-long');
         const expPNormal = document.getElementById('expPNormal');
         const expPSurge = document.getElementById('expPSurge');
@@ -542,7 +811,6 @@
         if (system === 'short') {
           btnShort.className = 'px-4 py-1.5 rounded-lg font-bold bg-cyan-600 text-white shadow cursor-pointer';
           btnMid.className = 'px-4 py-1.5 rounded-lg font-bold text-slate-400 hover:text-slate-100 cursor-pointer';
-          thma.textContent = '5日線 / 25日線';
           expsLong.forEach(el => el.textContent = '25日線');
           expPNormal.textContent = '-8.0%';
           expPSurge.textContent = '-15.0%';
@@ -551,7 +819,6 @@
         } else {
           btnMid.className = 'px-4 py-1.5 rounded-lg font-bold bg-cyan-600 text-white shadow cursor-pointer';
           btnShort.className = 'px-4 py-1.5 rounded-lg font-bold text-slate-400 hover:text-slate-100 cursor-pointer';
-          thma.textContent = '25日線 / 75日線';
           expsLong.forEach(el => el.textContent = '75日線');
           expPNormal.textContent = '-12.0%';
           expPSurge.textContent = '-20.0%';
@@ -720,11 +987,26 @@
                   ? `<span class="text-[9px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold block mt-1" title="本日RSIが70%以上の買われすぎ圏に達しているか、または過去5日以内に70%を超えた後本日デッドクロスして下落に転じているため、過熱警戒です。">⚠️ RSI過熱警戒</span>`
                   : ``;
 
+          // ★ポジションサイジング計算 (案B: 打診 / 最大)
+          const pos = calculatePositionSizing(item.price, sysData.stop_loss_price);
+          let posDisplayHtml = "";
+          if (pos.status === "OK") {
+            const initAmountMan = (pos.initialBuyAmount / 10000).toFixed(1);
+            posDisplayHtml = `
+              <div class="font-bold text-emerald-400 font-mono text-[13px]">${pos.initialShares} <span class="text-slate-400 text-[10px] font-normal">株</span> / ${pos.maxShares} <span class="text-slate-400 text-[10px] font-normal">株</span></div>
+              <div class="text-[10px] text-slate-400 font-mono">(打診約 ${initAmountMan}万円)</div>
+            `;
+          } else {
+            posDisplayHtml = `
+              <span class="px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-800/40 text-[10px] font-bold select-none cursor-help" title="${pos.rejectReason}">購入不可</span>
+            `;
+          }
+
           let reasonsListHtml = '';
           if (sysData.score_reasons && sysData.score_reasons.length > 0) {
             reasonsListHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5 text-slate-300"><span>•</span><span>${r}</span></li>`).join('');
           } else {
-            reasonsListHtml = `<li class="text-slate-500 py-0.5">※加減点なし (基本点 3)</li>`;
+            reasonsListHtml = `<li class="text-slate-500 py-0.5">※加減点なし (基本点 5)</li>`;
           }
 
           tr.innerHTML = `
@@ -769,10 +1051,12 @@
             </td>
             <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
             <td class="p-3 text-right font-mono ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${item.change.toLocaleString()} (${isPlus ? '+' : ''}${item.changeRate}%)</td>
-            <td class="p-3 text-right font-mono text-slate-300">
-              <div>${sys==='short'?'5日':'25日'}: ${sysData.ma_short.toLocaleString()}</div>
-              <div class="text-[10px] text-slate-400">${sys==='short'?'25日':'75日'}: ${sysData.ma_long.toLocaleString()}</div>
+            
+            <!-- ★置換した「購入目安 (打診/最大)」表示列 -->
+            <td class="p-3 text-right font-mono">
+              ${posDisplayHtml}
             </td>
+
             <td class="p-3 text-right font-mono">
               <div class="flex flex-col items-end">
                 <span class="${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'} font-bold">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</span>
@@ -782,15 +1066,12 @@
             </td>
             <td class="p-3 text-center"><span class="${marketBadgeClass} px-2 py-0.5 rounded text-[10px] font-bold">${item.market}</span></td>
             
-            <td class="p-3 text-center space-x-1 whitespace-nowrap">
-              <button onclick="openScoreFeedback('${item.ticker}', '${item.name}', '${sysData.score}')" class="px-2 py-1 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px] font-bold transition duration-200 cursor-pointer" title="期待度スコアの妥当性に対して報告">
-                ⭐ 期待度
-              </button>
-              <button onclick="copyAiData('${item.ticker}', '${item.name}')" class="flex items-center gap-1 px-2 py-1 bg-indigo-950/80 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded border border-indigo-800/50 hover:border-indigo-500 text-[10px] font-bold transition duration-200 cursor-pointer shadow-sm" title="AIに相談するための時系列データをコピー">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                AI抽出
-              </button>
-            </td>
+           <td class="p-3 text-center whitespace-nowrap">
+           <button onclick="copyAiData('${item.ticker}', '${item.name}')" class="inline-flex items-center gap-1 px-2 py-1 bg-indigo-950/80 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded border border-indigo-800/50 hover:border-indigo-500 text-[10px] font-bold transition duration-200 cursor-pointer shadow-sm" title="AIに相談するための時系列データをコピー">
+           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+         AI抽出
+           </button>
+           </td>
           `;
           tbody.appendChild(tr);
         });        
@@ -800,6 +1081,7 @@
         const item = state.results.find(r => r.ticker === ticker);
         if (!item) return;
         const sysData = item[sys];
+        const pos = calculatePositionSizing(item.price, sysData.stop_loss_price);
         
         const dialog = document.getElementById('diagnosticDialog');
         const title = document.getElementById('dialogTitle');
@@ -811,7 +1093,32 @@
         if (sysData.score_reasons && sysData.score_reasons.length > 0) {
           reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5"><span>•</span><span>${r}</span></li>`).join('');
         } else {
-          reasonsHtml = '<li class="text-slate-500 py-0.5">※加減点なし (基本点 3)</li>';
+          reasonsHtml = '<li class="text-slate-500 py-0.5">※加減点なし (基本点 5)</li>';
+        }
+
+        let posHtml = "";
+        if (pos.status === "OK") {
+          const initMan = (pos.initialBuyAmount / 10000).toFixed(1);
+          const maxMan = (pos.maxBuyAmount / 10000).toFixed(1);
+          posHtml = `
+            <div class="bg-slate-950 p-3 rounded-xl border border-emerald-500/30 space-y-1.5 text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-400">打診買い (50%):</span>
+                <strong class="text-emerald-400 font-mono">${pos.initialShares} 株 (約 ${initMan} 万円)</strong>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">本玉最大上限:</span>
+                <strong class="text-white font-mono">${pos.maxShares} 株 (約 ${maxMan} 万円)</strong>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800">
+                <span>ブレーキ適用:</span>
+                <span class="text-amber-300 font-mono">${pos.appliedRule}</span>
+              </div>
+            </div>
+            ${pos.isTightStop ? `<div class="p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-300 text-[10px]">⚠️ 損切り幅が極小（0.5%未満）のためノイズ狩りに注意</div>` : ''}
+          `;
+        } else {
+          posHtml = `<div class="bg-rose-950/40 p-2.5 rounded-xl border border-rose-800/40 text-rose-300 text-xs">🚫 購入不可: ${pos.rejectReason}</div>`;
         }
 
         content.innerHTML = `
@@ -821,8 +1128,8 @@
               <strong class="text-white text-base font-mono">${item.price.toLocaleString()} 円</strong>
             </div>
             <div>
-              <span class="text-slate-400 text-[10px] uppercase block">長期線乖離率</span>
-              <strong class="${sysData.diffRate >= 0 ? 'text-cyan-400' : 'text-purple-400'} text-base font-mono">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</strong>
+              <span class="text-slate-400 text-[10px] uppercase block">損切り設定価格</span>
+              <strong class="text-rose-400 text-base font-mono">${sysData.stop_loss_price ? sysData.stop_loss_price.toLocaleString() + ' 円' : 'なし'}</strong>
             </div>
           </div>
           
@@ -835,6 +1142,11 @@
               <span class="text-slate-400 text-[10px] uppercase block">RSI (14日)</span>
               <strong class="text-white text-base font-mono">${sysData.rsi}%</strong>
             </div>
+          </div>
+
+          <div class="space-y-1.5 border-b border-slate-800 pb-3">
+            <span class="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">⚖️ ポジションサイジング推奨</span>
+            ${posHtml}
           </div>
           
           <div class="space-y-2 border-b border-slate-800 pb-3">
