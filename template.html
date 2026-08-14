@@ -798,36 +798,36 @@
         document.body.removeChild(link);
       }
 
-      function switchSystem(system) {
-        state.currentSystem = system;
-        const btnShort = document.getElementById('btnSystemShort');
-        const btnMid = document.getElementById('btnSystemMid');
-        const expsLong = document.querySelectorAll('.exp-long');
-        const expPNormal = document.getElementById('expPNormal');
-        const expPSurge = document.getElementById('expPSurge');
-        const expS = document.getElementById('expS');
-        const expG = document.getElementById('expG');
+function switchSystem(system) {
+  state.currentSystem = system;
+  const btnShort = document.getElementById('btnSystemShort');
+  const btnMid = document.getElementById('btnSystemMid');
+  const expsLong = document.querySelectorAll('.exp-long');
+  const expPNormal = document.getElementById('expPNormal');
+  const expPSurge = document.getElementById('expPSurge');
+  const expS = document.getElementById('expS');
+  const expG = document.getElementById('expG');
 
-        if (system === 'short') {
-          btnShort.className = 'px-4 py-1.5 rounded-lg font-bold bg-cyan-600 text-white shadow cursor-pointer';
-          btnMid.className = 'px-4 py-1.5 rounded-lg font-bold text-slate-400 hover:text-slate-100 cursor-pointer';
-          expsLong.forEach(el => el.textContent = '25日線');
-          expPNormal.textContent = '-8.0%';
-          expPSurge.textContent = '-15.0%';
-          expS.textContent = '-12.0%';
-          expG.textContent = '-15.0%';
-        } else {
-          btnMid.className = 'px-4 py-1.5 rounded-lg font-bold bg-cyan-600 text-white shadow cursor-pointer';
-          btnShort.className = 'px-4 py-1.5 rounded-lg font-bold text-slate-400 hover:text-slate-100 cursor-pointer';
-          expsLong.forEach(el => el.textContent = '75日線');
-          expPNormal.textContent = '-12.0%';
-          expPSurge.textContent = '-20.0%';
-          expS.textContent = '-18.0%';
-          expG.textContent = '-20.0%';
-        }
-        updateStats();
-        renderTable();
-      }
+  if (system === 'short') {
+    if (btnShort) btnShort.className = 'px-4 py-1.5 rounded-lg font-bold bg-cyan-600 text-white shadow cursor-pointer';
+    if (btnMid) btnMid.className = 'px-4 py-1.5 rounded-lg font-bold text-slate-400 hover:text-slate-100 cursor-pointer';
+    expsLong.forEach(el => el.textContent = '25日線');
+    if (expPNormal) expPNormal.textContent = '-8.0%';
+    if (expPSurge) expPSurge.textContent = '-15.0%';
+    if (expS) expS.textContent = '-12.0%';
+    if (expG) expG.textContent = '-15.0%';
+  } else {
+    if (btnMid) btnMid.className = 'px-4 py-1.5 rounded-lg font-bold bg-cyan-600 text-white shadow cursor-pointer';
+    if (btnShort) btnShort.className = 'px-4 py-1.5 rounded-lg font-bold text-slate-400 hover:text-slate-100 cursor-pointer';
+    expsLong.forEach(el => el.textContent = '75日線');
+    if (expPNormal) expPNormal.textContent = '-12.0%';
+    if (expPSurge) expPSurge.textContent = '-20.0%';
+    if (expS) expS.textContent = '-18.0%';
+    if (expG) expG.textContent = '-20.0%';
+  }
+  updateStats();
+  renderTable();
+}
 
       function getDiffBadge(todayVal, yesterdayVal) {
         const diff = todayVal - yesterdayVal;
