@@ -56,12 +56,22 @@ if os.path.exists(html_output_path):
         with open(html_output_path, "r", encoding="utf-8") as f:
             old_html = f.read()
         
-        def extract_results_json(text):
-            start_pos = text.find("results:")
-            if start_pos == -1: return None
-            b_start = text.find("[", start_pos)
-            if b_start == -1: return None
+def extract_results_json(text):
+    start_tag = '<script id="data-results" type="application/json">'
+    end_tag = '</script>'
+    
+    start_pos = text.find(start_tag)
+    if start_pos != -1:
+        b_start = start_pos + len(start_tag)
+        end_pos = text.find(end_tag, b_start)
+        if end_pos != -1:
+            return text[b_start:end_pos].strip()
             
+    # 古い形式(results:)との互換性バックアップ
+    start_pos = text.find("results:")
+    if start_pos != -1:
+        b_start = text.find("[", start_pos)
+        if b_start != -1:
             depth = 0
             in_string = False
             escape = False
@@ -83,7 +93,7 @@ if os.path.exists(html_output_path):
                         depth -= 1
                         if depth == 0:
                             return text[b_start:i+1]
-            return None
+    return None
 
         prev_results_json = extract_results_json(old_html)
         
