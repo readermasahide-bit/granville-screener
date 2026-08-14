@@ -4,34 +4,10 @@ import json
 import time
 import requests
 import re
+import math
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta, timezone
-
-# ==========================================
-# ★ 設定パラメータ（Wフォーム設定＆クラウド対応）
-# ==========================================
-SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
-html_output_path = "index.html" # ホームページとして公開するため index.html に固定
-
-# 【Googleフォーム1：判定カテゴリ改善用】
-FORM_CONFIG_CAT = {
-    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSeUMv4F3yxLUKXuAzU03riKKFRlZjoxORx5vGX69gXyxDiQOw/viewform",
-    "entryCode": "entry.1616153480",
-    "entryName": "entry.639288663",
-    "entrySys":  "entry.1292630960",
-    "entryCat":  "entry.432445345"
-}
-
-# 【Googleフォーム2：期待度改善用】
-FORM_CONFIG_SCORE = {
-    "baseUrl": "https://docs.google.com/forms/d/e/1FAIpQLSet_-Ab3-3HgXrRS5pG-5PT4K-qgip4lV4EUqqivaWNRBO_g/viewform",
-    "entryCode": "entry.473391802",
-    "entryName": "entry.1042173003",
-    "entrySys":  "entry.1364518533",
-    "entryScore": "entry.2008795821"
-}
-# ==========================================
 
 # 日本時間(JST)の現在時刻をベースに動的な日付を計算
 JST = timezone(timedelta(hours=+9))
@@ -239,6 +215,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             "diffRate": 0.0, "reason": "データが不足しています。",
             "ma_short": 0.0, "ma_long": 0.0, "score": 1,
             "stars": "★☆☆☆☆",
+            "stop_loss_price": 0,
             "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False
         }
         
@@ -402,10 +379,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_trend_reversing = short_long_diff >= -2.0 
 
     # 5. 長期MAの傾き判定（過去3日間の傾き、または単日での上向き転換）
-    long_ma_3d_ago = df_temp.iloc[-4]['long_ma'] # 3営業日前
+    long_ma_3d_ago = df_temp.iloc[-4]['long_ma']
     long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100
     
-    # 【改定ポイント】「単日で長期MAが上向き」または「過去3日間の傾きが -0.2% 以上（ほぼ水平）」なら合格
     is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
 
     # 6. 統合判定
@@ -435,7 +411,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
             reason = f"長期の底練りから脱却後、最初の押し目で長期線を一度下抜け、本日再び上方に復帰しました。"
 
-# 買い3：押し目反発 ＆ 初押し(支持線反発)
+    # 買い3：押し目反発 ＆ 初押し(支持線反発)
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     
@@ -445,14 +421,13 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
 
     is_initial_dip_rebound = is_long_bottoming_past and was_above_recently and is_close_to_ma and is_rebound and not_crossed_below_recent
 
-    # ★【修正】外枠の条件に「is_long_ma_rising (完全右肩上がり)」を必須条件化
     if category == "NONE" and not_crossed_below_recent and is_long_ma_rising:
         if has_pulled_back and is_close_to_ma and is_rebound:
             category = "BUY3"
             category_name = "買い3：押し目反発"
             badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
             reason = f"上向き長期線を支持線とした、教科書通りの綺麗な陽線反発を観測しました。"
-        elif is_initial_dip_rebound: # ★【修正】is_long_ma_flat_or_rising を削除
+        elif is_initial_dip_rebound:
             category = "BUY3"
             category_name = "買い3：初押し(支持線反発)"
             badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
@@ -462,18 +437,36 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
     is_initial_dip_resting = is_long_bottoming_past and was_above_recently and is_resting_on_ma and not_crossed_below_recent
 
-    # ★【修正】外枠の条件に「is_long_ma_rising (完全右肩上がり)」を必須条件化
     if category == "NONE" and not_crossed_below_recent and is_long_ma_rising:
         if has_pulled_back and is_resting_on_ma:
             category = "BUY3_PRE"
             category_name = "買い3：押し目待ち伏せ"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
-        elif is_initial_dip_resting: # ★【修正】is_long_ma_flat_or_rising を削除
+        elif is_initial_dip_resting:
             category = "BUY3_PRE"
             category_name = "買い3：初押し(待ち伏せ)"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
+
+    # ==========================================
+    # ★【新規追加】カテゴリ別テクニカル損切り価格 (stop_loss_price) 自動算出
+    # ==========================================
+    stop_loss_price = 0
+    if category == "BUY1":
+        # 買い1: 直近20日間の最安値 × 0.995（0.5%下、切り捨て）
+        low_20d = df_temp['Low'].tail(20).min()
+        stop_loss_price = math.floor(low_20d * 0.995)
+    elif category == "BUY2":
+        # 買い2: 直近5日間の最安値 × 0.995（0.5%下、切り捨て）
+        low_5d = df_temp['Low'].tail(5).min()
+        stop_loss_price = math.floor(low_5d * 0.995)
+    elif category in ["BUY3", "BUY3_PRE"]:
+        # 買い3 / Pre: 長期移動平均線 × 0.985（1.5%下、切り捨て）
+        stop_loss_price = math.floor(long_ma_today * 0.985)
+    elif category == "BUY4":
+        # 買い4: 当日安値 × 0.99（1.0%下、切り捨て）
+        stop_loss_price = math.floor(low_today * 0.99)
 
     # ==========================================
     # 期待度スコア (10段階スケール解放版)
@@ -547,9 +540,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     # 星表記（互換性確保）
     stars_str = "★" * min(5, score) + "☆" * max(0, 5 - min(5, score))
 
-# ==========================================
-# ★ 最終出力パーツ
-# ==========================================
     return {
         "category": clean_val(category),
         "categoryName": clean_val(category_name),
@@ -560,6 +550,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
         "ma_long": clean_val(round(long_ma_today, 1)),
         "score": clean_val(int(score)),
         "stars": clean_val(stars_str),
+        "stop_loss_price": clean_val(int(stop_loss_price)),
         "rsi": clean_val(round(rsi_today, 1)),
         "rsi_sell_warning": is_rsi_sell_warning,
         "rsi_buy_reversal": is_rsi_buy_reversal,
@@ -824,8 +815,6 @@ print(" -> AI履歴データの出力を完了しました")
 # 1. JSONデータの作成 (エスケープ事故を防ぐためコンパクトな1行文字列化)
 json_data_str = json.dumps(results_list, ensure_ascii=False)
 hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
-form_cat_str = json.dumps(FORM_CONFIG_CAT, ensure_ascii=False)
-form_score_str = json.dumps(FORM_CONFIG_SCORE, ensure_ascii=False)
 prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
 
 # 2. 外部テンプレートファイルの読み込み
@@ -843,8 +832,6 @@ html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_m
 html_content = html_content.replace("__PLACEHOLDER_HOT_SECTORS__", hot_sectors_json_str)
 html_content = html_content.replace("__PLACEHOLDER_RESULTS__", json_data_str)
 html_content = html_content.replace("__PLACEHOLDER_PREV_COUNTS__", prev_counts_json_str)
-html_content = html_content.replace("__PLACEHOLDER_FORM_CAT__", form_cat_str)
-html_content = html_content.replace("__PLACEHOLDER_FORM_SCORE__", form_score_str)
 
 # 4. index.html として出力
 with open(html_output_path, "w", encoding="utf-8") as f:
