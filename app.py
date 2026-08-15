@@ -43,6 +43,46 @@ def clean_val(val):
         return None
     return val
 
+# ヘルパー関数：HTMLから data-results JSONを抽出する関数
+def extract_results_json(text):
+    start_tag = '<script id="data-results" type="application/json">'
+    end_tag = '</script>'
+    
+    start_pos = text.find(start_tag)
+    if start_pos != -1:
+        b_start = start_pos + len(start_tag)
+        end_pos = text.find(end_tag, b_start)
+        if end_pos != -1:
+            return text[b_start:end_pos].strip()
+            
+    # 古い形式(results:)との互換性バックアップ
+    start_pos = text.find("results:")
+    if start_pos != -1:
+        b_start = text.find("[", start_pos)
+        if b_start != -1:
+            depth = 0
+            in_string = False
+            escape = False
+            for i in range(b_start, len(text)):
+                char = text[i]
+                if escape:
+                    escape = False
+                    continue
+                if char == '\\':
+                    escape = True
+                    continue
+                if char == '"':
+                    in_string = not in_string
+                    continue
+                if not in_string:
+                    if char == '[':
+                        depth += 1
+                    elif char == ']':
+                        depth -= 1
+                        if depth == 0:
+                            return text[b_start:i+1]
+    return None
+
 # ★【件数前日比＆連続日数ハック】既存の index.html から前日のデータを自動解析
 prev_counts = {
     "short": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0},
@@ -56,48 +96,6 @@ if os.path.exists(html_output_path):
         with open(html_output_path, "r", encoding="utf-8") as f:
             old_html = f.read()
         
-        # ★ここから下（def〜return Noneまで）のインデント（スペース8個）を揃えました
-        def extract_results_json(text):
-            start_tag = '<script id="data-results" type="application/json">'
-            end_tag = '</script>'
-            
-            start_pos = text.find(start_tag)
-            if start_pos != -1:
-                b_start = start_pos + len(start_tag)
-                end_pos = text.find(end_tag, b_start)
-                if end_pos != -1:
-                    return text[b_start:end_pos].strip()
-                    
-            # 古い形式(results:)との互換性バックアップ
-            start_pos = text.find("results:")
-            if start_pos != -1:
-                b_start = text.find("[", start_pos)
-                if b_start != -1:
-                    depth = 0
-                    in_string = False
-                    escape = False
-                    for i in range(b_start, len(text)):
-                        char = text[i]
-                        if escape:
-                            escape = False
-                            continue
-                        if char == '\\':
-                            escape = True
-                            continue
-                        if char == '"':
-                            in_string = not in_string
-                            continue
-                        if not in_string:
-                            if char == '[':
-                                depth += 1
-                            elif char == ']':
-                                depth -= 1
-                                if depth == 0:
-                                    return text[b_start:i+1]
-            return None
-
-        prev_results_json = extract_results_json(old_html)
-
         prev_results_json = extract_results_json(old_html)
         
         if prev_results_json:
@@ -470,22 +468,18 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
 
     # ==========================================
-    # ★【新規追加】カテゴリ別テクニカル損切り価格 (stop_loss_price) 自動算出
+    # ★ テクニカル損切り価格 (stop_loss_price) 自動算出
     # ==========================================
     stop_loss_price = 0
     if category == "BUY1":
-        # 買い1: 直近20日間の最安値 × 0.995（0.5%下、切り捨て）
         low_20d = df_temp['Low'].tail(20).min()
         stop_loss_price = math.floor(low_20d * 0.995)
     elif category == "BUY2":
-        # 買い2: 直近5日間の最安値 × 0.995（0.5%下、切り捨て）
         low_5d = df_temp['Low'].tail(5).min()
         stop_loss_price = math.floor(low_5d * 0.995)
     elif category in ["BUY3", "BUY3_PRE"]:
-        # 買い3 / Pre: 長期移動平均線 × 0.985（1.5%下、切り捨て）
         stop_loss_price = math.floor(long_ma_today * 0.985)
     elif category == "BUY4":
-        # 買い4: 当日安値 × 0.99（1.0%下、切り捨て）
         stop_loss_price = math.floor(low_today * 0.99)
 
     # ==========================================
@@ -557,7 +551,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
                 score_reasons.append("🕯️ 反発実体極小: -1")
                 
     score = max(1, min(10, score))
-    # 星表記（互換性確保）
     stars_str = "★" * min(5, score) + "☆" * max(0, 5 - min(5, score))
 
     return {
