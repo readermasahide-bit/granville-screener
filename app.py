@@ -142,7 +142,7 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. 全銘柄のデータをブロック分けして一括ダウンロード
+# 2. 全銘柄のデータをブロック分けして一括ダウンロード（★取得漏れ防止リトライ機能搭載）
 session = requests.Session()
 session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -150,37 +150,57 @@ session.headers.update({
 
 print("株価データ(2年分)を一括ダウンロード中...")
 bulk_data = {}
-chunk_size = 200
+chunk_size = 100 # 最適化のため100銘柄ずつ取得
+
+def process_downloaded_data(data, chunk_list):
+    for ticker in chunk_list:
+        df_single = None
+        if isinstance(data.columns, pd.MultiIndex):
+            if ticker in data.columns.get_level_values(0):
+                df_single = data[ticker].copy()
+            elif ticker in data.columns.get_level_values(1):
+                df_single = data.xs(ticker, axis=1, level=1).copy()
+        else:
+            if len(chunk_list) == 1:
+                df_single = data.copy()
+
+        if df_single is not None and not df_single.empty:
+            df_single = df_single.dropna(subset=['Close']).copy()
+            if not df_single.empty:
+                if df_single.index.tz is not None:
+                    df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
+                else:
+                    df_single.index = df_single.index.tz_localize(None)
+                bulk_data[ticker] = df_single
+
 for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
-    try:
-        data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
-        
-        for ticker in chunk:
-            df_single = None
-            if isinstance(data.columns, pd.MultiIndex):
-                if ticker in data.columns.get_level_values(0):
-                    df_single = data[ticker].copy()
-                elif ticker in data.columns.get_level_values(1):
-                    df_single = data.xs(ticker, axis=1, level=1).copy()
-            else:
-                if len(chunk) == 1:
-                    df_single = data.copy()
-
-            if df_single is not None and not df_single.empty:
-                df_single = df_single.dropna(subset=['Close']).copy()
-                if not df_single.empty:
-                    if df_single.index.tz is not None:
-                        df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
-                    else:
-                        df_single.index = df_single.index.tz_localize(None)
-                    
-                    bulk_data[ticker] = df_single
-    except Exception as e:
-        print(f" -> ブロック取得でエラーが発生しました: {e}")
     
-    time.sleep(4)
+    # ★リトライ処理（最大3回再試行）
+    success = False
+    for attempt in range(3):
+        try:
+            data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
+            if data is not None and not data.empty:
+                process_downloaded_data(data, chunk)
+                success = True
+                break
+        except Exception as e:
+            time.sleep(2 * (attempt + 1))
+            
+    # ★一括で取れなかった場合の個別フォールバック取得
+    if not success:
+        print(f"    ⚠️ ブロック取得失敗のため小分け再取得を実行します...")
+        for ticker in chunk:
+            try:
+                data_single = yf.download(ticker, period="2y", interval="1d", auto_adjust=False, progress=False, session=session)
+                if data_single is not None and not data_single.empty:
+                    process_downloaded_data(data_single, [ticker])
+            except Exception:
+                pass
+
+    time.sleep(1.5)
 
 print(f"データのダウンロードが完了しました。正常取得銘柄数: {len(bulk_data)}")
 
@@ -379,30 +399,22 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     # 買い1：新規買い（トレンド転換・底練りからの上抜け）
     # ==========================================
     lookback_period = 40
-    
-    # 1. 底練り・位置関係（過去40日中28日以上沈んでいたこと）
     price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     is_long_bottoming = price_below_count >= (lookback_period * 0.7)
 
-    # 2. レンジ相場排除フィルター（過去40日間に+5.0%以上上に飛び出した履歴がないこと）
     past_max_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).max()
     is_not_range_bound = past_max_diff < 5.0
 
-    # 3. 本日の突き抜け / GC判定
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
 
-    # 4. トレンド転換の裏付け（短期MAが長期MAのすぐ近くまで肉薄しているか）
     short_long_diff = ((short_ma_today - long_ma_today) / long_ma_today) * 100
     is_trend_reversing = short_long_diff >= -2.0 
 
-    # 5. 長期MAの傾き判定（過去3日間の傾き、または単日での上向き転換）
     long_ma_3d_ago = df_temp.iloc[-4]['long_ma']
     long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100
-    
     is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
 
-    # 6. 統合判定
     if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming and is_not_range_bound and is_trend_reversing and (diff_rate <= 5.0):
         category = "BUY1"
         category_name = "買い1：新規買い"
