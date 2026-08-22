@@ -74,7 +74,7 @@
       <div id="hotSectorsBanner" class="hidden bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
       </div>
       
-      <!-- ★統計カード（買い1-Pre ➔ 買い1 ➔ 買い2-Pre ➔ 買い2 ➔ 買い3-Pre ➔ 買い3 ➔ 買い4 の順） -->
+      <!-- ★統計カード（完全独立集計化） -->
       <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col justify-between shadow-lg">
           <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">東証シグナル総数</span>
@@ -455,7 +455,7 @@
         switchSystem('mid');
       });
 
-      // ★新設：買付上限価格計算エンジン（Pre銘柄は1.4倍、確定足は1.2倍、ガード付）
+      // ★買付上限価格計算エンジン（Pre銘柄は1.4倍、確定足は1.2倍、ガード付）
       function calculateMaxBuyPrice(price, stopLossPrice, category) {
         if (!price || price <= 0 || !stopLossPrice || stopLossPrice >= price || stopLossPrice <= 0) {
           return price;
@@ -890,7 +890,7 @@
           if (expPNormal) expPNormal.textContent = '-12.0%';
           if (expPSurge) expPSurge.textContent = '-20.0%';
           if (expS) expS.textContent = '-18.0%';
-          if (expG) expG.textContent = '-20.0%';
+          if (expG) expG.textContent = '-18.0%';
         }
         updateStats();
         renderTable();
@@ -907,6 +907,7 @@
         }
       }
 
+      // ★修正：買い3 と 買い3-Pre の個別単独集計に対応
       function updateStats() {
         const counts = { BUY1: 0, BUY1_PRE: 0, BUY2: 0, BUY2_PRE: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0 };
         const sys = state.currentSystem;
@@ -935,9 +936,14 @@
           <span class="text-xl font-bold text-sky-300">${counts.BUY2_PRE}</span>
           ${getDiffBadge(counts.BUY2_PRE, state.prevCounts[sys].BUY2_PRE || 0)}
         `;
+        // ★修正箇所：買い3 と 買い3-Pre を完全に独立して単独カウント出力
+        document.getElementById('statBuy3Pre').innerHTML = `
+          <span class="text-xl font-bold text-amber-300">${counts.BUY3_PRE}</span>
+          ${getDiffBadge(counts.BUY3_PRE, state.prevCounts[sys].BUY3_PRE || 0)}
+        `;
         document.getElementById('statBuy3').innerHTML = `
-          <span class="text-xl font-bold text-amber-400">${counts.BUY3} / ${counts.BUY3_PRE}</span>
-          ${getDiffBadge(counts.BUY3 + counts.BUY3_PRE, (state.prevCounts[sys].BUY3 || 0) + (state.prevCounts[sys].BUY3_PRE || 0))}
+          <span class="text-xl font-bold text-amber-400">${counts.BUY3}</span>
+          ${getDiffBadge(counts.BUY3, state.prevCounts[sys].BUY3 || 0)}
         `;
         document.getElementById('statBuy4').innerHTML = `
           <span class="text-xl font-bold text-purple-400">${counts.BUY4}</span>
@@ -1206,7 +1212,6 @@
               <strong class="text-white text-sm font-mono">${item.price.toLocaleString()} 円</strong>
             </div>
             <div>
-              <!-- ★買付上限価格：Pre銘柄1.4倍、確定足1.2倍 ガード付 -->
               <span class="text-slate-400 text-[10px] uppercase block">買付上限価格 (ガード付)</span>
               <strong class="text-amber-300 text-sm font-mono">${maxBuyPrice.toLocaleString()} 円 (+${maxBuyPct}%)</strong>
             </div>
