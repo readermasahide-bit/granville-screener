@@ -85,8 +85,8 @@ def extract_results_json(text):
 
 # ★【件数前日比＆連続日数ハック】既存の index.html から前日のデータを自動解析
 prev_counts = {
-    "short": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0},
-    "mid": {"BUY1": 0, "BUY2": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0}
+    "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0},
+    "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "TOTAL": 0}
 }
 prev_results_by_ticker = {}
 
@@ -114,8 +114,8 @@ if os.path.exists(html_output_path):
             for sys_key in ["short", "mid"]:
                 prev_counts[sys_key]["TOTAL"] = len(prev_results)
                 total_active = 0
-                for cat in ["BUY1", "BUY2", "BUY3", "BUY3_PRE", "BUY4"]:
-                    total_active += prev_counts[sys_key][cat]
+                for cat in ["BUY1", "BUY1_PRE", "BUY2", "BUY2_PRE", "BUY3", "BUY3_PRE", "BUY4"]:
+                    total_active += prev_counts[sys_key].get(cat, 0)
                 prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
             
             print(f" -> 前日データのパースに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
@@ -177,7 +177,6 @@ for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     
-    # ★リトライ処理（最大3回再試行）
     success = False
     for attempt in range(3):
         try:
@@ -189,7 +188,6 @@ for i in range(0, len(tickers), chunk_size):
         except Exception as e:
             time.sleep(2 * (attempt + 1))
             
-    # ★一括で取れなかった場合の個別フォールバック取得
     if not success:
         print(f"    ⚠️ ブロック取得失敗のため小分け再取得を実行します...")
         for ticker in chunk:
@@ -276,7 +274,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
 
     long_ma_slope_5d = long_ma_today - df_temp.iloc[-6]['long_ma']
     long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
-    long_ma_slope_3d = long_ma_today - df_temp.iloc[-4]['long_ma']
     long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma']
     
     is_yang_candle = price_today > open_today
@@ -367,18 +364,22 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル(1〜4)条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
+    # ------------------------------------------
+    # ★ 長期MA傾き判定
+    # ------------------------------------------
+    long_ma_3d_ago = df_temp.iloc[-4]['long_ma']
+    long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100
+    
+    # 買い1用の緩い傾き判定（単日プラス or 3日傾き >= -0.2%）
+    is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
+    # 買い2, 買い3用の厳格な完全右肩上がり（前日比プラス かつ 3日傾き > 0）
+    is_long_ma_rising = (long_ma_today > long_ma_yesterday) and (long_ma_slope_3d > 0.0)
     is_long_ma_falling = long_ma_slope_5d < -0.05
-    is_long_ma_flat_or_rising = long_ma_slope_5d >= -0.01
-    is_long_ma_rising = long_ma_slope_5d > 0.05
 
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
 
     lookback_period = 40
-    price_below_count_recent = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
-    short_ma_below_count_recent = (df_temp.iloc[-lookback_period-1:-1]['short_ma'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
-    is_long_bottoming_recent = (price_below_count_recent >= lookback_period * 0.8) or (short_ma_below_count_recent >= lookback_period * 0.9)
-    
     offset = 10
     if len(df_temp) >= lookback_period + offset + 1:
         price_below_count_past = (df_temp.iloc[-lookback_period-offset-1:-offset-1]['Close'] < df_temp.iloc[-lookback_period-offset-1:-offset-1]['long_ma']).sum()
@@ -396,52 +397,63 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
                 reason = f"下落中の{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
     # ==========================================
-    # 買い1：新規買い（トレンド転換・底練りからの上抜け）
+    # 買い1：新規買い ＆ 買い1-Pre（突破前夜）
     # ==========================================
-    lookback_period = 40
     price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     is_long_bottoming = price_below_count >= (lookback_period * 0.7)
 
     past_max_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).max()
     is_not_range_bound = past_max_diff < 5.0
 
-    price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
-    gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
-
     short_long_diff = ((short_ma_today - long_ma_today) / long_ma_today) * 100
     is_trend_reversing = short_long_diff >= -2.0 
 
-    long_ma_3d_ago = df_temp.iloc[-4]['long_ma']
-    long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100
-    is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
+    is_resting_under_ma_1 = -1.5 <= diff_rate < 0.0
+    is_pre_rebound = is_yang_candle or is_price_up
 
-    if category == "NONE" and (price_crossed_above or gc_occurred) and is_long_ma_flat_or_rising and is_long_bottoming and is_not_range_bound and is_trend_reversing and (diff_rate <= 5.0):
-        category = "BUY1"
-        category_name = "買い1：新規買い"
-        badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-        cross_type = "ゴールデンクロス" if gc_occurred else "価格の突き抜け"
-        reason = f"底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生。短期線も追従しておりトレンド転換の兆しです。"
+    if category == "NONE" and is_long_ma_flat_or_rising and is_long_bottoming and is_not_range_bound and is_trend_reversing:
+        if (price_crossed_above or gc_occurred) and (diff_rate <= 5.0):
+            category = "BUY1"
+            category_name = "買い1：新規買い"
+            badge_class = "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+            cross_type = "ゴールデンクロス" if gc_occurred else "価格の突き抜け"
+            reason = f"底練りを経て、横這い〜上昇傾向の長期線({long_window}日線)に対して本日{cross_type}が発生。短期線も追従しておりトレンド転換の兆しです。"
+        elif is_resting_under_ma_1 and is_pre_rebound:
+            category = "BUY1_PRE"
+            category_name = "買い1-Pre：突破前夜仕込み"
+            badge_class = "bg-emerald-600/10 text-emerald-400 border border-emerald-500/20"
+            reason = f"底練りを経て、長期線({long_window}日線)の直下まで肉薄。本日下げ止まりを見せており上抜け直前の仕込み状態です。"
         
-    # 買い2：再突き抜け ＆ 初押し(下抜け復帰)
+    # ==========================================
+    # 買い2：再突き抜け ＆ 買い2-Pre（復帰前夜）
+    # ==========================================
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_15d <= 3
     
     was_above_recently = (df_temp.iloc[-21:-1]['Close'] >= df_temp.iloc[-21:-1]['long_ma']).any()
     is_initial_dip_crossed = is_long_bottoming_past and was_above_recently and price_crossed_above
+    is_resting_under_ma_2 = -2.0 <= diff_rate < 0.0
 
-    if category == "NONE" and (diff_rate <= 5.0):
-        if price_crossed_above and is_long_ma_rising and is_temp_dip:
+    if category == "NONE":
+        if (diff_rate <= 5.0) and price_crossed_above and is_long_ma_rising and is_temp_dip:
             category = "BUY2"
             category_name = "買い2：再突き抜け"
             badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
             reason = f"力強い上昇トレンド中、長期線をわずか数日下抜け後、本日素早く上方に復帰しました。"
-        elif is_long_ma_flat_or_rising and is_initial_dip_crossed:
+        elif (diff_rate <= 5.0) and is_long_ma_flat_or_rising and is_initial_dip_crossed:
             category = "BUY2"
             category_name = "買い2：初押し(下抜け復帰)"
             badge_class = "bg-sky-500/15 text-sky-300 border border-sky-500/30"
             reason = f"長期の底練りから脱却後、最初の押し目で長期線を一度下抜け、本日再び上方に復帰しました。"
+        elif is_long_ma_rising and is_temp_dip and is_resting_under_ma_2:
+            category = "BUY2_PRE"
+            category_name = "買い2-Pre：復帰前夜仕込み"
+            badge_class = "bg-sky-600/10 text-sky-400 border border-sky-500/20"
+            reason = f"上昇トレンド中、長期線を一時下抜け後に直下で踏み止まり。本日中に再上抜けが期待される状態です。"
 
-    # 買い3：押し目反発 ＆ 初押し(支持線反発)
+    # ==========================================
+    # 買い3：押し目反発 ＆ 買い3-Pre（押し目待ち伏せ）
+    # ==========================================
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     
@@ -450,7 +462,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     not_crossed_below_recent = (df_temp.iloc[-6:-1]['Close'] >= df_temp.iloc[-6:-1]['long_ma']).all()
 
     is_initial_dip_rebound = is_long_bottoming_past and was_above_recently and is_close_to_ma and is_rebound and not_crossed_below_recent
+    is_resting_on_ma = -0.5 <= diff_rate <= 1.5
+    is_initial_dip_resting = is_long_bottoming_past and was_above_recently and is_resting_on_ma and not_crossed_below_recent
 
+    # ★買い3および買い3-Preの親IFに完全右肩上がり(is_long_ma_rising)を適用！
     if category == "NONE" and not_crossed_below_recent and is_long_ma_rising:
         if has_pulled_back and is_close_to_ma and is_rebound:
             category = "BUY3"
@@ -462,20 +477,14 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             category_name = "買い3：初押し(支持線反発)"
             badge_class = "bg-amber-500/15 text-amber-300 border border-amber-500/30"
             reason = f"長期の底練りから脱却後、最初の押し目で長期線に接近し、下抜けることなく本日反発しました。"
-        
-    # 買い3-Pre：押し目待ち伏せ ＆ 初押し(待ち伏せ)
-    is_resting_on_ma = -0.5 <= diff_rate <= 1.5
-    is_initial_dip_resting = is_long_bottoming_past and was_above_recently and is_resting_on_ma and not_crossed_below_recent
-
-    if category == "NONE" and not_crossed_below_recent and is_long_ma_rising:
-        if has_pulled_back and is_resting_on_ma:
+        elif has_pulled_back and is_resting_on_ma:
             category = "BUY3_PRE"
-            category_name = "買い3：押し目待ち伏せ"
+            category_name = "買い3-Pre：押し目待ち伏せ"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期上昇トレンド中、支持線接触まで十分に引き付けた仕込み待ち伏せ状態です。"
         elif is_initial_dip_resting:
             category = "BUY3_PRE"
-            category_name = "買い3：初押し(待ち伏せ)"
+            category_name = "買い3-Pre：初押し(待ち伏せ)"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
 
@@ -483,10 +492,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
     # ★ テクニカル損切り価格 (stop_loss_price) 自動算出
     # ==========================================
     stop_loss_price = 0
-    if category == "BUY1":
+    if category in ["BUY1", "BUY1_PRE"]:
         low_20d = df_temp['Low'].tail(20).min()
         stop_loss_price = math.floor(low_20d * 0.995)
-    elif category == "BUY2":
+    elif category in ["BUY2", "BUY2_PRE"]:
         low_5d = df_temp['Low'].tail(5).min()
         stop_loss_price = math.floor(low_5d * 0.995)
     elif category in ["BUY3", "BUY3_PRE"]:
@@ -516,13 +525,13 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             score -= 1
             score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
             
-        if vol_ratio >= 1.5:
+        if vol_ratio >= 1.2:
             if is_yang_candle:
                 score += 1
-                score_reasons.append("📊 陽線で出来高急増: +1")
-            else:
+                score_reasons.append("📊 陽線で出来高増加(買い集め): +1")
+            elif vol_ratio >= 1.5:
                 score -= 1
-                score_reasons.append("⚠️ 陰線で出来高急増: -1")
+                score_reasons.append("⚠️ 陰線で出来高急増(売り抜け警戒): -1")
 
         if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0:
             score -= 1
@@ -533,7 +542,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
             score -= 1
             score_reasons.append("🚀 短期的な飛びすぎ警戒: -1")
 
-        if category == "BUY1":
+        if category in ["BUY1", "BUY1_PRE"]:
             if is_slope_strong_relative:
                 score += 1
                 score_reasons.append("📈 長期線トレンド加速: +1")
@@ -541,7 +550,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type):
                 score -= 1
                 score_reasons.append("🕯️ 反発実体極小: -1")
 
-        elif category == "BUY2":
+        elif category in ["BUY2", "BUY2_PRE"]:
             if is_slope_strong_relative:
                 score += 1
                 score_reasons.append("📈 長期線トレンド加速: +1")
