@@ -74,37 +74,50 @@
       <div id="hotSectorsBanner" class="hidden bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
       </div>
       
-      <section class="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">東証判定シグナル数</span>
-          <div class="flex items-baseline gap-2 mt-2">
-            <span id="statTotal" class="text-2xl font-bold text-white">0</span>
-            <span class="text-xs text-slate-500">銘柄</span>
-            <span id="statTotalDiff" class="text-[10px] font-bold ml-1"></span>
+      <!-- ★統計カード（買い1-Pre, 買い2-Preの集計にも対応した7カラム表示） -->
+      <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">東証シグナル総数</span>
+          <div class="flex items-baseline gap-1 mt-1">
+            <span id="statTotal" class="text-xl font-bold text-white">0</span>
+            <span class="text-[10px] text-slate-500">件</span>
+            <span id="statTotalDiff" class="text-[9px] font-bold ml-0.5"></span>
           </div>
         </div>
-        <div class="bg-slate-900/80 border border-emerald-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">買い1 (新規GC初動)</span>
-          <div class="flex items-baseline justify-between mt-2" id="statBuy1">
-            <span class="text-2xl font-bold text-emerald-400">0</span>
+        <div class="bg-slate-900/80 border border-emerald-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">買い1 (新規初動)</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy1">
+            <span class="text-xl font-bold text-emerald-400">0</span>
           </div>
         </div>
-        <div class="bg-slate-900/80 border border-sky-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-sky-400 uppercase tracking-wider">買い2 (初押し/再復帰)</span>
-          <div class="flex items-baseline justify-between mt-2" id="statBuy2">
-            <span class="text-2xl font-bold text-sky-400">0</span>
+        <div class="bg-slate-900/80 border border-emerald-600/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">買い1-Pre (突破前夜)</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy1Pre">
+            <span class="text-xl font-bold text-emerald-300">0</span>
           </div>
         </div>
-        <div class="bg-slate-900/80 border border-amber-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">買い3 (支持線反発/Pre)</span>
-          <div class="flex items-baseline justify-between mt-2" id="statBuy3">
-            <span class="text-2xl font-bold text-amber-400">0</span>
+        <div class="bg-slate-900/80 border border-sky-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-sky-400 uppercase tracking-wider">買い2 (再突き抜け)</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy2">
+            <span class="text-xl font-bold text-sky-400">0</span>
           </div>
         </div>
-        <div class="bg-slate-900/80 border border-purple-500/20 rounded-xl p-4 flex flex-col justify-between shadow-lg">
-          <span class="text-[11px] font-bold text-purple-400 uppercase tracking-wider">買い4 (下方乖離リバ)</span>
-          <div class="flex items-baseline justify-between mt-2" id="statBuy4">
-            <span class="text-2xl font-bold text-purple-400">0</span>
+        <div class="bg-slate-900/80 border border-sky-600/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-sky-300 uppercase tracking-wider">買い2-Pre (復帰前夜)</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy2Pre">
+            <span class="text-xl font-bold text-sky-300">0</span>
+          </div>
+        </div>
+        <div class="bg-slate-900/80 border border-amber-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">買い3 / 3-Pre</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy3">
+            <span class="text-xl font-bold text-amber-400">0</span>
+          </div>
+        </div>
+        <div class="bg-slate-900/80 border border-purple-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">買い4 (上方乖離リバ)</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy4">
+            <span class="text-xl font-bold text-purple-400">0</span>
           </div>
         </div>
       </section>
@@ -114,12 +127,16 @@
         <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           
           <div class="flex flex-wrap items-center gap-3">
-            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto" id="tabContainer">
-              <button data-tab="BUY1" class="tab-btn px-4 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
-              <button data-tab="BUY2" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
-              <button data-tab="BUY3" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
-              <button data-tab="BUY4" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い4</button>
-              <button data-tab="ALL" class="tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">すべて</button>
+            <!-- ★改修：Preシグナルも含めて各タブを独立配置（買い3オーバーフロー完全解消） -->
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto flex-wrap gap-1" id="tabContainer">
+              <button data-tab="BUY1" class="tab-btn px-3 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
+              <button data-tab="BUY1_PRE" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い1-Pre</button>
+              <button data-tab="BUY2" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
+              <button data-tab="BUY2_PRE" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2-Pre</button>
+              <button data-tab="BUY3" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
+              <button data-tab="BUY3_PRE" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3-Pre</button>
+              <button data-tab="BUY4" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い4</button>
+              <button data-tab="ALL" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">すべて</button>
             </div>
 
             <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
@@ -252,7 +269,7 @@
               <div class="bg-slate-900/60 border border-sky-500/20 rounded-xl p-3.5">
                 <span class="font-bold text-sky-400 block mb-1">出来高・流動性評価 (+1 / -1)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・陽線で過去25日平均比出来高1.5倍以上に急増 ➔ <strong class="text-emerald-400">+1</strong><br>
+                  ・陽線で過去25日平均比出来高1.2倍以上に増加 ➔ <strong class="text-emerald-400">+1</strong><br>
                   ・出来高1万株以下の過疎銘柄（流動性リスク高） ➔ <strong class="text-rose-400">-1</strong>
                 </p>
               </div>
@@ -293,39 +310,40 @@
 
           <div class="space-y-4">
             <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
-              <span>📖</span> グランビル買いシグナル（1〜4）詳細判定要件
+              <span>📖</span> グランビル買いシグナル（1〜4＆Pre）詳細判定要件
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 relative overflow-hidden">
-                <span class="font-bold text-slate-300 block mb-1">買い1：新規買い初動</span>
+                <span class="font-bold text-slate-300 block mb-1">買い1 / 買い1-Pre (突破前夜)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)の傾き: 横ばい〜上向き<br>
                   ・底確認: 過去40日のうち<span class="font-mono">70%以上</span>沈んでいたこと<br>
-                  ・本日、完全なる初上抜け(ゴールデンクロス含む)<br>
-                  ・損切りライン: 直近20日最安値✕0.995 (切り捨て)
+                  ・買い1: 本日完全初上抜け / 買い1-Pre: 線直下(-1.5%〜0%)で下げ止まり<br>
+                  ・損切りライン: 直近20日最安値✕0.995
                 </p>
               </div>
               <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5">
-                <span class="font-bold text-slate-200 block mb-1">買い2：初押し・再突き抜け</span>
+                <span class="font-bold text-slate-200 block mb-1">買い2 / 買い2-Pre (復帰前夜)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
-                  ・通常: 安定した右肩上がりの長期線(<span class="exp-long"></span>)を過去10日で1〜3日のみ下抜けし、本日復帰。<br>
-                  ・初押し: 長期底練りからの脱却直後に、初めて長期線付近まで押して再上抜け。<br>
-                  ・損切りライン: 直近5日最安値✕0.995 (切り捨て)
+                  ・長期線(<span class="exp-long"></span>)が完全右肩上がり中、過去15日で1〜3日のみ下抜け<br>
+                  ・買い2: 本日素早く復帰 / 買い2-Pre: 線直下(-2.0%〜0%)で復帰前夜<br>
+                  ・損切りライン: 直近5日最安値✕0.995
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                <span class="font-bold text-slate-200 block mb-1">買い3：押し目反発（待ち伏せ含む）</span>
+                <span class="font-bold text-slate-200 block mb-1">買い3 / 買い3-Pre (待ち伏せ)</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   ・長期線(<span class="exp-long"></span>)が<span class="font-bold text-emerald-300">明確な右肩上がりトレンド</span>中<br>
-                  ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日反発。<br>
-                  ・損切りライン: 長期移動平均線✕0.985 (切り捨て)
+                  ・反発: 長期線のすぐ上(<span class="font-mono">0.0%〜+3.5%</span>)で本日陽線反発。<br>
+                  ・待ち伏せPre: 長期線の極近(-0.5%〜+1.5%)で引き付け仕込み状態。<br>
+                  ・損切りライン: 長期移動平均線✕0.985
                 </p>
               </div>
               <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
                 <span class="font-bold text-slate-200 block mb-1">買い4：逆張り下方乖離</span>
                 <p class="text-slate-400 text-[11px] leading-relaxed">
                   下落中の長期線から大きく下方に下方乖離して本日反発。<br>
-                  ・損切りライン: 当日安値✕0.99 (切り捨て)
+                  ・損切りライン: 当日安値✕0.99
                 </p>
               </div>
             </div>
@@ -395,7 +413,7 @@
         document.getElementById('settingRiskTolerance').addEventListener('input', updatePosConfigFromUI);
         document.getElementById('settingMaxPosition').addEventListener('input', updatePosConfigFromUI);
 
-        // ★改修：モーダル外枠（背景）クリックでダイアログを閉じる機能
+        // ★モーダル外枠（背景）クリックでダイアログを閉じる機能
         const dialog = document.getElementById('diagnosticDialog');
         if (dialog) {
           dialog.addEventListener('click', (event) => {
@@ -407,8 +425,8 @@
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.className = 'tab-btn px-4 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer');
-            btn.className = 'tab-btn px-4 py-1.5 rounded-lg bg-cyan-600 text-white shadow cursor-pointer';
+            document.querySelectorAll('.tab-btn').forEach(b => b.className = 'tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer');
+            btn.className = 'tab-btn px-3 py-1.5 rounded-lg bg-cyan-600 text-white shadow cursor-pointer';
             state.activeTab = btn.dataset.tab;
             renderTable();
           });
@@ -427,23 +445,24 @@
         switchSystem('mid');
       });
 
-      // ★新設：ガードレール付き 1.2倍ルールの買付上限価格計算エンジン
-      function calculateMaxBuyPrice(price, stopLossPrice) {
+      // ★新設：買付上限価格計算エンジン（Pre銘柄は1.4倍、確定足は1.2倍、ガード付）
+      function calculateMaxBuyPrice(price, stopLossPrice, category) {
         if (!price || price <= 0 || !stopLossPrice || stopLossPrice >= price || stopLossPrice <= 0) {
           return price;
         }
         const riskPerShare = price - stopLossPrice;
-        const theoreticalMax = stopLossPrice + (riskPerShare * 1.2);
+        const multiplier = (category && category.endsWith('_PRE')) ? 1.4 : 1.2;
+        const theoreticalMax = stopLossPrice + (riskPerShare * multiplier);
         
-        const floorGuard = price * 1.005; // 最低でも終値 +0.5%
-        const capGuard = price * 1.020;   // 最大でも終値 +2.0%
+        const floorGuard = price * 1.010; // 最低でも終値 +1.0%
+        const capGuard = price * 1.025;   // 最大でも終値 +2.5%
         
         const maxPrice = Math.min(Math.max(theoreticalMax, floorGuard), capGuard);
         return Math.floor(maxPrice);
       }
 
       // ★ポジションサイジング計算コアエンジン
-      function calculatePositionSizing(price, stopLossPrice) {
+      function calculatePositionSizing(price, stopLossPrice, category) {
         const unit = posConfig.unitShare;
         
         if (!price || price <= 0 || !stopLossPrice || stopLossPrice >= price || stopLossPrice <= 0) {
@@ -469,9 +488,9 @@
         const sharesByPositionLimit = Math.floor(maxBuyAmountLimit / price / unit) * unit;
 
         const maxShares = Math.min(sharesByRisk, sharesByPositionLimit);
-        const appliedRule = sharesByRisk < sharesByPositionLimit ? "リスク上限" : "資金枠上限(30%)";
+        const appliedRule = sharesByRisk < sharesByPositionLimit ? "リスク上限" : `資金枠上限(${posConfig.maxPositionRate}%)`;
 
-        const maxBuyPrice = calculateMaxBuyPrice(price, stopLossPrice);
+        const maxBuyPrice = calculateMaxBuyPrice(price, stopLossPrice, category);
 
         // ★100株救済例外ルール
         let initialShares = 0;
@@ -563,6 +582,7 @@
         let stopLossPrice = 0;
         let name = "";
         let volume = 0;
+        let category = "NONE";
         let categoryName = "条件外（個別緊急計算）";
 
         const matchItem = state.results.find(r => r.ticker === input);
@@ -573,6 +593,7 @@
           const sysData = matchItem[sys];
           if (sysData && sysData.category !== "NONE") {
             stopLossPrice = sysData.stop_loss_price;
+            category = sysData.category;
             categoryName = sysData.categoryName;
           }
         }
@@ -610,11 +631,11 @@
           }
         }
 
-        const pos = calculatePositionSizing(price, stopLossPrice);
-        showIndividualSharesModal(input, name, price, stopLossPrice, volume, categoryName, pos);
+        const pos = calculatePositionSizing(price, stopLossPrice, category);
+        showIndividualSharesModal(input, name, price, stopLossPrice, volume, categoryName, pos, category);
       }
 
-      function showIndividualSharesModal(ticker, name, price, stopLossPrice, volume, categoryName, pos) {
+      function showIndividualSharesModal(ticker, name, price, stopLossPrice, volume, categoryName, pos, category) {
         const dialog = document.getElementById('diagnosticDialog');
         const title = document.getElementById('dialogTitle');
         const content = document.getElementById('dialogContent');
@@ -654,7 +675,7 @@
 
         const riskDiff = price - stopLossPrice;
         const riskPct = ((riskDiff / price) * 100).toFixed(1);
-        const maxBuyPrice = pos.maxBuyPrice || calculateMaxBuyPrice(price, stopLossPrice);
+        const maxBuyPrice = pos.maxBuyPrice || calculateMaxBuyPrice(price, stopLossPrice, category);
         const maxBuyPct = (((maxBuyPrice - price) / price) * 100).toFixed(1);
 
         content.innerHTML = `
@@ -664,7 +685,7 @@
               <strong class="text-white text-sm font-mono">${price.toLocaleString()} 円</strong>
             </div>
             <div>
-              <span class="text-slate-400 text-[10px] uppercase block">買付上限価格 (ガード付1.2倍)</span>
+              <span class="text-slate-400 text-[10px] uppercase block">買付上限価格 (ガード付)</span>
               <strong class="text-amber-300 text-sm font-mono">${maxBuyPrice.toLocaleString()} 円 (+${maxBuyPct}%)</strong>
             </div>
           </div>
@@ -789,11 +810,7 @@
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
         if (state.activeTab !== 'ALL') {
-          if (state.activeTab === 'BUY3') {
-            filtered = filtered.filter(r => r[sys].category === 'BUY3' || r[sys].category === 'BUY3_PRE');
-          } else {
-            filtered = filtered.filter(r => r[sys].category === state.activeTab);
-          }
+          filtered = filtered.filter(r => r[sys].category === state.activeTab);
         }
         if (state.activeMarket !== 'ALL') filtered = filtered.filter(r => r.market === state.activeMarket);
         if (state.searchQuery) {
@@ -809,7 +826,7 @@
           const sysData = item[sys];
           const isPlus = item.change >= 0;
           const sign = isPlus ? "+" : "";
-          const pos = calculatePositionSizing(item.price, sysData.stop_loss_price);
+          const pos = calculatePositionSizing(item.price, sysData.stop_loss_price, sysData.category);
           const row = [
             `"${sysData.categoryName.split('：')[0]}"`,
             `"${sysData.score}"`,
@@ -881,34 +898,39 @@
       }
 
       function updateStats() {
-        const counts = { BUY1: 0, BUY2: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0 };
+        const counts = { BUY1: 0, BUY1_PRE: 0, BUY2: 0, BUY2_PRE: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0 };
         const sys = state.currentSystem;
         state.results.forEach(r => {
           const cat = r[sys].category;
           if (counts[cat] !== undefined) counts[cat]++;
         });
-        
-        const buy3Total = counts.BUY3 + counts.BUY3_PRE;
-        const buy3Yesterday = (state.prevCounts[sys].BUY3 || 0) + (state.prevCounts[sys].BUY3_PRE || 0);
 
         const totalToday = state.results.filter(r => r[sys].category !== "NONE").length;
         const totalYesterday = state.prevCounts[sys].TOTAL_ACTIVE || 0; 
         const totalDiff = totalToday - totalYesterday;
 
         document.getElementById('statBuy1').innerHTML = `
-          <span class="text-2xl font-bold text-emerald-400">${counts.BUY1}</span>
+          <span class="text-xl font-bold text-emerald-400">${counts.BUY1}</span>
           ${getDiffBadge(counts.BUY1, state.prevCounts[sys].BUY1 || 0)}
         `;
+        document.getElementById('statBuy1Pre').innerHTML = `
+          <span class="text-xl font-bold text-emerald-300">${counts.BUY1_PRE}</span>
+          ${getDiffBadge(counts.BUY1_PRE, state.prevCounts[sys].BUY1_PRE || 0)}
+        `;
         document.getElementById('statBuy2').innerHTML = `
-          <span class="text-2xl font-bold text-sky-400">${counts.BUY2}</span>
+          <span class="text-xl font-bold text-sky-400">${counts.BUY2}</span>
           ${getDiffBadge(counts.BUY2, state.prevCounts[sys].BUY2 || 0)}
         `;
+        document.getElementById('statBuy2Pre').innerHTML = `
+          <span class="text-xl font-bold text-sky-300">${counts.BUY2_PRE}</span>
+          ${getDiffBadge(counts.BUY2_PRE, state.prevCounts[sys].BUY2_PRE || 0)}
+        `;
         document.getElementById('statBuy3').innerHTML = `
-          <span class="text-2xl font-bold text-amber-400">${buy3Total}</span>
-          ${getDiffBadge(buy3Total, buy3Yesterday)}
+          <span class="text-xl font-bold text-amber-400">${counts.BUY3} / ${counts.BUY3_PRE}</span>
+          ${getDiffBadge(counts.BUY3 + counts.BUY3_PRE, (state.prevCounts[sys].BUY3 || 0) + (state.prevCounts[sys].BUY3_PRE || 0))}
         `;
         document.getElementById('statBuy4').innerHTML = `
-          <span class="text-2xl font-bold text-purple-400">${counts.BUY4}</span>
+          <span class="text-xl font-bold text-purple-400">${counts.BUY4}</span>
           ${getDiffBadge(counts.BUY4, state.prevCounts[sys].BUY4 || 0)}
         `;
         
@@ -919,16 +941,23 @@
           totalDiffEl.className = `text-[10px] font-bold ml-1.5 ${totalDiff > 0 ? 'text-emerald-400' : totalDiff < 0 ? 'text-rose-400' : 'text-slate-500'}`;
         }
 
-        const labels = { ALL: 'すべて', BUY1: '買い1', BUY2: '買い2', BUY3: '買い3', BUY4: '買い4' };
+        const labels = {
+          ALL: 'すべて',
+          BUY1: '買い1',
+          BUY1_PRE: '買い1-Pre',
+          BUY2: '買い2',
+          BUY2_PRE: '買い2-Pre',
+          BUY3: '買い3',
+          BUY3_PRE: '買い3-Pre',
+          BUY4: '買い4'
+        };
         document.querySelectorAll('.tab-btn').forEach(btn => {
           const t = btn.dataset.tab;
           let count = 0;
           if (t === 'ALL') {
             count = totalToday;
-          } else if (t === 'BUY3') {
-            count = counts.BUY3 + counts.BUY3_PRE;
           } else {
-            count = counts[t];
+            count = counts[t] || 0;
           }
           btn.textContent = `${labels[t]} (${count})`;
         });
@@ -943,11 +972,7 @@
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
         if (state.activeTab !== 'ALL') {
-          if (state.activeTab === 'BUY3') {
-            filtered = filtered.filter(r => r[sys].category === 'BUY3' || r[sys].category === 'BUY3_PRE');
-          } else {
-            filtered = filtered.filter(r => r[sys].category === state.activeTab);
-          }
+          filtered = filtered.filter(r => r[sys].category === state.activeTab);
         }
         if (state.activeMarket !== 'ALL') filtered = filtered.filter(r => r.market === state.activeMarket);
         if (state.searchQuery) {
@@ -1027,7 +1052,7 @@
                   ? `<span class="text-[9px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold block mt-1" title="本日RSIが70%以上の買われすぎ圏に達しているか、または過去5日以内に70%を超えた後本日デッドクロスして下落に転じているため、過熱警戒です。">⚠️ RSI過熱警戒</span>`
                   : ``;
 
-          const pos = calculatePositionSizing(item.price, sysData.stop_loss_price);
+          const pos = calculatePositionSizing(item.price, sysData.stop_loss_price, sysData.category);
           let posDisplayHtml = "";
           if (pos.status === "OK") {
             const initAmountMan = (pos.initialBuyAmount / 10000).toFixed(1);
@@ -1119,7 +1144,7 @@
         const item = state.results.find(r => r.ticker === ticker);
         if (!item) return;
         const sysData = item[sys];
-        const pos = calculatePositionSizing(item.price, sysData.stop_loss_price);
+        const pos = calculatePositionSizing(item.price, sysData.stop_loss_price, sysData.category);
         
         const dialog = document.getElementById('diagnosticDialog');
         const title = document.getElementById('dialogTitle');
@@ -1161,7 +1186,7 @@
 
         const riskDiff = item.price - (sysData.stop_loss_price || 0);
         const riskPct = sysData.stop_loss_price ? ((riskDiff / item.price) * 100).toFixed(1) : "0.0";
-        const maxBuyPrice = pos.maxBuyPrice || calculateMaxBuyPrice(item.price, sysData.stop_loss_price);
+        const maxBuyPrice = pos.maxBuyPrice || calculateMaxBuyPrice(item.price, sysData.stop_loss_price, sysData.category);
         const maxBuyPct = (((maxBuyPrice - item.price) / item.price) * 100).toFixed(1);
 
         content.innerHTML = `
@@ -1171,7 +1196,7 @@
               <strong class="text-white text-sm font-mono">${item.price.toLocaleString()} 円</strong>
             </div>
             <div>
-              <!-- ★新規：ガードレール付き買付上限価格 -->
+              <!-- ★買付上限価格：Pre銘柄1.4倍、確定足1.2倍 ガード付 -->
               <span class="text-slate-400 text-[10px] uppercase block">買付上限価格 (ガード付)</span>
               <strong class="text-amber-300 text-sm font-mono">${maxBuyPrice.toLocaleString()} 円 (+${maxBuyPct}%)</strong>
             </div>
@@ -1179,12 +1204,10 @@
 
           <div class="grid grid-cols-2 gap-3 border-b border-slate-800 pb-3">
             <div>
-              <!-- ★改修：損切り価格＋リスク幅金額＆％自動表示 -->
               <span class="text-slate-400 text-[10px] uppercase block">損切り設定価格</span>
               <strong class="text-rose-400 text-sm font-mono">${sysData.stop_loss_price ? sysData.stop_loss_price.toLocaleString() + ' 円' : 'なし'} (${-riskDiff}円 / -${riskPct}%)</strong>
             </div>
             <div>
-              <!-- ★改修：RSIを削除し、本日出来高を表示 -->
               <span class="text-slate-400 text-[10px] uppercase block">本日出来高</span>
               <strong class="text-white text-sm font-mono">${item.volume ? item.volume.toLocaleString() + ' 株' : '-'}</strong>
             </div>
