@@ -74,72 +74,81 @@
       <div id="hotSectorsBanner" class="hidden bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
       </div>
       
-      <!-- ★統計カード（買い1-Pre, 買い2-Preの集計にも対応した7カラム表示） -->
-      <section class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <!-- ★統計カード（買い1-Pre ➔ 買い1 ➔ 買い2-Pre ➔ 買い2 ➔ 買い3-Pre ➔ 買い3 ➔ 買い4 の順） -->
+      <section class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
         <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex flex-col justify-between shadow-lg">
           <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">東証シグナル総数</span>
           <div class="flex items-baseline gap-1 mt-1">
-            <span id="statTotal" class="text-xl font-bold text-white">0</span>
+            <span id="statTotal" class="text-lg font-bold text-white">0</span>
             <span class="text-[10px] text-slate-500">件</span>
             <span id="statTotalDiff" class="text-[9px] font-bold ml-0.5"></span>
-          </div>
-        </div>
-        <div class="bg-slate-900/80 border border-emerald-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
-          <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">買い1 (新規初動)</span>
-          <div class="flex items-baseline justify-between mt-1" id="statBuy1">
-            <span class="text-xl font-bold text-emerald-400">0</span>
           </div>
         </div>
         <div class="bg-slate-900/80 border border-emerald-600/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
           <span class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">買い1-Pre (突破前夜)</span>
           <div class="flex items-baseline justify-between mt-1" id="statBuy1Pre">
-            <span class="text-xl font-bold text-emerald-300">0</span>
+            <span class="text-lg font-bold text-emerald-300">0</span>
           </div>
         </div>
-        <div class="bg-slate-900/80 border border-sky-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
-          <span class="text-[10px] font-bold text-sky-400 uppercase tracking-wider">買い2 (再突き抜け)</span>
-          <div class="flex items-baseline justify-between mt-1" id="statBuy2">
-            <span class="text-xl font-bold text-sky-400">0</span>
+        <div class="bg-slate-900/80 border border-emerald-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">買い1 (新規初動)</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy1">
+            <span class="text-lg font-bold text-emerald-400">0</span>
           </div>
         </div>
         <div class="bg-slate-900/80 border border-sky-600/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
           <span class="text-[10px] font-bold text-sky-300 uppercase tracking-wider">買い2-Pre (復帰前夜)</span>
           <div class="flex items-baseline justify-between mt-1" id="statBuy2Pre">
-            <span class="text-xl font-bold text-sky-300">0</span>
+            <span class="text-lg font-bold text-sky-300">0</span>
+          </div>
+        </div>
+        <div class="bg-slate-900/80 border border-sky-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-sky-400 uppercase tracking-wider">買い2 (再突き抜け)</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy2">
+            <span class="text-lg font-bold text-sky-400">0</span>
+          </div>
+        </div>
+        <div class="bg-slate-900/80 border border-amber-600/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
+          <span class="text-[10px] font-bold text-amber-300 uppercase tracking-wider">買い3-Pre (待ち伏せ)</span>
+          <div class="flex items-baseline justify-between mt-1" id="statBuy3Pre">
+            <span class="text-lg font-bold text-amber-300">0</span>
           </div>
         </div>
         <div class="bg-slate-900/80 border border-amber-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
-          <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">買い3 / 3-Pre</span>
+          <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider">買い3 (支持線反発)</span>
           <div class="flex items-baseline justify-between mt-1" id="statBuy3">
-            <span class="text-xl font-bold text-amber-400">0</span>
+            <span class="text-lg font-bold text-amber-400">0</span>
           </div>
         </div>
         <div class="bg-slate-900/80 border border-purple-500/20 rounded-xl p-3 flex flex-col justify-between shadow-lg">
-          <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">買い4 (上方乖離リバ)</span>
+          <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">買い4 (下方乖離)</span>
           <div class="flex items-baseline justify-between mt-1" id="statBuy4">
-            <span class="text-xl font-bold text-purple-400">0</span>
+            <span class="text-lg font-bold text-purple-400">0</span>
           </div>
         </div>
       </section>
 
       <section class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col">
         
-        <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <!-- ★コントロールパネル（上段左：買い条件タブ / 上段右：市場タブ / 下段右：入力・操作ボタン） -->
+        <div class="flex flex-col gap-4 pb-4 border-b border-slate-800">
           
-          <div class="flex flex-wrap items-center gap-3">
-            <!-- ★改修：Preシグナルも含めて各タブを独立配置（買い3オーバーフロー完全解消） -->
-            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto flex-wrap gap-1" id="tabContainer">
-              <button data-tab="BUY1" class="tab-btn px-3 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1</button>
-              <button data-tab="BUY1_PRE" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い1-Pre</button>
-              <button data-tab="BUY2" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
+          <!-- 上段: 買い条件タブ (左) ＆ 市場タブ (右) -->
+          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+            <!-- 上段左側：買い条件タブ -->
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs flex-wrap gap-1 w-full lg:w-auto" id="tabContainer">
+              <button data-tab="BUY1_PRE" class="tab-btn px-3 py-1.5 rounded-lg font-medium bg-cyan-600 text-white shadow cursor-pointer">買い1-Pre</button>
+              <button data-tab="BUY1" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い1</button>
               <button data-tab="BUY2_PRE" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2-Pre</button>
-              <button data-tab="BUY3" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
+              <button data-tab="BUY2" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い2</button>
               <button data-tab="BUY3_PRE" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3-Pre</button>
+              <button data-tab="BUY3" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い3</button>
               <button data-tab="BUY4" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">買い4</button>
               <button data-tab="ALL" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer">すべて</button>
             </div>
 
-            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs" id="marketFilterContainer">
+            <!-- 上段右側：市場タブ -->
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs self-start lg:self-auto" id="marketFilterContainer">
               <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
               <button data-market="ALL" class="market-btn px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-white cursor-pointer">すべて</button>
               <button data-market="東Ｐ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｐ</button>
@@ -148,10 +157,10 @@
             </div>
           </div>
 
-          <!-- AI個別抽出 ＆ 緊急株数計算 ＆ エクスポート -->
-          <div class="flex items-center gap-2 w-full xl:w-auto flex-wrap sm:flex-nowrap">
-            <div class="flex items-center gap-1.5 flex-1 xl:w-auto">
-              <input type="text" id="aiExtractInput" placeholder="銘柄コード (例: 7974)" class="w-full xl:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest">
+          <!-- 下段右側：銘柄コード入力 ＆ AI抽出 ＆ 株数計算 ＆ CSVボタン -->
+          <div class="flex justify-start sm:justify-end items-center gap-2 w-full">
+            <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap w-full sm:w-auto justify-end">
+              <input type="text" id="aiExtractInput" placeholder="銘柄コード (例: 7974)" class="w-full sm:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest">
               <button id="btnAiExtract" class="bg-indigo-900/50 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-700/50 hover:border-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0" title="AI相談用時系列データをコピー">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 AI抽出
@@ -159,9 +168,10 @@
               <button id="btnCalcShares" class="bg-emerald-900/50 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-700/50 hover:border-emerald-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0" title="入力銘柄の推奨購入株数を計算">
                 📊 株数
               </button>
+              <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shrink-0">📥 CSV</button>
             </div>
-            <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shrink-0">📥 CSV</button>
           </div>
+
         </div>
 
         <div id="performanceWarning" class="mt-4 hidden bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] p-2.5 rounded-xl">
@@ -371,7 +381,7 @@
         prevCounts: JSON.parse(document.getElementById('data-prev-counts').textContent),
         marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
-        activeTab: 'BUY1',
+        activeTab: 'BUY1_PRE', // ★先回りトレード優先のため「買い1-Pre」を初期アクティブタブに設定
         activeMarket: 'ALL',
         searchQuery: '',
         sortOrder: 'none',
@@ -943,12 +953,12 @@
 
         const labels = {
           ALL: 'すべて',
-          BUY1: '買い1',
           BUY1_PRE: '買い1-Pre',
-          BUY2: '買い2',
+          BUY1: '買い1',
           BUY2_PRE: '買い2-Pre',
-          BUY3: '買い3',
+          BUY2: '買い2',
           BUY3_PRE: '買い3-Pre',
+          BUY3: '買い3',
           BUY4: '買い4'
         };
         document.querySelectorAll('.tab-btn').forEach(btn => {
