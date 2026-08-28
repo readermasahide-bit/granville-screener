@@ -142,7 +142,7 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. 全銘柄のデータをブロック分けして一括ダウンロード（★漏れ銘柄ピンポイント完全救済版）
+# 2. 全銘柄のデータをブロック分けして一括ダウンロード（★漏れ銘柄自動補完機能付き）
 session = requests.Session()
 session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -177,7 +177,7 @@ for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     
-    # 1. 一括ダウンロード試行（最大3回リトライ）
+    # 1. 一括ダウンロード試行
     for attempt in range(3):
         try:
             data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
@@ -187,10 +187,10 @@ for i in range(0, len(tickers), chunk_size):
         except Exception:
             time.sleep(2 * (attempt + 1))
             
-    # 2. ★超重要：一括取得でこぼれ落ちた漏れ銘柄（5471等）を自動検知してピンポイント再取得！
+    # 2. ★超重要：この100銘柄の中で bulk_data に入らなかった漏れ銘柄（5471等）を自動検知して個別にピンポイント再取得！
     missing_in_chunk = [t for t in chunk if t not in bulk_data]
     if missing_in_chunk:
-        print(f"    ⚠️ {len(missing_in_chunk)} 銘柄の取得漏れを検知。ピンポイント個別再取得を実行します...")
+        print(f"    ⚠️ {len(missing_in_chunk)} 銘柄の個別落選を検知。ピンポイント補完取得を実行します...")
         for ticker in missing_in_chunk:
             try:
                 data_single = yf.download(ticker, period="2y", interval="1d", auto_adjust=False, progress=False, session=session)
