@@ -124,15 +124,24 @@ if os.path.exists(html_output_path):
     except Exception as e:
         print(f" -> 前日データの読み込みに失敗（初回実行として無視します）: {e}")
 
+import io
+import time
+import requests
+import pandas as pd
+import yfinance as yf
+
 # 1. JPXから上場銘柄一覧をダウンロード
 jpx_url = "https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xls"
 print("JPXから銘柄一覧をダウンロード中...")
-response = requests.get(jpx_url)
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+}
+response = requests.get(jpx_url, headers=headers)
 response.raise_for_status()
 
 df_jpx = pd.read_excel(io.BytesIO(response.content))
 df_tse = df_jpx[df_jpx["市場・商品区分"].str.contains("プライム|スタンダード|グロース", na=False)].copy()
-df_tse["コード"] = df_tse["コード"].astype(str).str.zfill(4)
+df_tse["コード"] = df_tse["コード"].astype(str).str.strip().str.zfill(4)
 df_tse["ticker"] = df_tse["コード"] + ".T"
 
 ticker_to_name = dict(zip(df_tse['ticker'], df_tse['銘柄名']))
@@ -142,66 +151,94 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. 全銘柄のデータをブロック分けして一括ダウンロード（★漏れ銘柄自動補完機能付き）
-session = requests.Session()
-session.headers.update({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-})
+# 2. 全銘柄共通のデータクレンジング関数
+def clean_stock_df(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    株価データの欠損チェックとタイムゾーン正規化（全銘柄共通パイプライン）
+    """
+    if df is None or df.empty:
+        return None
+    
+    # 終値が存在しない、または有効データがない行を排除
+    if 'Close' not in df.columns:
+        return None
+    df = df.dropna(subset=['Close']).copy()
+    if df.empty:
+        return None
 
-print("株価データ(2年分)を一括ダウンロード中...")
+    # タイムゾーンの安全な正規化（tz-awareの場合のみJST変換後にnaive化、naiveなら何もしない）
+    if isinstance(df.index, pd.DatetimeIndex) and df.index.tz is not None:
+        df.index = df.index.tz_convert('Asia/Tokyo').tz_localize(None)
+
+    return df
+
+# 3. 2段階取得パイプライン（一括並列ダウンロード + 欠損自動フォールバック）
 bulk_data = {}
-chunk_size = 100 # 100銘柄ずつ取得
+chunk_size = 100
 
-def process_downloaded_data(data, chunk_list):
-    for ticker in chunk_list:
-        df_single = None
-        if isinstance(data.columns, pd.MultiIndex):
-            if ticker in data.columns.get_level_values(0):
-                df_single = data[ticker].copy()
-            elif ticker in data.columns.get_level_values(1):
-                df_single = data.xs(ticker, axis=1, level=1).copy()
-        else:
-            if len(chunk_list) == 1:
-                df_single = data.copy()
-
-        if df_single is not None and not df_single.empty:
-            df_single = df_single.dropna(subset=['Close']).copy()
-            if not df_single.empty:
-                if df_single.index.tz is not None:
-                    df_single.index = df_single.index.tz_convert('Asia/Tokyo').tz_localize(None)
-                else:
-                    df_single.index = df_single.index.tz_localize(None)
-                bulk_data[ticker] = df_single
+print("株価データ(2年分)の一括ダウンロード中...")
+start_time = time.time()
 
 for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
-    print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
-    
-    # 1. 一括ダウンロード試行
-    for attempt in range(3):
-        try:
-            data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
-            if data is not None and not data.empty:
-                process_downloaded_data(data, chunk)
-                break
-        except Exception:
-            time.sleep(2 * (attempt + 1))
-            
-    # 2. ★超重要：この100銘柄の中で bulk_data に入らなかった漏れ銘柄（5471等）を自動検知して個別にピンポイント再取得！
+    print(f" -> ダウンロード中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} / {len(tickers)} 銘柄...")
+
+    # Phase 1: 100銘柄単位の一括並列ダウンロード
+    try:
+        data = yf.download(
+            chunk,
+            period="2y",
+            interval="1d",
+            group_by="ticker",
+            auto_adjust=False,
+            progress=False,
+            threads=True
+        )
+        if data is not None and not data.empty:
+            for ticker in chunk:
+                df_single = None
+                if isinstance(data.columns, pd.MultiIndex):
+                    if ticker in data.columns.get_level_values(0):
+                        df_single = data[ticker].copy()
+                    elif ticker in data.columns.get_level_values(1):
+                        df_single = data.xs(ticker, axis=1, level=1).copy()
+                else:
+                    if len(chunk) == 1:
+                        df_single = data.copy()
+
+                cleaned = clean_stock_df(df_single)
+                if cleaned is not None:
+                    bulk_data[ticker] = cleaned
+    except Exception:
+        pass
+
+    # Phase 2: 汎用フォールバック（APIの通信瞬断等で欠損した銘柄のみを自動再取得）
     missing_in_chunk = [t for t in chunk if t not in bulk_data]
     if missing_in_chunk:
-        print(f"    ⚠️ {len(missing_in_chunk)} 銘柄の個別落選を検知。ピンポイント補完取得を実行します...")
         for ticker in missing_in_chunk:
             try:
-                data_single = yf.download(ticker, period="2y", interval="1d", auto_adjust=False, progress=False, session=session)
-                if data_single is not None and not data_single.empty:
-                    process_downloaded_data(data_single, [ticker])
+                # history() は単一銘柄の構造を最も安定して取得可能
+                df_single = yf.Ticker(ticker).history(period="2y", interval="1d", auto_adjust=False)
+                cleaned = clean_stock_df(df_single)
+                if cleaned is not None:
+                    bulk_data[ticker] = cleaned
             except Exception:
                 pass
 
-    time.sleep(1.2)
+    time.sleep(0.5)
 
-print(f"データのダウンロードが完了しました。正常取得銘柄数: {len(bulk_data)}")
+# 4. 実行結果サマリー
+elapsed_sec = time.time() - start_time
+print(f"\n==========================================")
+print(f"ダウンロード完了: 所要時間 {elapsed_sec/60:.1f} 分 ({elapsed_sec:.1f} 秒)")
+print(f"対象銘柄数: {len(tickers)} / 正常取得銘柄数: {len(bulk_data)} ({len(bulk_data)/len(tickers)*100:.1f}%)")
+
+unfetched = [t for t in tickers if t not in bulk_data]
+if unfetched:
+    print(f"※ 未取得銘柄 ({len(unfetched)}件): {unfetched}")
+else:
+    print("全銘柄の正常取得が完了しました。")
+print(f"==========================================")
 
 # 1. 独自実装：正確なワイルダー平滑化方式のRSI（14日）を算出する関数
 def calculate_rsi(series, period=14):
