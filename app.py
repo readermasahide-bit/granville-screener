@@ -142,7 +142,7 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# 2. 全銘柄のデータをブロック分けして一括ダウンロード（★取得漏れ防止リトライ機能搭載）
+# 2. 全銘柄のデータをブロック分けして一括ダウンロード（★漏れ銘柄ピンポイント完全救済版）
 session = requests.Session()
 session.headers.update({
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -150,7 +150,7 @@ session.headers.update({
 
 print("株価データ(2年分)を一括ダウンロード中...")
 bulk_data = {}
-chunk_size = 100 # 最適化のため100銘柄ずつ取得
+chunk_size = 100 # 100銘柄ずつ取得
 
 def process_downloaded_data(data, chunk_list):
     for ticker in chunk_list:
@@ -177,20 +177,21 @@ for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード実行中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} 銘柄目...")
     
-    success = False
+    # 1. 一括ダウンロード試行（最大3回リトライ）
     for attempt in range(3):
         try:
             data = yf.download(chunk, period="2y", interval="1d", group_by="ticker", auto_adjust=False, progress=False, session=session)
             if data is not None and not data.empty:
                 process_downloaded_data(data, chunk)
-                success = True
                 break
-        except Exception as e:
+        except Exception:
             time.sleep(2 * (attempt + 1))
             
-    if not success:
-        print(f"    ⚠️ ブロック取得失敗のため小分け再取得を実行します...")
-        for ticker in chunk:
+    # 2. ★超重要：一括取得でこぼれ落ちた漏れ銘柄（5471等）を自動検知してピンポイント再取得！
+    missing_in_chunk = [t for t in chunk if t not in bulk_data]
+    if missing_in_chunk:
+        print(f"    ⚠️ {len(missing_in_chunk)} 銘柄の取得漏れを検知。ピンポイント個別再取得を実行します...")
+        for ticker in missing_in_chunk:
             try:
                 data_single = yf.download(ticker, period="2y", interval="1d", auto_adjust=False, progress=False, session=session)
                 if data_single is not None and not data_single.empty:
@@ -198,7 +199,7 @@ for i in range(0, len(tickers), chunk_size):
             except Exception:
                 pass
 
-    time.sleep(1.5)
+    time.sleep(1.2)
 
 print(f"データのダウンロードが完了しました。正常取得銘柄数: {len(bulk_data)}")
 
