@@ -579,7 +579,7 @@
         }
       }
 
-      // ★個別の緊急株数計算処理（コード入力 ➔ 株数ボタン）
+// ★個別の緊急株数計算処理（コード入力 ➔ 株数ボタン）
       async function handleCalcIndividualShares() {
         const input = document.getElementById('aiExtractInput').value.trim();
         if (!input) {
@@ -621,7 +621,9 @@
             const res = await fetch(url);
             if (!res.ok) throw new Error("データの取得に失敗しました。");
             const data = await res.json();
-            const history = data[input];
+            
+            // ★修正点：数字のみのキー (例: "5471") で確実にデータを参照
+            const history = data[tickerNum] || data[input];
 
             if (!history || history.length === 0) {
               alert(`銘柄コード [${input}] のデータが見つかりません。`);
@@ -645,6 +647,7 @@
         showIndividualSharesModal(input, name, price, stopLossPrice, volume, categoryName, pos, category);
       }
 
+      // ★ポップアップ画面構築関数（削除せずにそのまま保持）
       function showIndividualSharesModal(ticker, name, price, stopLossPrice, volume, categoryName, pos, category) {
         const dialog = document.getElementById('diagnosticDialog');
         const title = document.getElementById('dialogTitle');
@@ -725,6 +728,7 @@
         dialog.showModal();
       }
 
+      // ★AI抽出データコピー関数
       async function copyAiData(ticker, name) {
         if (!ticker) return;
         
@@ -741,13 +745,15 @@
           if (!response.ok) throw new Error("データの取得に失敗しました。まだファイルが生成されていない可能性があります。");
           const data = await response.json();
           
-          const history = data[ticker];
+          // ★修正点：数字のみのキー (例: "5471") で確実にデータを参照
+          const history = data[tickerNum] || data[ticker];
+
           if (!history || history.length === 0) {
-            alert(`銘柄コード [${ticker}] の履歴データが見つかりません。`);
+            alert(`銘柄コード [${tickerNum}] の履歴データが見つかりません。`);
             return;
           }
 
-          let md = `【対象銘柄: ${ticker} ${name || ""}】\n`;
+          let md = `【対象銘柄: ${tickerNum} ${name || ""}】\n`;
           md += `【システム設定: 短期(5/25) & 中期(25/75)】\n\n`;
           md += "| 日付 | 終値 | 5日線 | 25日線 | 75日線 | 25日線乖離率 | RSI(14) |\n";
           md += "|---|---|---|---|---|---|---|\n";
@@ -759,7 +765,7 @@
           });
 
           await navigator.clipboard.writeText(md);
-          alert(`✅ [${ticker}] のAI相談用データをコピーしました！\n\nChatGPTやClaudeの入力欄にそのまま「貼り付け（ペースト）」して分析させてください。`);
+          alert(`✅ [${tickerNum}] のAI相談用データをコピーしました！\n\nChatGPTやClaudeの入力欄にそのまま「貼り付け（ペースト）」して分析させてください。`);
           
         } catch (err) {
           console.error(err);
