@@ -2,3 +2,4 @@ yfinance
 pandas
 xlrd
 requests
+openpyxl
