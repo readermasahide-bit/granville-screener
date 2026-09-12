@@ -135,7 +135,7 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# ★【日証金公式】貸借銘柄（空売り可能銘柄）CSV自動取得
+# ★【日証金公式】貸借銘柄（空売り可能銘柄）CSV自動取得 ＆ 完全フェイルセーフ
 print("日証金から貸借取引対象銘柄（空売り可能銘柄）を取得中...")
 margin_shortable_tickers = set()
 try:
@@ -170,10 +170,15 @@ try:
             for code in shortable_df.iloc[:, 1]:
                 code_str = str(code).strip().zfill(4)
                 margin_shortable_tickers.add(f"{code_str}.T")
-        print(f" -> 貸借銘柄（空売り可能）: {len(margin_shortable_tickers)} 銘柄を登録完了")
 except Exception as e:
-    print(f"⚠️ 日証金データの取得に失敗（フォールバックとしてプライム全銘柄を空売り対象と仮定）: {e}")
+    print(f"⚠️ 日証金データ取得の通信警告: {e}")
+
+# ★重要：もし日証金が取れなかった（0件）場合、プライム全銘柄を空売り対象として自動救済！
+if len(margin_shortable_tickers) == 0:
+    print(" -> ⚠️ 日証金が0件のため、プライム市場全銘柄を空売り可能対象として自動救済適用します。")
     margin_shortable_tickers = {t for t, m in ticker_to_market.items() if "プライム" in m}
+else:
+    print(f" -> 貸借銘柄（空売り可能）: {len(margin_shortable_tickers)} 銘柄を正常登録完了")
 
 # 2. 全銘柄共通のデータクレンジング関数
 def clean_stock_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -702,6 +707,8 @@ results_list = []
 print("各銘柄の判定ロジックを実行しています...", flush=True)
 
 MIN_REQUIRED_DAYS = 69
+sell_count_debug = 0
+buy_count_debug = 0
 
 for ticker, df_stock in bulk_data.items():
     try:
@@ -736,6 +743,11 @@ for ticker, df_stock in bulk_data.items():
         
         if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
             continue
+
+        if short_res["category"].startswith("SELL") or mid_res["category"].startswith("SELL"):
+            sell_count_debug += 1
+        if short_res["category"].startswith("BUY") or mid_res["category"].startswith("BUY"):
+            buy_count_debug += 1
 
         ticker_clean = ticker.replace(".T", "")
         yesterday_data = prev_results_by_ticker.get(ticker_clean)
@@ -781,6 +793,8 @@ for ticker, df_stock in bulk_data.items():
 
     except Exception as e:
         print(f"⚠️ {ticker} の判定中にエラーが発生しスキップしました: {e}", flush=True)
+
+print(f" -> 判定完了: 買い銘柄検知 {buy_count_debug} 件 / 売り銘柄検知 {sell_count_debug} 件 (総検出: {len(results_list)} 件)")
 
 all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
 market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
