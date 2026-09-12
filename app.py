@@ -13,10 +13,9 @@ from datetime import datetime, timedelta, timezone
 # ★ 設定パラメータ（クラウド対応）
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
-html_output_path = "index.html" # ホームページとして公開するため index.html に固定
+html_output_path = "index.html"
 # ==========================================
 
-# 日本時間(JST)の現在時刻をベースに動的な日付を計算
 JST = timezone(timedelta(hours=+9))
 now_jst = datetime.now(JST)
 current_time_str = now_jst.strftime("%Y-%m-%d %H:%M:%S")
@@ -30,24 +29,21 @@ else:
     long_window = 75
     system_title = "中期（25日線/75日線）"
 
-# NumPyの独自型やbytesを標準のPythonデータ型にクレンジングする関数
 def clean_val(val):
     if isinstance(val, bytes):
         try:
             return val.decode('utf-8')
         except Exception:
             return str(val)
-    elif hasattr(val, 'item'):  # numpy scalar (int64, float64等)
+    elif hasattr(val, 'item'):
         return val.item()
     elif pd.isna(val):
         return None
     return val
 
-# ヘルパー関数：HTMLから data-results JSONを抽出する関数
 def extract_results_json(text):
     start_tag = '<script id="data-results" type="application/json">'
     end_tag = '</script>'
-    
     start_pos = text.find(start_tag)
     if start_pos != -1:
         b_start = start_pos + len(start_tag)
@@ -55,7 +51,6 @@ def extract_results_json(text):
         if end_pos != -1:
             return text[b_start:end_pos].strip()
             
-    # 古い形式(results:)との互換性バックアップ
     start_pos = text.find("results:")
     if start_pos != -1:
         b_start = text.find("[", start_pos)
@@ -83,7 +78,7 @@ def extract_results_json(text):
                             return text[b_start:i+1]
     return None
 
-# ★【件数前日比＆連続日数ハック】売り5〜8を追加
+# ★前日集計に売り5〜8を完全対応
 prev_counts = {
     "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL8": 0, "TOTAL": 0},
     "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL8": 0, "TOTAL": 0}
@@ -95,18 +90,14 @@ if os.path.exists(html_output_path):
     try:
         with open(html_output_path, "r", encoding="utf-8") as f:
             old_html = f.read()
-        
         prev_results_json = extract_results_json(old_html)
-        
         if prev_results_json:
             prev_results = json.loads(prev_results_json)
-            
             for item in prev_results:
                 for sys_key in ["short", "mid"]:
                     cat = item.get(sys_key, {}).get("category", "NONE")
                     if cat in prev_counts[sys_key]:
                         prev_counts[sys_key][cat] += 1
-                
                 ticker_key = item.get("ticker")
                 if ticker_key:
                     prev_results_by_ticker[ticker_key] = item
@@ -117,7 +108,6 @@ if os.path.exists(html_output_path):
                 for cat in ["BUY1", "BUY1_PRE", "BUY2", "BUY2_PRE", "BUY3", "BUY3_PRE", "BUY4", "SELL5", "SELL6", "SELL7", "SELL8"]:
                     total_active += prev_counts[sys_key].get(cat, 0)
                 prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
-            
             print(f" -> 前日データのパースに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
         else:
             print(" -> 前日データ(results)の抽出パターンが見つかりませんでした。")
@@ -145,7 +135,7 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# ★【新規追加】日証金（日本証券金融）から貸借取引対象銘柄一覧（空売り可能銘柄）を取得
+# ★【日証金公式】貸借銘柄（空売り可能銘柄）CSV自動取得
 print("日証金から貸借取引対象銘柄（空売り可能銘柄）を取得中...")
 margin_shortable_tickers = set()
 try:
@@ -157,17 +147,15 @@ try:
         if match:
             link = match.group(1)
             csv_url = link if link.startswith('http') else requests.compat.urljoin(data_page_url, link)
-            
     if not csv_url:
         csv_url = "https://www.taisyaku.jp/data/data-file/meigara.csv"
 
     res_csv = requests.get(csv_url, headers=headers, timeout=10)
     if res_csv.status_code == 200:
-        content_bytes = res_csv.content
         try:
-            df_margin = pd.read_csv(io.BytesIO(content_bytes), encoding='cp932')
+            df_margin = pd.read_csv(io.BytesIO(res_csv.content), encoding='cp932')
         except Exception:
-            df_margin = pd.read_csv(io.BytesIO(content_bytes), encoding='utf-8', errors='ignore')
+            df_margin = pd.read_csv(io.BytesIO(res_csv.content), encoding='utf-8', errors='ignore')
             
         code_col = [c for c in df_margin.columns if 'コード' in str(c) or 'Code' in str(c)]
         type_col = [c for c in df_margin.columns if '貸借' in str(c) or '区分' in str(c)]
@@ -182,10 +170,9 @@ try:
             for code in shortable_df.iloc[:, 1]:
                 code_str = str(code).strip().zfill(4)
                 margin_shortable_tickers.add(f"{code_str}.T")
-                
         print(f" -> 貸借銘柄（空売り可能）: {len(margin_shortable_tickers)} 銘柄を登録完了")
 except Exception as e:
-    print(f"⚠️ 日証金データの取得に失敗（フォールバックとしてプライム銘柄を空売り対象と仮定）: {e}")
+    print(f"⚠️ 日証金データの取得に失敗（フォールバックとしてプライム全銘柄を空売り対象と仮定）: {e}")
     margin_shortable_tickers = {t for t, m in ticker_to_market.items() if "プライム" in m}
 
 # 2. 全銘柄共通のデータクレンジング関数
@@ -212,7 +199,6 @@ for i in range(0, len(tickers), chunk_size):
     chunk = tickers[i:i+chunk_size]
     print(f" -> ダウンロード中: {i + 1} 〜 {min(i + chunk_size, len(tickers))} / {len(tickers)} 銘柄...")
 
-    # Phase 1: 100銘柄単位の一括並列ダウンロード
     try:
         data = yf.download(
             chunk,
@@ -248,7 +234,6 @@ for i in range(0, len(tickers), chunk_size):
     except Exception:
         pass
 
-    # Phase 2: 汎用フォールバック
     missing_in_chunk = [t for t in chunk if t not in bulk_data]
     if missing_in_chunk:
         for ticker in missing_in_chunk:
@@ -268,20 +253,16 @@ print(f"ダウンロード完了: 所要時間 {elapsed_sec/60:.1f} 分 ({elapse
 print(f"対象銘柄数: {len(tickers)} / 正常取得銘柄数: {len(bulk_data)} ({len(bulk_data)/len(tickers)*100:.1f}%)")
 print(f"==========================================")
 
-# 1. 独自実装：正確なワイルダー平滑化方式のRSI（14日）を算出する関数
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
-    
     avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
-    
     rs = avg_gain / avg_loss.replace(0, 1e-10)
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-# 2. ヘルパー：先読みバイアスを排除したスイングロー（極小値）検出関数
 def find_swing_lows(series, window=25):
     n = len(series)
     low_indices = []
@@ -294,7 +275,7 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# 3. 判定および採点ロジック関数（★買い1〜4＆Pre ＋ 売り5〜8統合版）
+# ★判定および採点ロジック関数（買い1〜4＆Pre ＋ 売り5〜8）
 def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tradable=False):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -342,7 +323,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
     is_price_up = price_today > price_yesterday
     is_price_down = price_today < price_yesterday
     
-    # RSI シグナル検出
     rsi_series = df_temp['rsi']
     price_low_series = df_temp['Low']
     rsi_today = float(rsi_series.iloc[-1])
@@ -427,20 +407,17 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
     
-    # 長期MA傾き判定
     long_ma_3d_ago = df_temp.iloc[-4]['long_ma']
     long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100
     
     is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
     is_long_ma_rising = (long_ma_today > long_ma_yesterday) and (long_ma_slope_3d > 0.0)
     
-    # 売り用：下向き判定
     is_long_ma_flat_or_falling = (long_ma_today < long_ma_yesterday) or (long_ma_slope_3d <= 0.2)
     is_long_ma_falling = (long_ma_today < long_ma_yesterday) and (long_ma_slope_3d < 0.0)
 
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
-    
     price_crossed_below = (price_yesterday > long_ma_yesterday) and (price_today <= long_ma_today)
     dc_occurred = (short_ma_yesterday > long_ma_yesterday) and (short_ma_today <= long_ma_today)
 
@@ -452,17 +429,18 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
     else:
         is_long_bottoming_past = False
 
-    # ==========================================================
-    # ★ 買いシグナル判定（1〜4 ＆ 各Pre）
-    # ==========================================================
+    # ----------------------------------------------------
     # 買い4：逆張りリバ
+    # ----------------------------------------------------
     if diff_rate <= oversold_threshold and is_long_ma_falling and (is_yang_candle or is_price_up):
         category = "BUY4"
         category_name = "買い4：逆張りリバ"
         badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
         reason = f"下落中の{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
+    # ----------------------------------------------------
     # 買い1：新規買い ＆ 買い1-Pre（突破前夜）
+    # ----------------------------------------------------
     price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     is_long_bottoming = price_below_count >= (lookback_period * 0.7)
     past_max_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).max()
@@ -485,7 +463,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
             badge_class = "bg-emerald-600/10 text-emerald-400 border border-emerald-500/20"
             reason = f"底練りを経て、長期線({long_window}日線)の直下まで肉薄。本日下げ止まりを見せており上抜け直前の仕込み状態です。"
         
+    # ----------------------------------------------------
     # 買い2：再突き抜け ＆ 買い2-Pre（復帰前夜）
+    # ----------------------------------------------------
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_15d <= 3
     was_above_recently = (df_temp.iloc[-21:-1]['Close'] >= df_temp.iloc[-21:-1]['long_ma']).any()
@@ -509,7 +489,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
             badge_class = "bg-sky-600/10 text-sky-400 border border-sky-500/20"
             reason = f"上昇トレンド中、長期線を一時下抜け後に直下で踏み止まり。本日中に再上抜けが期待される状態です。"
 
+    # ----------------------------------------------------
     # 買い3：押し目反発 ＆ 買い3-Pre（押し目待ち伏せ）
+    # ----------------------------------------------------
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     is_close_to_ma = 0.0 < diff_rate <= 3.5
@@ -541,18 +523,18 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
 
-    # ==========================================================
-    # ★【新規追加】信用売りシグナル判定（売り5〜8：貸借銘柄のみ点灯）
-    # ==========================================================
+    # ----------------------------------------------------
+    # ★ 信用売りシグナル判定（売り5〜8：貸借銘柄のみ点灯）
+    # ----------------------------------------------------
     if category == "NONE" and is_margin_tradable:
-        # 売り8：逆張り過熱売り（買い4の完全反転）
+        # 売り8：逆張り過熱売り
         if diff_rate >= overbought_threshold and is_long_ma_rising and (is_yin_candle or is_price_down):
             category = "SELL8"
             category_name = "売り8：過熱売り"
             badge_class = "bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
             reason = f"上昇中の長期線から上方に異常なほど急騰乖離({diff_rate:.1f}%)。本日天井反落を確認しました。"
 
-        # 売り5：新規売り初動（買い1の完全反転）
+        # 売り5：新規売り初動
         price_above_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] > df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
         is_long_topping = price_above_count >= (lookback_period * 0.7)
         past_min_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).min()
@@ -568,7 +550,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
                 cross_type_sell = "デッドクロス" if dc_occurred else "価格の割り込み"
                 reason = f"高値圏・上昇トレンドを経て、横這い〜下降傾向の長期線に対し本日{cross_type_sell}が発生。下落トレンド入りの初動です。"
 
-        # 売り6：初戻り再下抜け（買い2の完全反転）
+        # 売り6：初戻り再下抜け
         above_count_15d = (df_temp.iloc[-16:-1]['Close'] > df_temp.iloc[-16:-1]['long_ma']).sum()
         is_temp_pump = 1 <= above_count_15d <= 3
         if category == "NONE" and (diff_rate >= -5.0) and price_crossed_below and is_long_ma_falling and is_temp_pump:
@@ -577,7 +559,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
             badge_class = "bg-orange-500/15 text-orange-300 border border-orange-500/30"
             reason = f"下降トレンド中、長期線をわずか数日上抜けるダマシの上昇後、本日急激に割り込んで下落トレンドに復帰しました。"
 
-        # 売り7：戻り売り反落（買い3の完全反転 ★最主力）
+        # 売り7：戻り売り反落 ★最主力
         min_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).min()
         has_dropped_deep = min_diff_15d <= -4.0
         is_close_under_ma = -3.5 <= diff_rate < 0.0
@@ -591,11 +573,10 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
                 badge_class = "bg-red-600/15 text-red-400 border border-red-500/30"
                 reason = f"下向き長期線に頭を押さえられて戻り天井を形成。教科書通りの綺麗な陰線反落を観測しました。"
 
-    # ==========================================
+    # ----------------------------------------------------
     # ★ テクニカル損切り価格 (stop_loss_price) 自動算出
-    # ==========================================
+    # ----------------------------------------------------
     stop_loss_price = 0
-    # 買いシグナル（株価の下にSLを設定 ➔ 切り捨て）
     if category in ["BUY1", "BUY1_PRE"]:
         low_20d = df_temp['Low'].tail(20).min()
         stop_loss_price = math.floor(low_20d * 0.995)
@@ -606,7 +587,7 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
         stop_loss_price = math.floor(long_ma_today * 0.985)
     elif category == "BUY4":
         stop_loss_price = math.floor(low_today * 0.99)
-    # ★売りシグナル（株価の上にSLを設定 ➔ 切り上げ math.ceil）
+    # 売りシグナル（株価の上にSLを設定 ➔ 切り上げ）
     elif category == "SELL5":
         high_20d = df_temp['High'].tail(20).max()
         stop_loss_price = math.ceil(high_20d * 1.005)
@@ -618,9 +599,9 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
     elif category == "SELL8":
         stop_loss_price = math.ceil(high_today * 1.01)
 
-    # ==========================================
-    # 期待度スコア (10段階スケール)
-    # ==========================================
+    # ----------------------------------------------------
+    # 期待度スコア
+    # ----------------------------------------------------
     score = 5 
     score_reasons = []
     
@@ -684,7 +665,6 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
                     score -= 1
                     score_reasons.append("🕯️ 反発実体極小: -1")
         else:
-            # 売り用のスコア加減点
             if is_yin_candle and vol_ratio >= 1.2:
                 score += 1
                 score_reasons.append("📊 陰線で出来高増加(売り圧力): +1")
@@ -717,9 +697,95 @@ def evaluate_logic(df_temp, short_window, long_window, market_type, is_margin_tr
         "score_reasons": score_reasons
     }
 
-# ----------------------------------------------------------------------
-# ★【Phase 1】東証33業種 HOTセクター自動算出関数
-# ----------------------------------------------------------------------
+# 4. 全データの判定実行
+results_list = []
+print("各銘柄の判定ロジックを実行しています...", flush=True)
+
+MIN_REQUIRED_DAYS = 69
+
+for ticker, df_stock in bulk_data.items():
+    try:
+        if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
+            continue
+            
+        today = df_stock.iloc[-1]
+        yesterday = df_stock.iloc[-2]
+        
+        price_today = float(today['Close'])
+        price_yesterday = float(yesterday['Close'])
+        change = price_today - price_yesterday
+        change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
+        
+        volume_today = float(today['Volume'])
+        is_low_volume = volume_today <= 10000
+        
+        market_raw = ticker_to_market.get(ticker, "")
+        if "プライム" in market_raw:
+            market_short = "東Ｐ"
+        elif "スタンダード" in market_raw:
+            market_short = "東Ｓ"
+        elif "グロース" in market_raw:
+            market_short = "東Ｇ"
+        else:
+            market_short = "他"
+            
+        is_shortable = ticker in margin_shortable_tickers
+            
+        short_res = evaluate_logic(df_stock, 5, 25, market_short, is_shortable)
+        mid_res = evaluate_logic(df_stock, 25, 75, market_short, is_shortable)
+        
+        if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
+            continue
+
+        ticker_clean = ticker.replace(".T", "")
+        yesterday_data = prev_results_by_ticker.get(ticker_clean)
+
+        for sys_key, sys_res in [("short", short_res), ("mid", mid_res)]:
+            if sys_res["category"] != "NONE":
+                consecutive = 1
+                prev_cat_name = None
+
+                if yesterday_data and sys_key in yesterday_data:
+                    yes_sys = yesterday_data[sys_key]
+                    yes_cat = yes_sys.get("category", "NONE")
+
+                    if yes_cat != "NONE":
+                        yes_consecutive = yes_sys.get("consecutiveDays", 1)
+                        consecutive = yes_consecutive + 1
+
+                        if yes_cat != sys_res["category"]:
+                            prev_cat_name = yes_sys.get("categoryName", yes_cat).split('：')[0]
+
+                sys_res["consecutiveDays"] = consecutive
+                sys_res["prevCategory"] = prev_cat_name
+            else:
+                sys_res["consecutiveDays"] = 0
+                sys_res["prevCategory"] = None
+        
+        stock_info = {
+            "ticker": clean_val(ticker_clean),
+            "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
+            "market": market_short,
+            "sector": clean_val(ticker_to_sector.get(ticker, "不明")),
+            "price": clean_val(price_today),
+            "change": clean_val(change),
+            "changeRate": clean_val(round(change_rate, 2)),
+            "volume": clean_val(volume_today),
+            "isLowVolume": clean_val(is_low_volume),
+            "isStrongRelative": False,
+            "isMarginTradable": is_shortable,
+            "short": short_res,
+            "mid": mid_res
+        }
+        results_list.append(stock_info)
+
+    except Exception as e:
+        print(f"⚠️ {ticker} の判定中にエラーが発生しスキップしました: {e}", flush=True)
+
+all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
+market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
+print(f" -> 本日の東証全上場銘柄の騰落率中央値: {market_median_change:.2f}%")
+
 def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
     sector_data = {}
     for ticker, df in bulk_data.items():
@@ -784,96 +850,6 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
     hot_sectors = [s for s in scored_sectors if s["score"] >= 55.0][:5]
     return hot_sectors, sector_data
 
-# 4. 全データの判定実行
-results_list = []
-print("各銘柄の判定ロジックを実行しています...", flush=True)
-
-MIN_REQUIRED_DAYS = 69
-
-for ticker, df_stock in bulk_data.items():
-    try:
-        if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
-            continue
-            
-        today = df_stock.iloc[-1]
-        yesterday = df_stock.iloc[-2]
-        
-        price_today = float(today['Close'])
-        price_yesterday = float(yesterday['Close'])
-        change = price_today - price_yesterday
-        change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
-        
-        volume_today = float(today['Volume'])
-        is_low_volume = volume_today <= 10000
-        
-        market_raw = ticker_to_market.get(ticker, "")
-        if "プライム" in market_raw:
-            market_short = "東Ｐ"
-        elif "スタンダード" in market_raw:
-            market_short = "東Ｓ"
-        elif "グロース" in market_raw:
-            market_short = "東Ｇ"
-        else:
-            market_short = "他"
-            
-        # ★日証金で貸借銘柄（空売りOK）に指定されているかを判定
-        is_shortable = ticker in margin_shortable_tickers
-            
-        short_res = evaluate_logic(df_stock, 5, 25, market_short, is_shortable)
-        mid_res = evaluate_logic(df_stock, 25, 75, market_short, is_shortable)
-        
-        if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
-            continue
-
-        ticker_clean = ticker.replace(".T", "")
-        yesterday_data = prev_results_by_ticker.get(ticker_clean)
-
-        for sys_key, sys_res in [("short", short_res), ("mid", mid_res)]:
-            if sys_res["category"] != "NONE":
-                consecutive = 1
-                prev_cat_name = None
-
-                if yesterday_data and sys_key in yesterday_data:
-                    yes_sys = yesterday_data[sys_key]
-                    yes_cat = yes_sys.get("category", "NONE")
-
-                    if yes_cat != "NONE":
-                        yes_consecutive = yes_sys.get("consecutiveDays", 1)
-                        consecutive = yes_consecutive + 1
-
-                        if yes_cat != sys_res["category"]:
-                            prev_cat_name = yes_sys.get("categoryName", yes_cat).split('：')[0]
-
-                sys_res["consecutiveDays"] = consecutive
-                sys_res["prevCategory"] = prev_cat_name
-            else:
-                sys_res["consecutiveDays"] = 0
-                sys_res["prevCategory"] = None
-        
-        stock_info = {
-            "ticker": clean_val(ticker_clean),
-            "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
-            "market": market_short,
-            "sector": clean_val(ticker_to_sector.get(ticker, "不明")),
-            "price": clean_val(price_today),
-            "change": clean_val(change),
-            "changeRate": clean_val(round(change_rate, 2)),
-            "volume": clean_val(volume_today),
-            "isLowVolume": clean_val(is_low_volume),
-            "isStrongRelative": False,
-            "isMarginTradable": is_shortable, # 貸借銘柄フラグ
-            "short": short_res,
-            "mid": mid_res
-        }
-        results_list.append(stock_info)
-
-    except Exception as e:
-        print(f"⚠️ {ticker} の判定中にエラーが発生しスキップしました: {e}", flush=True)
-
-all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
-market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
-print(f" -> 本日の東証全上場銘柄の騰落率中央値: {market_median_change:.2f}%")
-
 hot_sectors, all_sector_stats = calculate_hot_sectors(bulk_data, results_list, ticker_to_sector)
 hot_sector_names = [s["sector"] for s in hot_sectors]
 print(f" -> 本日のHOT業種 ({len(hot_sectors)}件検知): {', '.join(hot_sector_names) if hot_sectors else 'なし'}")
@@ -903,9 +879,7 @@ for item in results_list:
                 new_score = min(10, item[sys_key]["score"] + 1)
                 item[sys_key]["score"] = new_score
 
-# ==========================================
-# ★ AI相談用履歴データ分割出力 (100分割シャーディング)
-# ==========================================
+# 履歴データ分割出力 (100分割シャーディング)
 print("AI相談用の履歴データを分割出力しています...")
 history_dir = "history_data"
 os.makedirs(history_dir, exist_ok=True)
@@ -946,9 +920,7 @@ for shard_key, data_dict in shards.items():
             json.dump(data_dict, f, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
 
-# ==========================================
-# ★【最終出力】template.html を読み込んで index.html を生成
-# ==========================================
+# HTML出力
 json_data_str = json.dumps(results_list, ensure_ascii=False)
 hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
 prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
