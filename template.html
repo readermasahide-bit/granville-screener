@@ -38,7 +38,6 @@
       ::-webkit-scrollbar-thumb:hover { background: #3c4f74; }
     </style>
 
-    <!-- ★手立て2：データを安全に格納する専用タグ -->
     <script id="data-results" type="application/json">__PLACEHOLDER_RESULTS__</script>
     <script id="data-hot-sectors" type="application/json">__PLACEHOLDER_HOT_SECTORS__</script>
     <script id="data-prev-counts" type="application/json">__PLACEHOLDER_PREV_COUNTS__</script>
@@ -346,11 +345,11 @@
         prevCounts: JSON.parse(document.getElementById('data-prev-counts').textContent),
         marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
-        activeTab: 'BUY1', // デフォルト選択
+        activeTab: 'BUY1',
         activeMarket: 'ALL',
         searchQuery: '',
         sortOrder: 'none',
-        sortScoreOrder: 'desc' // ★初期状態で「期待度降順」に設定
+        sortScoreOrder: 'desc' // ★初期状態で「期待度降順」に常時設定
       };
       
       const MAX_RENDER_ROWS = 150;
