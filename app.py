@@ -19,7 +19,6 @@ html_output_path = "index.html"
 JST = timezone(timedelta(hours=+9))
 now_jst = datetime.now(JST)
 current_time_str = now_jst.strftime("%Y-%m-%d %H:%M:%S")
-today_date = now_jst.date()
 
 if SYSTEM_TYPE == "short":
     short_window = 5
@@ -136,43 +135,11 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# ★【新規：機能B】JPX公式から「決算発表予定日」を動的スクレイピング取得（404エラー防止）
-print("JPXから決算発表予定日一覧を動的取得中...")
-earnings_dates = {}
-try:
-    kessan_page_url = "https://www.jpx.co.jp/listing/event-schedules/financial-results/index.html"
-    res_kpage = requests.get(kessan_page_url, headers=headers, timeout=10)
-    kessan_excel_url = None
-    if res_kpage.status_code == 200:
-        match = re.search(r'href=["\']([^"\']*kessan[^"\']*\.xlsx?)["\']', res_kpage.text, re.IGNORECASE)
-        if match:
-            link = match.group(1)
-            kessan_excel_url = link if link.startswith('http') else requests.compat.urljoin(kessan_page_url, link)
-            
-    if kessan_excel_url:
-        res_kexcel = requests.get(kessan_excel_url, headers=headers, timeout=15)
-        if res_kexcel.status_code == 200:
-            df_kessan = pd.read_excel(io.BytesIO(res_kexcel.content))
-            code_col = [c for c in df_kessan.columns if 'コード' in str(c)]
-            date_col = [c for c in df_kessan.columns if '予定日' in str(c) or '決算発表日' in str(c)]
-            if code_col and date_col:
-                c_col = code_col[0]
-                d_col = date_col[0]
-                for _, row in df_kessan.dropna(subset=[c_col, d_col]).iterrows():
-                    c_str = str(row[c_col]).strip().zfill(4)
-                    try:
-                        d_val = pd.to_datetime(row[d_col]).date()
-                        earnings_dates[f"{c_str}.T"] = d_val
-                    except Exception:
-                        pass
-                print(f" -> 決算発表予定日: {len(earnings_dates)} 銘柄を登録完了")
-except Exception as e:
-    print(f"⚠️ 決算予定日データの動的取得に失敗（スキップして続行）: {e}")
-
-# ★【新規：機能A】日証金公式から「貸借銘柄＆日次残高」取得（空売り可能判定＆踏み上げ需給検知）
+# ★日証金公式から「貸借銘柄一覧」および「日次残高」取得
 print("日証金から貸借取引対象銘柄（空売り可能銘柄）を取得中...")
 margin_shortable_tickers = set()
-short_squeeze_candidates = set() # 踏み上げ期待銘柄（倍率0.7倍以下など）
+short_squeeze_candidates = set() # 買い用：倍率0.7倍以下（売り長）
+heavy_margin_buyers = set()      # 売り用：倍率5.0倍以上（買い残過多）
 
 try:
     data_page_url = "https://www.taisyaku.jp/data/"
@@ -209,7 +176,7 @@ try:
 except Exception as e:
     print(f"⚠️ 日証金データ取得の通信警告: {e}")
 
-# 日証金残高データから貸借倍率0.7倍以下を検知試行
+# 日次貸借残高データから倍率0.7倍以下 ＆ 5.0倍以上を検知
 try:
     zandaka_url = "https://www.taisyaku.jp/data/data-file/zandaka.csv"
     res_zan = requests.get(zandaka_url, headers=headers, timeout=10)
@@ -218,7 +185,6 @@ try:
             df_zan = pd.read_csv(io.BytesIO(res_zan.content), encoding='cp932')
         except Exception:
             df_zan = pd.read_csv(io.BytesIO(res_zan.content), encoding='utf-8', errors='ignore')
-        # コード列と倍率列
         c_cols = [c for c in df_zan.columns if 'コード' in str(c)]
         r_cols = [c for c in df_zan.columns if '倍率' in str(c)]
         if c_cols and r_cols:
@@ -228,9 +194,11 @@ try:
                     ratio = float(row[r_cols[0]])
                     if 0 < ratio <= 0.7:
                         short_squeeze_candidates.add(f"{c_str}.T")
+                    elif ratio >= 5.0:
+                        heavy_margin_buyers.add(f"{c_str}.T")
                 except Exception:
                     pass
-            print(f" -> 日証金日次需給: 踏み上げ期待(倍率0.7倍以下) {len(short_squeeze_candidates)} 銘柄を検知")
+            print(f" -> 日証金日次需給: 踏み上げ期待({len(short_squeeze_candidates)}件) / 買い残過多({len(heavy_margin_buyers)}件)")
 except Exception:
     pass
 
@@ -253,7 +221,7 @@ def clean_stock_df(df: pd.DataFrame) -> pd.DataFrame:
         df.index = df.index.tz_convert('Asia/Tokyo').tz_localize(None)
     return df
 
-# 3. 2段階取得パイプライン（一括並列ダウンロード + 欠損自動フォールバック）
+# 3. 2段階取得パイプライン
 bulk_data = {}
 chunk_size = 100
 
@@ -340,8 +308,8 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# ★判定および採点ロジック関数（買い1〜4＆Pre ＋ 売り5〜8＆売り7-Pre ＋ 決算ガード＆需給加点）
-def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False):
+# ★判定および採点ロジック関数（買い1〜4＆Pre ＋ 売り5〜8＆売り7-Pre ＋ 需給判定 ＋ 本発射加点）
+def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE"):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
@@ -670,25 +638,22 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         stop_loss_price = math.ceil(high_today * 1.01)
 
     # ----------------------------------------------------
-    # 期待度スコア（決算直前ガード -5 ＆ 踏み上げ初動 +1）
+    # 期待度スコア（需給判定 ＆ 本発射加点）
     # ----------------------------------------------------
     score = 5 
     score_reasons = []
     
     if category != "NONE":
-        # ★【機能B】決算発表3営業日以内の銘柄はスコアを一律 -5（被弾完全防止）
-        if ticker in earnings_dates:
-            e_date = earnings_dates[ticker]
-            delta_days = (e_date - today_date).days
-            if 0 <= delta_days <= 4:
-                score -= 5
-                score_reasons.append(f"⚠️ 決算発表直前({e_date.strftime('%m/%d')}): -5")
-
         if category.startswith("BUY"):
-            # ★【機能A】踏み上げ需給好転加点（貸借倍率0.7倍以下 ＋ 当日反発確認）
+            # ★項目1：買い需給加点（倍率0.7倍以下 ＋ 当日反発確認）
             if (ticker in short_squeeze_candidates) and is_yang_candle and is_price_up:
                 score += 1
                 score_reasons.append("🔥 踏み上げ需給好転(ショートカバー初動): +1")
+
+            # ★項目4：パワー充填（Pre）からの本発射加点
+            if (yesterday_cat in ["BUY1_PRE", "BUY2_PRE", "BUY3_PRE"]) and (category in ["BUY1", "BUY2", "BUY3"]):
+                score += 1
+                score_reasons.append("🚀 パワー充填からの本発射: +1")
 
             if is_rsi_sell_warning:
                 score -= 1
@@ -748,6 +713,16 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                     score -= 1
                     score_reasons.append("🕯️ 反発実体極小: -1")
         else:
+            # ★項目1：売り需給加点（倍率5.0倍以上 ＋ 当日反落確認）
+            if (ticker in heavy_margin_buyers) and is_yin_candle and is_price_down:
+                score += 1
+                score_reasons.append("📉 買い残過多の投げ売り加速(追証連鎖初動): +1")
+
+            # ★項目4：パワー充填（Pre）からの本発射加点（売り版）
+            if (yesterday_cat == "SELL7_PRE") and (category == "SELL7"):
+                score += 1
+                score_reasons.append("🚀 パワー充填からの本発射: +1")
+
             if is_yin_candle and vol_ratio >= 1.2:
                 score += 1
                 score_reasons.append("📊 陰線で出来高増加(売り圧力): +1")
@@ -815,9 +790,14 @@ for ticker, df_stock in bulk_data.items():
             market_short = "他"
             
         is_shortable = ticker in margin_shortable_tickers
+        ticker_clean = ticker.replace(".T", "")
+        yesterday_data = prev_results_by_ticker.get(ticker_clean)
+
+        yes_cat_short = yesterday_data.get("short", {}).get("category", "NONE") if yesterday_data else "NONE"
+        yes_cat_mid = yesterday_data.get("mid", {}).get("category", "NONE") if yesterday_data else "NONE"
             
-        short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable)
-        mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable)
+        short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable, yes_cat_short)
+        mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable, yes_cat_mid)
         
         if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
             continue
@@ -826,9 +806,6 @@ for ticker, df_stock in bulk_data.items():
             sell_count_debug += 1
         if short_res["category"].startswith("BUY") or mid_res["category"].startswith("BUY"):
             buy_count_debug += 1
-
-        ticker_clean = ticker.replace(".T", "")
-        yesterday_data = prev_results_by_ticker.get(ticker_clean)
 
         for sys_key, sys_res in [("short", short_res), ("mid", mid_res)]:
             if sys_res["category"] != "NONE":
