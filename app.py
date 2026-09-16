@@ -19,6 +19,7 @@ html_output_path = "index.html"
 JST = timezone(timedelta(hours=+9))
 now_jst = datetime.now(JST)
 current_time_str = now_jst.strftime("%Y-%m-%d %H:%M:%S")
+today_date = now_jst.date()
 
 if SYSTEM_TYPE == "short":
     short_window = 5
@@ -78,7 +79,6 @@ def extract_results_json(text):
                             return text[b_start:i+1]
     return None
 
-# 前日集計データ保持
 prev_counts = {
     "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0},
     "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0}
@@ -135,11 +135,43 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# ★日証金公式から「貸借銘柄一覧」および「日次残高」取得
+# ★【JPX公式】決算発表予定日一覧を動的取得（決算直前ガード用）
+print("JPXから決算発表予定日一覧を動的取得中...")
+earnings_dates = {}
+try:
+    kessan_page_url = "https://www.jpx.co.jp/listing/event-schedules/financial-results/index.html"
+    res_kpage = requests.get(kessan_page_url, headers=headers, timeout=10)
+    kessan_excel_url = None
+    if res_kpage.status_code == 200:
+        match = re.search(r'href=["\']([^"\']*kessan[^"\']*\.xlsx?)["\']', res_kpage.text, re.IGNORECASE)
+        if match:
+            link = match.group(1)
+            kessan_excel_url = link if link.startswith('http') else requests.compat.urljoin(kessan_page_url, link)
+            
+    if kessan_excel_url:
+        res_kexcel = requests.get(kessan_excel_url, headers=headers, timeout=15)
+        if res_kexcel.status_code == 200:
+            df_kessan = pd.read_excel(io.BytesIO(res_kexcel.content))
+            code_col = [c for c in df_kessan.columns if 'コード' in str(c)]
+            date_col = [c for c in df_kessan.columns if '予定日' in str(c) or '決算発表日' in str(c)]
+            if code_col and date_col:
+                c_col = code_col[0]
+                d_col = date_col[0]
+                for _, row in df_kessan.dropna(subset=[c_col, d_col]).iterrows():
+                    c_str = str(row[c_col]).strip().zfill(4)
+                    try:
+                        d_val = pd.to_datetime(row[d_col]).date()
+                        earnings_dates[f"{c_str}.T"] = d_val
+                    except Exception:
+                        pass
+                print(f" -> 決算発表予定日: {len(earnings_dates)} 銘柄を登録完了")
+except Exception as e:
+    print(f"⚠️ 決算予定日データの動的取得に失敗（スキップして続行）: {e}")
+
+# ★【日証金公式】貸借取引対象銘柄＆日次残高データ（融資残・貸株残・倍率）取得
 print("日証金から貸借取引対象銘柄（空売り可能銘柄）を取得中...")
 margin_shortable_tickers = set()
-short_squeeze_candidates = set() # 買い用：倍率0.7倍以下（売り長）
-heavy_margin_buyers = set()      # 売り用：倍率5.0倍以上（買い残過多）
+margin_balance_dict = {} # ticker: {'ratio': float, 'buy_balance': float, 'short_balance': float}
 
 try:
     data_page_url = "https://www.taisyaku.jp/data/"
@@ -176,7 +208,7 @@ try:
 except Exception as e:
     print(f"⚠️ 日証金データ取得の通信警告: {e}")
 
-# 日次貸借残高データから倍率0.7倍以下 ＆ 5.0倍以上を検知
+# 日証金日次残高ファイル（zandaka.csv）から融資残・貸株残・倍率を取得
 try:
     zandaka_url = "https://www.taisyaku.jp/data/data-file/zandaka.csv"
     res_zan = requests.get(zandaka_url, headers=headers, timeout=10)
@@ -185,22 +217,34 @@ try:
             df_zan = pd.read_csv(io.BytesIO(res_zan.content), encoding='cp932')
         except Exception:
             df_zan = pd.read_csv(io.BytesIO(res_zan.content), encoding='utf-8', errors='ignore')
+            
         c_cols = [c for c in df_zan.columns if 'コード' in str(c)]
         r_cols = [c for c in df_zan.columns if '倍率' in str(c)]
-        if c_cols and r_cols:
-            for _, row in df_zan.dropna(subset=[c_cols[0], r_cols[0]]).iterrows():
-                try:
-                    c_str = str(row[c_cols[0]]).strip().zfill(4)
-                    ratio = float(row[r_cols[0]])
-                    if 0 < ratio <= 0.7:
-                        short_squeeze_candidates.add(f"{c_str}.T")
-                    elif ratio >= 5.0:
-                        heavy_margin_buyers.add(f"{c_str}.T")
-                except Exception:
-                    pass
-            print(f" -> 日証金日次需給: 踏み上げ期待({len(short_squeeze_candidates)}件) / 買い残過多({len(heavy_margin_buyers)}件)")
-except Exception:
-    pass
+        b_cols = [c for c in df_zan.columns if '融資' in str(c) and '残' in str(c)]
+        s_cols = [c for c in df_zan.columns if '貸株' in str(c) and '残' in str(c)]
+        
+        c_col = c_cols[0] if c_cols else df_zan.columns[1]
+        r_col = r_cols[0] if r_cols else None
+        b_col = b_cols[0] if b_cols else None
+        s_col = s_cols[0] if s_cols else None
+
+        for _, row in df_zan.iterrows():
+            try:
+                c_str = str(row[c_col]).strip().zfill(4)
+                t_key = f"{c_str}.T"
+                ratio_val = float(row[r_col]) if r_col and pd.notna(row[r_col]) else 1.0
+                buy_val = float(row[b_col]) if b_col and pd.notna(row[b_col]) else 0.0
+                short_val = float(row[s_col]) if s_col and pd.notna(row[s_col]) else 0.0
+                margin_balance_dict[t_key] = {
+                    'ratio': ratio_val,
+                    'buy_balance': buy_val,
+                    'short_balance': short_val
+                }
+            except Exception:
+                pass
+        print(f" -> 日証金日次残高データ: {len(margin_balance_dict)} 銘柄の需給数値を解析完了")
+except Exception as e:
+    print(f"⚠️ 日次残高解析の通信警告（スキップして続行）: {e}")
 
 if len(margin_shortable_tickers) == 0:
     print(" -> ⚠️ 日証金が0件のため、プライム市場全銘柄を空売り可能対象として自動救済適用します。")
@@ -308,7 +352,7 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# ★判定および採点ロジック関数（買い1〜4＆Pre ＋ 売り5〜8＆売り7-Pre ＋ 需給判定 ＋ 本発射加点）
+# ★判定および採点ロジック関数（信用消化日数加減点 ＋ 決算ガード ＋ 本発射加点）
 def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE"):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -445,7 +489,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     
     is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
     is_long_ma_rising = (long_ma_today > long_ma_yesterday) and (long_ma_slope_3d > 0.0)
-    
     is_long_ma_flat_or_falling = (long_ma_today < long_ma_yesterday) or (long_ma_slope_3d <= 0.2)
     is_long_ma_falling = (long_ma_today < long_ma_yesterday) and (long_ma_slope_3d < 0.0)
 
@@ -638,19 +681,38 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         stop_loss_price = math.ceil(high_today * 1.01)
 
     # ----------------------------------------------------
-    # 期待度スコア（需給判定 ＆ 本発射加点）
+    # 期待度スコア（信用消化日数加減点 ＆ 決算ガード ＆ 本発射加点）
     # ----------------------------------------------------
     score = 5 
     score_reasons = []
     
     if category != "NONE":
-        if category.startswith("BUY"):
-            # ★項目1：買い需給加点（倍率0.7倍以下 ＋ 当日反発確認）
-            if (ticker in short_squeeze_candidates) and is_yang_candle and is_price_up:
-                score += 1
-                score_reasons.append("🔥 踏み上げ需給好転(ショートカバー初動): +1")
+        # 1. 決算発表3営業日以内の銘柄はスコアを一律 -5
+        if ticker in earnings_dates:
+            e_date = earnings_dates[ticker]
+            delta_days = (e_date - today_date).days
+            if 0 <= delta_days <= 4:
+                score -= 5
+                score_reasons.append(f"⚠️ 決算発表直前({e_date.strftime('%m/%d')}): -5")
 
-            # ★項目4：パワー充填（Pre）からの本発射加点
+        # 2. 日証金・信用消化日数＆倍率の需給判定
+        m_info = margin_balance_dict.get(ticker, {'ratio': 1.0, 'buy_balance': 0, 'short_balance': 0})
+        buy_cover_days = (m_info['buy_balance'] / vol_ma25) if vol_ma25 > 0 else 0
+        short_cover_days = (m_info['short_balance'] / vol_ma25) if vol_ma25 > 0 else 0
+        ratio = m_info['ratio']
+
+        if category.startswith("BUY"):
+            # ★買い側加点：倍率0.7倍以下 ＋ 消化日数1.0日以上 ＋ 当日反発
+            if (ratio <= 0.7) and (short_cover_days >= 1.0) and is_yang_candle and is_price_up:
+                score += 1
+                score_reasons.append("🔥 需給完全合致(売長＆燃料過多のショートスクイーズ初動): +1")
+            
+            # ★買い側減点：買い残消化日数1.5日分以上（頭上に重いシコり玉）
+            if buy_cover_days >= 1.5:
+                score -= 1
+                score_reasons.append("⚠️ 頭上に重いシコり玉(買い残1.5日分以上): -1")
+
+            # ★パワー充填（Pre）からの本発射加点
             if (yesterday_cat in ["BUY1_PRE", "BUY2_PRE", "BUY3_PRE"]) and (category in ["BUY1", "BUY2", "BUY3"]):
                 score += 1
                 score_reasons.append("🚀 パワー充填からの本発射: +1")
@@ -713,12 +775,17 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                     score -= 1
                     score_reasons.append("🕯️ 反発実体極小: -1")
         else:
-            # ★項目1：売り需給加点（倍率5.0倍以上 ＋ 当日反落確認）
-            if (ticker in heavy_margin_buyers) and is_yin_candle and is_price_down:
+            # ★売り側加点：倍率5.0倍以上 ＋ 消化日数1.2日以上 ＋ 当日反落
+            if (ratio >= 5.0) and (buy_cover_days >= 1.2) and is_yin_candle and is_price_down:
                 score += 1
-                score_reasons.append("📉 買い残過多の投げ売り加速(追証連鎖初動): +1")
+                score_reasons.append("📉 需給完全合致(買長＆シコり玉過多の追証連鎖初動): +1")
 
-            # ★項目4：パワー充填（Pre）からの本発射加点（売り版）
+            # ★売り側減点：空売り消化日数1.0日分以上（下値の買い戻し需要による下げ渋り警戒）
+            if short_cover_days >= 1.0:
+                score -= 1
+                score_reasons.append("⚠️ 下値に大量の空売り買い戻し圧力: -1")
+
+            # ★パワー充填（Pre）からの本発射加点（売り版）
             if (yesterday_cat == "SELL7_PRE") and (category == "SELL7"):
                 score += 1
                 score_reasons.append("🚀 パワー充填からの本発射: +1")
