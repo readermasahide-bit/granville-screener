@@ -147,10 +147,9 @@
 
       <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col">
         
-        <!-- コントロールパネル：市場タブと入力・操作ボタンが1行に整列 -->
+        <!-- コントロールパネル -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
           
-          <!-- 市場フィルター -->
           <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs self-start sm:self-auto" id="marketFilterContainer">
             <span class="text-slate-500 self-center px-2.5 font-bold border-r border-slate-800 mr-1.5">市場</span>
             <button data-market="ALL" class="market-btn px-3 py-1.5 rounded-lg font-medium bg-slate-800 text-white cursor-pointer">すべて</button>
@@ -159,7 +158,6 @@
             <button data-market="東Ｇ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｇ</button>
           </div>
 
-          <!-- 銘柄コード入力 ＆ 各種ボタン -->
           <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-end">
             <input type="text" id="aiExtractInput" placeholder="銘柄コード (例: 7974)" class="w-full sm:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest">
             <button id="btnAiExtract" class="bg-indigo-900/50 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-700/50 hover:border-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0" title="AI相談用時系列データをコピー">
@@ -211,7 +209,7 @@
         <div class="mt-4 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
           <span id="displayCountLabel" class="font-medium text-slate-300">表示中: 0 件</span>
           <div class="flex items-center gap-3 text-slate-500 font-mono text-[10px]">
-            <span id="footerFormula">乖離率 = (株価 - 基準MA) ÷ 基準MA</span>
+            <span id="footerFormula">行をクリックすると診断カルテを開きます</span>
             <span>•</span>
             <span id="footerBase">ポジションサイズ: Wブレーキ(許容リスク✕売買枠)</span>
           </div>
@@ -349,7 +347,7 @@
         activeMarket: 'ALL',
         searchQuery: '',
         sortOrder: 'none',
-        sortScoreOrder: 'desc' // ★初期状態で「期待度降順」に常時設定
+        sortScoreOrder: 'desc' // 初期状態で「期待度降順」
       };
       
       const MAX_RENDER_ROWS = 150;
@@ -386,6 +384,7 @@
         document.getElementById('settingRiskTolerance').addEventListener('input', updatePosConfigFromUI);
         document.getElementById('settingMaxPosition').addEventListener('input', updatePosConfigFromUI);
 
+        // モーダル外枠クリックで閉じる機能
         const dialog = document.getElementById('diagnosticDialog');
         if (dialog) {
           dialog.addEventListener('click', (event) => {
@@ -395,7 +394,7 @@
           });
         }
 
-        // ★上部の統計窓カードをクリックした時の処理（常に期待度降順ソートを自動適用！）
+        // 上部の統計窓カードをクリックした時の処理（常に期待度降順ソートを自動適用！）
         document.querySelectorAll('.tab-card').forEach(card => {
           card.addEventListener('click', () => {
             const targetTab = card.dataset.tab;
@@ -427,7 +426,6 @@
         switchSystem('mid');
       });
 
-      // 選択中カードのハイライト処理
       function highlightActiveCard(activeTab) {
         document.querySelectorAll('.tab-card').forEach(card => {
           const t = card.dataset.tab;
@@ -926,7 +924,6 @@
         }
       }
 
-      // ★更新：8大分類＋全シグナルの統合集計（Pre合算）
       function updateStats() {
         const counts = {
           BUY1: 0, BUY1_PRE: 0, BUY2: 0, BUY2_PRE: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0,
@@ -952,7 +949,6 @@
           }
         };
 
-        // 買い側：確定足とPreを合算してカードに表示
         const b1Total = counts.BUY1 + counts.BUY1_PRE;
         const b1Prev = (state.prevCounts[sys].BUY1 || 0) + (state.prevCounts[sys].BUY1_PRE || 0);
         updateEl('statBuy1', b1Total, b1Prev);
@@ -967,7 +963,6 @@
 
         updateEl('statBuy4', counts.BUY4, state.prevCounts[sys].BUY4);
 
-        // 売り側
         updateEl('statSell5', counts.SELL5, state.prevCounts[sys].SELL5);
         updateEl('statSell6', counts.SELL6, state.prevCounts[sys].SELL6);
 
@@ -995,7 +990,6 @@
         
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
-        // ★8大分類タブの完全フィルタリング（確定足とPreを統合）
         if (state.activeTab !== 'ALL') {
           if (state.activeTab === 'BUY1') filtered = filtered.filter(r => r[sys].category === 'BUY1' || r[sys].category === 'BUY1_PRE');
           else if (state.activeTab === 'BUY2') filtered = filtered.filter(r => r[sys].category === 'BUY2' || r[sys].category === 'BUY2_PRE');
@@ -1020,7 +1014,6 @@
         } else if (state.sortScoreOrder === 'asc') {
           filtered.sort((a, b) => a[sys].score - b[sys].score);
         } else {
-          // デフォルト：期待度スコアの高い順（降順）
           filtered.sort((a, b) => b[sys].score - a[sys].score);
         }
 
@@ -1049,7 +1042,16 @@
           const sysData = item[sys];
           const isPlus = item.change >= 0;
           const tr = document.createElement('tr');
-          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/40';
+          
+          // ★【大改修】行全体をクリック可能にし、ホバーアニメーションを付与
+          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/70 cursor-pointer transition duration-150 select-none';
+          
+          // ★【大改修】行をクリックした時に診断カルテを即座に表示（リンクやボタン押下時は除外）
+          tr.addEventListener('click', (e) => {
+            if (e.target.closest('a, button')) return;
+            openDiagnosticDialog(item.ticker, sys);
+          });
+
           let marketBadgeClass = "bg-slate-800 text-slate-300";
           if (item.market === "東Ｐ") marketBadgeClass = "bg-emerald-950/80 text-emerald-300 border border-emerald-800/40";
           if (item.market === "東Ｓ") marketBadgeClass = "bg-cyan-950/80 text-cyan-300 border border-cyan-800/40";
@@ -1116,9 +1118,9 @@
               </div>
             </td>
             
-            <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none cursor-help relative group">
+            <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold select-none relative group">
               <span class="hover:text-amber-300">${sysData.score}</span>
-              <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-52 bg-slate-950/95 backdrop-blur border border-slate-800 text-left text-xs p-3 rounded-xl shadow-2xl z-30 select-none">
+              <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 bg-slate-950/95 backdrop-blur border border-slate-800 text-left text-xs p-3 rounded-xl shadow-2xl z-30 select-none">
                 <p class="font-bold text-[10px] text-slate-400 border-b border-slate-800 pb-1 mb-1.5">🌟 期待度スコア評価内訳</p>
                 <ul class="space-y-0.5 text-[10px] font-normal leading-relaxed">
                   ${reasonsListHtml}
@@ -1135,9 +1137,9 @@
               </div>
             </td>
             <td class="p-3">
+              <!-- ★「📋」アイコンを削除し、銘柄名周りをスッキリ整列 -->
               <div class="font-bold text-slate-100 text-sm flex items-center flex-wrap gap-1">
-                <span>${item.name}</span>
-                <button onclick="openDiagnosticDialog('${item.ticker}', '${sys}')" class="text-xs hover:text-cyan-400 ml-1 cursor-pointer select-none focus:outline-none" title="診断カルテを表示">📋</button>
+                <span class="hover:text-cyan-400 transition">${item.name}</span>
                 ${volumeWarning}
                 ${rsBadge}
               </div>
@@ -1190,7 +1192,7 @@
         
         let reasonsHtml = '';
         if (sysData.score_reasons && sysData.score_reasons.length > 0) {
-          reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5 text-slate-300"><span>•</span><span>${r}</span></li>`).join('');
+          reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5"><span>•</span><span>${r}</span></li>`).join('');
         } else {
           reasonsHtml = '<li class="text-slate-500 py-0.5">※加減点なし (基本点 5)</li>';
         }
