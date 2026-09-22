@@ -41,7 +41,6 @@
     <script id="data-results" type="application/json">__PLACEHOLDER_RESULTS__</script>
     <script id="data-hot-sectors" type="application/json">__PLACEHOLDER_HOT_SECTORS__</script>
     <script id="data-prev-counts" type="application/json">__PLACEHOLDER_PREV_COUNTS__</script>
-    <!-- ★手立て2：保有ポートフォリオデータ安全格納タグ -->
     <script id="data-portfolio" type="application/json">__PLACEHOLDER_PORTFOLIO__</script>
   </head>
   <body class="min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-16">
@@ -72,10 +71,9 @@
 
     <main class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-5">
 
-      <!-- ★【新設】マイ保有ポートフォリオ専用ダッシュボード -->
+      <!-- マイ保有ポートフォリオ専用セクション（市場列削除・直感UI化） -->
       <section id="portfolioSection" class="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl flex flex-col space-y-4">
         
-        <!-- ポートフォリオ要約サマリーバー -->
         <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div class="flex items-center gap-2">
             <span class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-sm font-bold">📋</span>
@@ -96,7 +94,6 @@
           </div>
         </div>
 
-        <!-- 本日アクション要否サマリー窓 -->
         <div id="portActionBar" class="flex items-center gap-2 text-xs flex-wrap">
           <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">本日のアクション要否:</span>
           <span id="badgeActionTP" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">🏆 利確: 0件</span>
@@ -105,7 +102,6 @@
           <span id="badgeActionHold" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">🟢 ホールド: 0件</span>
         </div>
 
-        <!-- 保有銘柄テーブル -->
         <div class="overflow-x-auto">
           <table class="w-full text-left">
             <thead>
@@ -121,7 +117,6 @@
               </tr>
             </thead>
             <tbody id="portfolioTableBody" class="divide-y divide-slate-800/60 text-xs">
-              <!-- JSで描画 -->
             </tbody>
           </table>
         </div>
@@ -202,7 +197,6 @@
 
       <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col">
         
-        <!-- コントロールパネル -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
           
           <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs self-start sm:self-auto" id="marketFilterContainer">
@@ -417,7 +411,7 @@
 
       document.addEventListener('DOMContentLoaded', () => {
         loadPosConfig();
-        renderPortfolioSection(); // ★保有ポートフォリオの初期描画
+        renderPortfolioSection();
 
         document.getElementById('btnAiExtract').addEventListener('click', () => {
           const input = document.getElementById('aiExtractInput').value.trim();
@@ -450,7 +444,6 @@
           });
         }
 
-        // 上部統計窓カードクリック処理（期待度降順ソート常時連動）
         document.querySelectorAll('.tab-card').forEach(card => {
           card.addEventListener('click', () => {
             const targetTab = card.dataset.tab;
@@ -481,7 +474,6 @@
         switchSystem('mid');
       });
 
-      // ★【新設】保有ポートフォリオのテーブル＆サマリー描画関数
       function renderPortfolioSection() {
         const tbody = document.getElementById('portfolioTableBody');
         const portList = state.portfolio || [];
@@ -519,7 +511,7 @@
           totalCurrent += currentVal;
 
           if (item.statusLabel.includes('利確')) countTP++;
-          else if (item.statusLabel.includes('損切り')) countSL++;
+          else if (item.statusLabel.includes('損切り') || item.statusLabel.includes('撤退')) countSL++;
           else if (item.statusLabel.includes('逆指値') || item.statusLabel.includes('安全圏') || item.statusLabel.includes('利益確保')) countTrail++;
           else countHold++;
 
@@ -530,7 +522,6 @@
           const tr = document.createElement('tr');
           tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/60 cursor-pointer transition duration-150 select-none';
           
-          // 行クリックで診断カルテ表示
           tr.addEventListener('click', (e) => {
             if (e.target.closest('a, button')) return;
             openDiagnosticDialog(item.code, state.currentSystem);
@@ -564,7 +555,6 @@
         plEl.textContent = `${isTotalPlus ? '+' : ''}${Math.round(totalPL).toLocaleString()} 円 (${isTotalPlus ? '+' : ''}${totalPLRate.toFixed(2)}%)`;
         plEl.className = `font-bold ${isTotalPlus ? 'text-emerald-400' : 'text-rose-400'}`;
 
-        // 要否サマリー窓の更新
         document.getElementById('badgeActionTP').textContent = `🏆 利確: ${countTP}件`;
         document.getElementById('badgeActionSL').textContent = `🛑 損切: ${countSL}件`;
         document.getElementById('badgeActionTrail').textContent = `🛡️ 逆指値変更: ${countTrail}件`;
@@ -1333,7 +1323,7 @@
         
         let reasonsHtml = '';
         if (sysData.score_reasons && sysData.score_reasons.length > 0) {
-          reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5"><span>•</span><span>${r}</span></li>`).join('');
+          reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5 text-slate-300"><span>•</span><span>${r}</span></li>`).join('');
         } else {
           reasonsHtml = '<li class="text-slate-500 py-0.5">※加減点なし (基本点 5)</li>';
         }
