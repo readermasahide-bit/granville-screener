@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 # ==========================================
 SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
 html_output_path = "index.html"
+portfolio_path = "portfolio.csv" # 保有銘柄管理ファイル
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -135,7 +136,7 @@ ticker_to_sector = dict(zip(df_tse['ticker'], df_tse['33業種区分']))
 tickers = list(df_tse['ticker'])
 print(f"東証3市場の個別株 合計 {len(tickers)} 銘柄のスキャンを開始します。")
 
-# ★【JPX公式】決算発表予定日一覧を動的取得（決算直前ガード用）
+# ★【JPX公式】決算発表予定日一覧を動的取得
 print("JPXから決算発表予定日一覧を動的取得中...")
 earnings_dates = {}
 try:
@@ -155,8 +156,7 @@ try:
             code_col = [c for c in df_kessan.columns if 'コード' in str(c)]
             date_col = [c for c in df_kessan.columns if '予定日' in str(c) or '決算発表日' in str(c)]
             if code_col and date_col:
-                c_col = code_col[0]
-                d_col = date_col[0]
+                c_col, d_col = code_col[0], date_col[0]
                 for _, row in df_kessan.dropna(subset=[c_col, d_col]).iterrows():
                     c_str = str(row[c_col]).strip().zfill(4)
                     try:
@@ -168,10 +168,10 @@ try:
 except Exception as e:
     print(f"⚠️ 決算予定日データの動的取得に失敗（スキップして続行）: {e}")
 
-# ★【日証金公式】貸借取引対象銘柄＆日次残高データ（融資残・貸株残・倍率）取得
+# ★【日証金公式】貸借取引対象銘柄＆日次残高データ取得
 print("日証金から貸借取引対象銘柄（空売り可能銘柄）を取得中...")
 margin_shortable_tickers = set()
-margin_balance_dict = {} # ticker: {'ratio': float, 'buy_balance': float, 'short_balance': float}
+margin_balance_dict = {}
 
 try:
     data_page_url = "https://www.taisyaku.jp/data/"
@@ -208,7 +208,6 @@ try:
 except Exception as e:
     print(f"⚠️ 日証金データ取得の通信警告: {e}")
 
-# 日証金日次残高ファイル（zandaka.csv）から融資残・貸株残・倍率を取得
 try:
     zandaka_url = "https://www.taisyaku.jp/data/data-file/zandaka.csv"
     res_zan = requests.get(zandaka_url, headers=headers, timeout=10)
@@ -244,7 +243,7 @@ try:
                 pass
         print(f" -> 日証金日次残高データ: {len(margin_balance_dict)} 銘柄の需給数値を解析完了")
 except Exception as e:
-    print(f"⚠️ 日次残高解析の通信警告（スキップして続行）: {e}")
+    print(f"⚠️ 日次残高解析の通信警告: {e}")
 
 if len(margin_shortable_tickers) == 0:
     print(" -> ⚠️ 日証金が0件のため、プライム市場全銘柄を空売り可能対象として自動救済適用します。")
@@ -352,7 +351,7 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# ★判定および採点ロジック関数（信用消化日数加減点 ＋ 決算ガード ＋ 本発射加点）
+# ★判定および採点ロジック関数
 def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE"):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -1056,10 +1055,108 @@ for shard_key, data_dict in shards.items():
             json.dump(data_dict, f, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
 
+# ======================================================================
+# ★【新規追加】portfolio.csv から保有銘柄の自動エグジット判定を生成
+# ======================================================================
+print("保有銘柄ポートフォリオのエグジット判定を計算中...")
+portfolio_records = []
+if os.path.exists(portfolio_path):
+    try:
+        df_port = pd.read_csv(portfolio_path)
+        c_cols = [c for c in df_port.columns if 'code' in str(c).lower() or 'コード' in str(c)]
+        p_cols = [c for c in df_port.columns if 'price' in str(c).lower() or '買値' in str(c) or '単価' in str(c)]
+        s_cols = [c for c in df_port.columns if 'share' in str(c).lower() or '株数' in str(c) or '数量' in str(c)]
+        
+        if c_cols and p_cols and s_cols:
+            c_c, p_c, s_c = c_cols[0], p_cols[0], s_cols[0]
+            for _, row in df_port.dropna(subset=[c_c, p_c, s_c]).iterrows():
+                try:
+                    c_str = str(row[c_c]).strip().replace('.T', '').zfill(4)
+                    t_key = f"{c_str}.T"
+                    buy_price = float(row[p_c])
+                    shares = int(float(row[s_c]))
+                    
+                    if t_key in bulk_data and not bulk_data[t_key].empty:
+                        df_p = bulk_data[t_key]
+                        today_r = df_p.iloc[-1]
+                        current_price = float(today_r['Close'])
+                        open_p = float(today_r['Open'])
+                        high_p = float(today_r['High'])
+                        low_p = float(today_r['Low'])
+                        
+                        pl_amount = round((current_price - buy_price) * shares)
+                        pl_rate = round(((current_price - buy_price) / buy_price) * 100, 2)
+                        
+                        ma5 = float(df_p['Close'].tail(5).mean())
+                        ma25 = float(df_p['Close'].tail(25).mean()) if len(df_p) >= 25 else ma5
+                        diff_ma25 = ((current_price - ma25) / ma25) * 100
+                        
+                        recent_low20 = float(df_p['Low'].tail(20).min())
+                        recent_low5 = float(df_p['Low'].tail(5).min())
+                        base_sl = math.floor(recent_low20 * 0.995)
+                        
+                        # 4段階エグジット判定 ＆ 安全圏逆指値算出
+                        status_label = "🟢 ホールド (順調)"
+                        action_label = f"推奨逆指値: {base_sl:,} 円"
+                        badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
+                        
+                        is_yin = current_price < open_p
+                        
+                        if current_price <= base_sl or pl_rate <= -5.0:
+                            status_label = "🛑 損切り執行"
+                            action_label = "【現在値で即撤退】"
+                            badge_class = "bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse font-bold"
+                        elif diff_ma25 >= 14.0 and is_yin:
+                            status_label = "🏆 大天井利確 (売り8)"
+                            action_label = "【全利確推奨】"
+                            badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
+                        elif pl_rate > 0 and current_price < ma25:
+                            status_label = "🏁 最終利確 (売り5割込)"
+                            action_label = "【トレンド終了全決済】"
+                            badge_class = "bg-purple-950/80 text-purple-300 border border-purple-500 font-bold"
+                        elif pl_rate >= 3.0 and current_price < ma5:
+                            status_label = "✨ 先行利確 (5日線割)"
+                            action_label = f"【逆指値を {math.floor(ma5):,} 円へ】"
+                            badge_class = "bg-indigo-950/80 text-indigo-300 border border-indigo-500 font-bold"
+                        elif pl_rate >= 6.0:
+                            trail_stop = math.floor(max(buy_price * 1.03, recent_low5))
+                            status_label = "🛡️ 利益確保"
+                            action_label = f"【逆指値を {trail_stop:,} 円へ引き上げ】"
+                            badge_class = "bg-sky-950/80 text-sky-300 border border-sky-500 font-bold"
+                        elif pl_rate >= 3.0:
+                            status_label = "🛡️ 安全圏"
+                            action_label = f"【逆指値を買値 {buy_price:,} 円に変更】"
+                            badge_class = "bg-sky-950/80 text-sky-300 border border-sky-500 font-bold"
+                        elif pl_rate < 0 and current_price > base_sl:
+                            status_label = "⏳ 押し目許容 (静観)"
+                            action_label = f"SL守り待機 ({base_sl:,} 円)"
+                            badge_class = "bg-slate-800 text-slate-400 border border-slate-700"
+
+                        portfolio_records.append({
+                            "code": c_str,
+                            "name": clean_val(ticker_to_name.get(t_key, "不明")),
+                            "shares": shares,
+                            "buyPrice": buy_price,
+                            "currentPrice": current_price,
+                            "plAmount": pl_amount,
+                            "plRate": pl_rate,
+                            "statusLabel": status_label,
+                            "actionLabel": action_label,
+                            "badgeClass": badge_class
+                        })
+                except Exception:
+                    pass
+        print(f" -> 保有ポートフォリオ: {len(portfolio_records)} 銘柄の判定完了")
+    except Exception as e:
+        print(f"⚠️ portfolio.csv の解析エラー（スキップ）: {e}")
+else:
+    print(" -> portfolio.csv が存在しないため保有銘柄セクションは空で出力します")
+
 # HTML出力
 json_data_str = json.dumps(results_list, ensure_ascii=False)
 hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
 prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
+portfolio_json_str = json.dumps(portfolio_records, ensure_ascii=False)
 
 template_path = "template.html"
 if not os.path.exists(template_path):
@@ -1074,6 +1171,7 @@ html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_m
 html_content = html_content.replace("__PLACEHOLDER_HOT_SECTORS__", hot_sectors_json_str)
 html_content = html_content.replace("__PLACEHOLDER_RESULTS__", json_data_str)
 html_content = html_content.replace("__PLACEHOLDER_PREV_COUNTS__", prev_counts_json_str)
+html_content = html_content.replace("__PLACEHOLDER_PORTFOLIO__", portfolio_json_str)
 
 with open(html_output_path, "w", encoding="utf-8") as f:
     f.write(html_content)
