@@ -41,6 +41,8 @@
     <script id="data-results" type="application/json">__PLACEHOLDER_RESULTS__</script>
     <script id="data-hot-sectors" type="application/json">__PLACEHOLDER_HOT_SECTORS__</script>
     <script id="data-prev-counts" type="application/json">__PLACEHOLDER_PREV_COUNTS__</script>
+    <!-- ★手立て2：保有ポートフォリオデータ安全格納タグ -->
+    <script id="data-portfolio" type="application/json">__PLACEHOLDER_PORTFOLIO__</script>
   </head>
   <body class="min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-16">
     
@@ -70,13 +72,68 @@
 
     <main class="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-5">
 
+      <!-- ★【新設】マイ保有ポートフォリオ専用ダッシュボード -->
+      <section id="portfolioSection" class="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl flex flex-col space-y-4">
+        
+        <!-- ポートフォリオ要約サマリーバー -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-sm font-bold">📋</span>
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                マイ保有ポートフォリオ（自動売り時・エグジット判定）
+              </h2>
+              <p class="text-[10px] text-slate-400">portfolio.csv に登録された保有銘柄の現在地・推奨アクション（完全同期中）</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-3 bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800 text-xs font-mono flex-wrap">
+            <div><span class="text-slate-400 text-[10px]">保有:</span> <span id="portTotalCount" class="font-bold text-white">0</span> 銘柄</div>
+            <div class="text-slate-700">|</div>
+            <div><span class="text-slate-400 text-[10px]">投資総額:</span> <span id="portTotalInvest" class="font-bold text-slate-200">0</span> 円</div>
+            <div class="text-slate-700">|</div>
+            <div><span class="text-slate-400 text-[10px]">合計損益:</span> <strong id="portTotalPL" class="font-bold text-emerald-400">0 円 (0.00%)</strong></div>
+          </div>
+        </div>
+
+        <!-- 本日アクション要否サマリー窓 -->
+        <div id="portActionBar" class="flex items-center gap-2 text-xs flex-wrap">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">本日のアクション要否:</span>
+          <span id="badgeActionTP" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">🏆 利確: 0件</span>
+          <span id="badgeActionSL" class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-300 border border-rose-500/20">🛑 損切: 0件</span>
+          <span id="badgeActionTrail" class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 text-sky-300 border border-sky-500/20">🛡️ 逆指値変更: 0件</span>
+          <span id="badgeActionHold" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">🟢 ホールド: 0件</span>
+        </div>
+
+        <!-- 保有銘柄テーブル -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
+                <th class="p-2.5 w-20">コード</th>
+                <th class="p-2.5 min-w-[140px]">銘柄名</th>
+                <th class="p-2.5 text-right w-24">保有株数</th>
+                <th class="p-2.5 text-right w-28">買付単価</th>
+                <th class="p-2.5 text-right w-28">本日終値</th>
+                <th class="p-2.5 text-right w-32">含み損益 (円)</th>
+                <th class="p-2.5 text-right w-24">損益率 (%)</th>
+                <th class="p-2.5 text-left min-w-[240px]">状態・推奨逆指値（証券口座設定用）</th>
+              </tr>
+            </thead>
+            <tbody id="portfolioTableBody" class="divide-y divide-slate-800/60 text-xs">
+              <!-- JSで描画 -->
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
       <div id="hotSectorsBanner" class="hidden bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
       </div>
       
-      <!-- ★【完全集約：8大分類＋全シグナル窓タブ】クリックで即座に該当カテゴリに切り替え＆期待度順自動ソート -->
+      <!-- ★【完全集約：8大分類＋全シグナル窓タブ】 -->
       <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2.5" id="tabCardsContainer">
         
-        <!-- 全シグナル -->
         <div data-tab="ALL" class="tab-card cursor-pointer bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-slate-600">
           <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">全シグナル</span>
           <div class="flex items-baseline justify-between mt-1">
@@ -85,7 +142,6 @@
           </div>
         </div>
 
-        <!-- 買いグループ (1〜4) -->
         <div data-tab="BUY1" class="tab-card cursor-pointer bg-slate-900/80 border border-emerald-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-emerald-400 ring-2 ring-emerald-500/80 bg-emerald-950/20">
           <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">買い1 (新規/Pre)</span>
           <div class="flex items-baseline justify-between mt-1" id="statBuy1">
@@ -114,7 +170,6 @@
           </div>
         </div>
 
-        <!-- 売りグループ (5〜8) -->
         <div data-tab="SELL5" class="tab-card cursor-pointer bg-slate-900/80 border border-rose-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-rose-400">
           <span class="text-[9px] font-bold text-rose-400 uppercase tracking-wider">売り5 (初動)</span>
           <div class="flex items-baseline justify-between mt-1" id="statSell5">
@@ -341,13 +396,14 @@
         results: JSON.parse(document.getElementById('data-results').textContent),
         hotSectors: JSON.parse(document.getElementById('data-hot-sectors').textContent),
         prevCounts: JSON.parse(document.getElementById('data-prev-counts').textContent),
+        portfolio: JSON.parse(document.getElementById('data-portfolio').textContent || '[]'),
         marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
         searchQuery: '',
         sortOrder: 'none',
-        sortScoreOrder: 'desc' // 初期状態で「期待度降順」
+        sortScoreOrder: 'desc'
       };
       
       const MAX_RENDER_ROWS = 150;
@@ -361,6 +417,7 @@
 
       document.addEventListener('DOMContentLoaded', () => {
         loadPosConfig();
+        renderPortfolioSection(); // ★保有ポートフォリオの初期描画
 
         document.getElementById('btnAiExtract').addEventListener('click', () => {
           const input = document.getElementById('aiExtractInput').value.trim();
@@ -384,7 +441,6 @@
         document.getElementById('settingRiskTolerance').addEventListener('input', updatePosConfigFromUI);
         document.getElementById('settingMaxPosition').addEventListener('input', updatePosConfigFromUI);
 
-        // モーダル外枠クリックで閉じる機能
         const dialog = document.getElementById('diagnosticDialog');
         if (dialog) {
           dialog.addEventListener('click', (event) => {
@@ -394,13 +450,12 @@
           });
         }
 
-        // 上部の統計窓カードをクリックした時の処理（常に期待度降順ソートを自動適用！）
+        // 上部統計窓カードクリック処理（期待度降順ソート常時連動）
         document.querySelectorAll('.tab-card').forEach(card => {
           card.addEventListener('click', () => {
             const targetTab = card.dataset.tab;
             state.activeTab = targetTab;
             
-            // ★すべての条件を押した際、常に期待度順（降順）に自動整列して反映！
             state.sortScoreOrder = 'desc';
             state.sortOrder = 'none';
             const sortScoreIcon = document.getElementById('sortScoreIcon');
@@ -425,6 +480,96 @@
         renderHotSectorsBanner();
         switchSystem('mid');
       });
+
+      // ★【新設】保有ポートフォリオのテーブル＆サマリー描画関数
+      function renderPortfolioSection() {
+        const tbody = document.getElementById('portfolioTableBody');
+        const portList = state.portfolio || [];
+        tbody.innerHTML = '';
+
+        if (portList.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8" class="p-6 text-center text-slate-500">
+                <p class="text-xs leading-relaxed">
+                  現在登録されている保有銘柄はありません。<br>
+                  リポジトリの <strong class="text-indigo-400 font-mono">portfolio.csv</strong> に銘柄コード、買値、株数を登録すると、自動でエグジット判定・逆指値指示がここに表示されます。
+                </p>
+              </td>
+            </tr>
+          `;
+          document.getElementById('portTotalCount').textContent = "0";
+          document.getElementById('portTotalInvest').textContent = "0";
+          document.getElementById('portTotalPL').textContent = "0 円 (0.00%)";
+          document.getElementById('portTotalPL').className = "font-bold text-slate-400";
+          return;
+        }
+
+        let totalInvest = 0;
+        let totalCurrent = 0;
+        let countTP = 0;
+        let countSL = 0;
+        let countTrail = 0;
+        let countHold = 0;
+
+        portList.forEach(item => {
+          const invest = item.buyPrice * item.shares;
+          const currentVal = item.currentPrice * item.shares;
+          totalInvest += invest;
+          totalCurrent += currentVal;
+
+          if (item.statusLabel.includes('利確')) countTP++;
+          else if (item.statusLabel.includes('損切り')) countSL++;
+          else if (item.statusLabel.includes('逆指値') || item.statusLabel.includes('安全圏') || item.statusLabel.includes('利益確保')) countTrail++;
+          else countHold++;
+
+          const isPlus = item.plAmount >= 0;
+          const colorClass = isPlus ? "text-emerald-400" : "text-rose-400";
+          const sign = isPlus ? "+" : "";
+
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/60 cursor-pointer transition duration-150 select-none';
+          
+          // 行クリックで診断カルテ表示
+          tr.addEventListener('click', (e) => {
+            if (e.target.closest('a, button')) return;
+            openDiagnosticDialog(item.code, state.currentSystem);
+          });
+
+          tr.innerHTML = `
+            <td class="p-2.5 font-mono font-bold text-white">${item.code}</td>
+            <td class="p-2.5 font-bold text-slate-100 hover:text-cyan-400 transition">${item.name}</td>
+            <td class="p-2.5 text-right font-mono text-slate-300">${item.shares.toLocaleString()} 株</td>
+            <td class="p-2.5 text-right font-mono text-slate-400">${item.buyPrice.toLocaleString()} 円</td>
+            <td class="p-2.5 text-right font-mono font-bold text-white">${item.currentPrice.toLocaleString()} 円</td>
+            <td class="p-2.5 text-right font-mono font-bold ${colorClass}">${sign}${item.plAmount.toLocaleString()} 円</td>
+            <td class="p-2.5 text-right font-mono font-bold ${colorClass}">${sign}${item.plRate.toFixed(2)}%</td>
+            <td class="p-2.5 text-left">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="px-2 py-0.5 rounded text-[10px] ${item.badgeClass}">${item.statusLabel}</span>
+                <span class="text-[11px] font-bold text-slate-200 font-mono">${item.actionLabel}</span>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        const totalPL = totalCurrent - totalInvest;
+        const totalPLRate = totalInvest > 0 ? ((totalPL / totalInvest) * 100) : 0;
+        const isTotalPlus = totalPL >= 0;
+
+        document.getElementById('portTotalCount').textContent = portList.length.toString();
+        document.getElementById('portTotalInvest').textContent = Math.round(totalInvest).toLocaleString();
+        const plEl = document.getElementById('portTotalPL');
+        plEl.textContent = `${isTotalPlus ? '+' : ''}${Math.round(totalPL).toLocaleString()} 円 (${isTotalPlus ? '+' : ''}${totalPLRate.toFixed(2)}%)`;
+        plEl.className = `font-bold ${isTotalPlus ? 'text-emerald-400' : 'text-rose-400'}`;
+
+        // 要否サマリー窓の更新
+        document.getElementById('badgeActionTP').textContent = `🏆 利確: ${countTP}件`;
+        document.getElementById('badgeActionSL').textContent = `🛑 損切: ${countSL}件`;
+        document.getElementById('badgeActionTrail').textContent = `🛡️ 逆指値変更: ${countTrail}件`;
+        document.getElementById('badgeActionHold').textContent = `🟢 ホールド: ${countHold}件`;
+      }
 
       function highlightActiveCard(activeTab) {
         document.querySelectorAll('.tab-card').forEach(card => {
@@ -1006,7 +1151,6 @@
           filtered = filtered.filter(r => r.ticker.includes(state.searchQuery) || r.name.toLowerCase().includes(state.searchQuery) || r.sector.toLowerCase().includes(state.searchQuery));
         }
 
-        // ★ソート処理：デフォルトおよびタブ切り替え時は常に「期待度スコア降順（高い順）」
         if (state.sortOrder === 'asc') {
           filtered.sort((a, b) => a.price - b.price);
         } else if (state.sortOrder === 'desc') {
@@ -1043,10 +1187,8 @@
           const isPlus = item.change >= 0;
           const tr = document.createElement('tr');
           
-          // ★【大改修】行全体をクリック可能にし、ホバーアニメーションを付与
           tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/70 cursor-pointer transition duration-150 select-none';
           
-          // ★【大改修】行をクリックした時に診断カルテを即座に表示（リンクやボタン押下時は除外）
           tr.addEventListener('click', (e) => {
             if (e.target.closest('a, button')) return;
             openDiagnosticDialog(item.ticker, sys);
@@ -1137,7 +1279,6 @@
               </div>
             </td>
             <td class="p-3">
-              <!-- ★「📋」アイコンを削除し、銘柄名周りをスッキリ整列 -->
               <div class="font-bold text-slate-100 text-sm flex items-center flex-wrap gap-1">
                 <span class="hover:text-cyan-400 transition">${item.name}</span>
                 ${volumeWarning}
