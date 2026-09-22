@@ -93,9 +93,13 @@
               <div class="text-slate-700">|</div>
               <div><span class="text-slate-400 text-[10px]">損益:</span> <strong id="portTotalPL" class="font-bold text-emerald-400">0 円</strong></div>
             </div>
-            <!-- ★新設：スマート登録ボタン -->
-            <button id="btnOpenAddPortfolio" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/20 shrink-0">
+            <!-- 保有登録ボタン -->
+            <button id="btnOpenAddPortfolio" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/20 shrink-0">
               <span>➕</span> 保有登録
+            </button>
+            <!-- ★新設：スクリーナー更新ボタン（任意で即時実行） -->
+            <button id="btnTriggerActions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-sm shrink-0" title="GitHub Actions を起動して最新データで全体更新">
+              <span>🔄</span> スクリーナー更新
             </button>
           </div>
         </div>
@@ -391,7 +395,7 @@
         </div>
       </dialog>
 
-      <!-- ★【新設】保有銘柄登録モーダル（GitHub直接連携） -->
+      <!-- 保有銘柄登録モーダル（連続登録対応版） -->
       <dialog id="portfolioEntryDialog" class="bg-slate-900 border border-indigo-500/40 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-md w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
         <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
           <h3 class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
@@ -437,9 +441,9 @@
           </details>
 
           <div class="pt-2 flex justify-end gap-2">
-            <button type="button" onclick="closePortfolioEntryDialog()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold cursor-pointer">キャンセル</button>
+            <button type="button" onclick="closePortfolioEntryDialog()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold cursor-pointer">閉じる</button>
             <button type="submit" id="btnSubmitPortfolio" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20 cursor-pointer flex items-center gap-1.5">
-              <span>💾</span> 保存してGitHubに反映
+              <span>💾</span> 保存する (連続登録可)
             </button>
           </div>
         </form>
@@ -477,6 +481,8 @@
         renderPortfolioSection();
 
         document.getElementById('btnOpenAddPortfolio').addEventListener('click', openPortfolioEntryDialog);
+        // ★新設：スクリーナー更新ボタンイベント
+        document.getElementById('btnTriggerActions').addEventListener('click', handleTriggerActions);
 
         document.getElementById('btnAiExtract').addEventListener('click', () => {
           const input = document.getElementById('aiExtractInput').value.trim();
@@ -500,7 +506,6 @@
         document.getElementById('settingRiskTolerance').addEventListener('input', updatePosConfigFromUI);
         document.getElementById('settingMaxPosition').addEventListener('input', updatePosConfigFromUI);
 
-        // ダイアログ外枠クリックで閉じる処理
         const diag = document.getElementById('diagnosticDialog');
         if (diag) {
           diag.addEventListener('click', (e) => { if (e.target === diag) diag.close(); });
@@ -541,7 +546,6 @@
         switchSystem('mid');
       });
 
-      // ★保有ポートフォリオテーブル描画
       function renderPortfolioSection() {
         const tbody = document.getElementById('portfolioTableBody');
         const portList = state.portfolio || [];
@@ -634,7 +638,6 @@
         document.getElementById('badgeActionHold').textContent = `🟢 ホールド: ${countHold}件`;
       }
 
-      // ★GitHub API連携処理（portfolio.csv の取得・追加・削除・コミット）
       function loadGitHubConfig() {
         const owner = localStorage.getItem('gh_owner') || '';
         const repo = localStorage.getItem('gh_repo') || '';
@@ -650,12 +653,14 @@
         document.getElementById('portInputPrice').value = '';
         document.getElementById('portInputShares').value = '100';
         document.getElementById('portfolioEntryDialog').showModal();
+        document.getElementById('portInputCode').focus();
       }
 
       function closePortfolioEntryDialog() {
         document.getElementById('portfolioEntryDialog').close();
       }
 
+      // ★登録処理（Actionsは起動せず、CSVにのみ高速追記）
       async function handlePortfolioSubmit(e) {
         e.preventDefault();
         const code = document.getElementById('portInputCode').value.trim().replace(/[^0-9]/g, '');
@@ -677,10 +682,9 @@
 
         const btn = document.getElementById('btnSubmitPortfolio');
         btn.disabled = true;
-        btn.innerHTML = `<span>⏳</span> GitHubへ保存中...`;
+        btn.innerHTML = `<span>⏳</span> 保存中...`;
 
         try {
-          // 1. 既存の portfolio.csv を取得
           const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/portfolio.csv`;
           const getRes = await fetch(apiUrl, {
             headers: {
@@ -695,22 +699,17 @@
           if (getRes.status === 200) {
             const fileData = await getRes.json();
             sha = fileData.sha;
-            // Base64デコード
             currentCsvText = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
           }
 
-          // 行の追加
           const lines = currentCsvText.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
           if (lines.length === 0 || !lines[0].toLowerCase().includes('code')) {
             lines.unshift("code,price,shares");
           }
           lines.push(`${code},${price},${shares}`);
           const newCsvText = lines.join('\n') + '\n';
-
-          // Base64エンコード
           const encodedContent = btoa(unescape(encodeURIComponent(newCsvText)));
 
-          // 2. PUTでファイルを更新コミット
           const putRes = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
@@ -730,31 +729,23 @@
             throw new Error(errJson.message || "GitHub APIの更新に失敗しました。");
           }
 
-          // 3. 任意：GitHub Actionsの自動起動（update.yml）
-          try {
-            await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/update.yml/dispatches`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/vnd.github+json',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ ref: 'main' })
-            });
-          } catch(e) {}
-
-          alert(`✅ [${code}] の登録が成功しました！\n\nGitHubの portfolio.csv が更新されました。Actionsの自動更新（約5分）完了後に最新の損益・エグジット判定が表示されます。`);
-          closePortfolioEntryDialog();
+          alert(`✅ [${code}] の登録が完了しました！\n\nGitHubの portfolio.csv に保存されました。続けて他の銘柄も登録できます。\n画面へ反映したい時は「🔄 スクリーナー更新」ボタンを押すか、夕方18時の自動更新をお待ちください。`);
+          
+          // 入力フォームをクリアして連続入力しやすくする
+          document.getElementById('portInputCode').value = '';
+          document.getElementById('portInputPrice').value = '';
+          document.getElementById('portInputCode').focus();
 
         } catch(err) {
           console.error(err);
-          alert(`エラーが発生しました:\n${err.message}\n\n※Tokenの権限(Contents: Read and write)やリポジトリ名を確認してください。`);
+          alert(`エラーが発生しました:\n${err.message}`);
         } finally {
           btn.disabled = false;
-          btn.innerHTML = `<span>💾</span> 保存してGitHubに反映`;
+          btn.innerHTML = `<span>💾</span> 保存する (連続登録可)`;
         }
       }
 
+      // ★削除処理（Actionsは起動せず、CSVからのみ高速削除）
       async function handleDeletePortfolioItem(targetCode) {
         if (!confirm(`銘柄コード [${targetCode}] を売却済として portfolio.csv から削除しますか？`)) {
           return;
@@ -783,10 +774,9 @@
           const sha = fileData.sha;
           const currentCsvText = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
 
-          // 該当コードの行を除外
           const lines = currentCsvText.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
           const newLines = lines.filter((l, idx) => {
-            if (idx === 0) return true; // ヘッダーは維持
+            if (idx === 0) return true;
             const parts = l.split(',');
             return parts[0].trim().replace(/[^0-9]/g, '') !== targetCode;
           });
@@ -810,24 +800,57 @@
 
           if (!putRes.ok) throw new Error("GitHubへの更新反映に失敗しました。");
 
-          // Actionsの自動起動
-          try {
-            await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/update.yml/dispatches`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/vnd.github+json',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ ref: 'main' })
-            });
-          } catch(e) {}
-
-          alert(`✅ [${targetCode}] を削除しました。Actions更新完了後に画面から消去されます。`);
+          alert(`✅ [${targetCode}] を削除しました。\n画面へ反映したい時は「🔄 スクリーナー更新」ボタンを押すか、夕方18時の自動更新をお待ちください。`);
 
         } catch(err) {
           console.error(err);
           alert(`削除エラー: ${err.message}`);
+        }
+      }
+
+      // ★新設：手動でのスクリーナー全体更新トリガー
+      async function handleTriggerActions() {
+        const owner = localStorage.getItem('gh_owner') || '';
+        const repo = localStorage.getItem('gh_repo') || '';
+        const token = localStorage.getItem('gh_token') || '';
+
+        if (!owner || !repo || !token) {
+          alert("GitHub連携設定が必要です。「➕ 保有登録」画面でTokenを設定してください。");
+          return;
+        }
+
+        if (!confirm("GitHub Actions を起動して全銘柄のスキャン＆最新エグジット判定（約5〜7分）を開始しますか？")) {
+          return;
+        }
+
+        const btn = document.getElementById('btnTriggerActions');
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳</span> 更新リクエスト中...`;
+
+        try {
+          const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/update.yml/dispatches`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/vnd.github+json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ref: 'main' })
+          });
+
+          if (!res.ok) {
+            const errJson = await res.json();
+            throw new Error(errJson.message || "更新起動に失敗しました。");
+          }
+
+          alert("🚀 スクリーナーの全体更新を開始しました！\n\nクラウド上で全銘柄のスキャンとポートフォリオ計算が行われます。\n約5〜7分後にブラウザを再読み込み（リロード）して最新結果をご確認ください。");
+          btn.innerHTML = `<span>⏳</span> クラウド実行中(約5分)`;
+
+        } catch(err) {
+          console.error(err);
+          alert(`更新エラー: ${err.message}`);
+          btn.disabled = false;
+          btn.innerHTML = `<span>🔄</span> スクリーナー更新`;
         }
       }
 
@@ -1220,7 +1243,7 @@
           state.sortScoreOrder = 'none';
         }
         const sortScoreIcon = document.getElementById('sortScoreIcon');
-        if (state.sortScoreOrder === 'asc') sortScoreIcon.textContent = '▲';
+        if (state.sortScoreIcon) sortScoreIcon.textContent = '▲';
         else if (state.sortScoreOrder === 'desc') sortScoreIcon.textContent = '▼';
         else sortScoreIcon.textContent = '↕';
         renderTable();
@@ -1311,7 +1334,7 @@
           if (expPNormal) expPNormal.textContent = '-12.0%';
           if (expPSurge) expPSurge.textContent = '-20.0%';
           if (expS) expS.textContent = '-18.0%';
-          if (expG) expG.textContent = '-18.0%';
+          if (expG) expG.textContent = '-20.0%';
         }
         updateStats();
         highlightActiveCard(state.activeTab);
@@ -1593,7 +1616,7 @@
         
         let reasonsHtml = '';
         if (sysData.score_reasons && sysData.score_reasons.length > 0) {
-          reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5"><span>•</span><span>${r}</span></li>`).join('');
+          reasonsHtml = sysData.score_reasons.map(r => `<li class="flex items-center gap-1.5 py-0.5 text-slate-300"><span>•</span><span>${r}</span></li>`).join('');
         } else {
           reasonsHtml = '<li class="text-slate-500 py-0.5">※加減点なし (基本点 5)</li>';
         }
