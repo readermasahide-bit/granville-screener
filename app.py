@@ -10,11 +10,14 @@ import yfinance as yf
 from datetime import datetime, timedelta, timezone
 
 # ==========================================
-# ★ 設定パラメータ（クラウド対応）
+# ★ 設定パラメータ
 # ==========================================
-SYSTEM_TYPE = "mid"  # "short"(5/25) または "mid"(25/75)
+SYSTEM_TYPE = "mid"
 html_output_path = "index.html"
 portfolio_path = "portfolio.csv"
+data_dir = "data"
+os.makedirs(data_dir, exist_ok=True)
+results_json_path = os.path.join(data_dir, "results.json")
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -80,40 +83,38 @@ def extract_results_json(text):
                             return text[b_start:i+1]
     return None
 
+# --- 前日データの読み込み（HTMLパースではなくJSONを直接読むだけでOKに！） ---
 prev_counts = {
     "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0},
     "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0}
 }
 prev_results_by_ticker = {}
 
-if os.path.exists(html_output_path):
-    print("既存の index.html から前日の集計データを自動解析中...")
+if os.path.exists(results_json_path):
+    print("前回の results.json から集計データを自動解析中...")
     try:
-        with open(html_output_path, "r", encoding="utf-8") as f:
-            old_html = f.read()
-        prev_results_json = extract_results_json(old_html)
-        if prev_results_json:
-            prev_results = json.loads(prev_results_json)
-            for item in prev_results:
-                for sys_key in ["short", "mid"]:
-                    cat = item.get(sys_key, {}).get("category", "NONE")
-                    if cat in prev_counts[sys_key]:
-                        prev_counts[sys_key][cat] += 1
-                ticker_key = item.get("ticker")
-                if ticker_key:
-                    prev_results_by_ticker[ticker_key] = item
-                        
+        with open(results_json_path, "r", encoding="utf-8") as f:
+            prev_results = json.load(f)
+            
+        for item in prev_results:
             for sys_key in ["short", "mid"]:
-                prev_counts[sys_key]["TOTAL"] = len(prev_results)
-                total_active = 0
-                for cat in ["BUY1", "BUY1_PRE", "BUY2", "BUY2_PRE", "BUY3", "BUY3_PRE", "BUY4", "SELL5", "SELL6", "SELL7", "SELL7_PRE", "SELL8"]:
-                    total_active += prev_counts[sys_key].get(cat, 0)
-                prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
-            print(f" -> 前日データのパースに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
-        else:
-            print(" -> 前日データ(results)の抽出パターンが見つかりませんでした。")
+                cat = item.get(sys_key, {}).get("category", "NONE")
+                if cat in prev_counts[sys_key]:
+                    prev_counts[sys_key][cat] += 1
+            ticker_key = item.get("ticker")
+            if ticker_key:
+                prev_results_by_ticker[ticker_key] = item
+                    
+        for sys_key in ["short", "mid"]:
+            prev_counts[sys_key]["TOTAL"] = len(prev_results)
+            total_active = sum(prev_counts[sys_key].get(cat, 0) for cat in [
+                "BUY1", "BUY1_PRE", "BUY2", "BUY2_PRE", "BUY3", "BUY3_PRE", "BUY4",
+                "SELL5", "SELL6", "SELL7", "SELL7_PRE", "SELL8"
+            ])
+            prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
+        print(f" -> 前日データの読み込みに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
     except Exception as e:
-        print(f" -> 前日データの読み込みに失敗（初回実行として無視します）: {e}")
+        print(f" -> 前日データの読み込みに失敗: {e}")
 
 # 1. JPXから上場銘柄一覧をダウンロード
 jpx_url = "https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xlsx"
@@ -1185,29 +1186,43 @@ if os.path.exists(portfolio_path):
 else:
     print(" -> portfolio.csv が存在しないため保有銘柄セクションは空で出力します")
 
-# HTML出力
-json_data_str = json.dumps(results_list, ensure_ascii=False)
-hot_sectors_json_str = json.dumps(hot_sectors, ensure_ascii=False)
-prev_counts_json_str = json.dumps(prev_counts, ensure_ascii=False)
-portfolio_json_str = json.dumps(portfolio_records, ensure_ascii=False)
+# ==========================================
+# ★ データ出力（JSONファイルとして独立保存）
+# ==========================================
+data_dir = "data"
+os.makedirs(data_dir, exist_ok=True)
 
+print("最新データを data/ フォルダに出力中...")
+
+# 1. 各データを個別のJSONファイルに保存
+with open(os.path.join(data_dir, "results.json"), "w", encoding="utf-8") as f:
+    json.dump(results_list, f, ensure_ascii=False)
+
+with open(os.path.join(data_dir, "hot_sectors.json"), "w", encoding="utf-8") as f:
+    json.dump(hot_sectors, f, ensure_ascii=False)
+
+with open(os.path.join(data_dir, "prev_counts.json"), "w", encoding="utf-8") as f:
+    json.dump(prev_counts, f, ensure_ascii=False)
+
+with open(os.path.join(data_dir, "portfolio.json"), "w", encoding="utf-8") as f:
+    json.dump(portfolio_records, f, ensure_ascii=False)
+
+# 2. 更新時刻などのメタ情報も保存
+meta_info = {
+    "lastUpdate": current_time_str,
+    "marketMedian": round(market_median_change, 4)
+}
+with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
+    json.dump(meta_info, f, ensure_ascii=False)
+
+# 3. template.html を index.html としてそのままコピー配置（データ置換は不要）
 template_path = "template.html"
-if not os.path.exists(template_path):
-    raise FileNotFoundError(f"テンプレートファイル '{template_path}' が見つかりません。")
+if os.path.exists(template_path):
+    with open(template_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    with open(html_output_path, "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print(f"👉 画面ファイル配置完了: {html_output_path}")
 
-with open(template_path, "r", encoding="utf-8") as f:
-    html_template = f.read()
-
-html_content = html_template
-html_content = html_content.replace("__LAST_UPDATE__", current_time_str)
-html_content = html_content.replace("__PLACEHOLDER_MARKET_MEDIAN__", f"{market_median_change:.4f}")
-html_content = html_content.replace("__PLACEHOLDER_HOT_SECTORS__", hot_sectors_json_str)
-html_content = html_content.replace("__PLACEHOLDER_RESULTS__", json_data_str)
-html_content = html_content.replace("__PLACEHOLDER_PREV_COUNTS__", prev_counts_json_str)
-html_content = html_content.replace("__PLACEHOLDER_PORTFOLIO__", portfolio_json_str)
-
-with open(html_output_path, "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print(f"\n--- HTML生成が完了しました ---")
-print(f"👉 生成されたファイル: {html_output_path} (自動更新時刻：{current_time_str})")
+print(f"\n--- データ更新およびファイル出力が完了しました ---")
+print(f"👉 出力フォルダ: {data_dir}/ (自動更新時刻：{current_time_str})")
