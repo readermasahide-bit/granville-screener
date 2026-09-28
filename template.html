@@ -38,10 +38,6 @@
       ::-webkit-scrollbar-thumb:hover { background: #3c4f74; }
     </style>
 
-    <script id="data-results" type="application/json">__PLACEHOLDER_RESULTS__</script>
-    <script id="data-hot-sectors" type="application/json">__PLACEHOLDER_HOT_SECTORS__</script>
-    <script id="data-prev-counts" type="application/json">__PLACEHOLDER_PREV_COUNTS__</script>
-    <script id="data-portfolio" type="application/json">__PLACEHOLDER_PORTFOLIO__</script>
   </head>
   <body class="min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-16">
     
@@ -54,7 +50,7 @@
               全自動グランビル・スクリーナー
               <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-normal">PRO v4.0_ALL_WEATHER</span>
             </h1>
-            <p class="text-xs text-slate-400 hidden sm:block">東証全市場自動解析・買い/売り全天候型ロジック（最終更新：__LAST_UPDATE__）</p>
+            <p class="text-xs text-slate-400 hidden sm:block">東証全市場自動解析・買い/売り全天候型ロジック（最終更新：<span id="lastUpdateTime">読み込み中...</span>）</p>
           </div>
         </div>
         
@@ -451,13 +447,14 @@
 
     </main>
 
-    <script>
+<script>
+      // 1. 初期状態は空にしておく
       const state = {
-        results: JSON.parse(document.getElementById('data-results').textContent),
-        hotSectors: JSON.parse(document.getElementById('data-hot-sectors').textContent),
-        prevCounts: JSON.parse(document.getElementById('data-prev-counts').textContent),
-        portfolio: JSON.parse(document.getElementById('data-portfolio').textContent || '[]'),
-        marketMedian: __PLACEHOLDER_MARKET_MEDIAN__,
+        results: [],
+        hotSectors: [],
+        prevCounts: { short: {}, mid: {} },
+        portfolio: [],
+        marketMedian: 0.0,
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
@@ -475,7 +472,31 @@
         unitShare: 100
       };
 
-      document.addEventListener('DOMContentLoaded', () => {
+      // 2. 画面起動時に data/ フォルダから各JSONを一括読み込み（async を追加）
+      document.addEventListener('DOMContentLoaded', async () => {
+        try {
+          const [resResults, resHot, resPrev, resPort, resMeta] = await Promise.all([
+            fetch('./data/results.json').then(r => r.json()),
+            fetch('./data/hot_sectors.json').then(r => r.json()),
+            fetch('./data/prev_counts.json').then(r => r.json()),
+            fetch('./data/portfolio.json').then(r => r.json()),
+            fetch('./data/meta.json').then(r => r.json())
+          ]);
+
+          state.results = resResults;
+          state.hotSectors = resHot;
+          state.prevCounts = resPrev;
+          state.portfolio = resPort;
+          state.marketMedian = resMeta.marketMedian || 0.0;
+
+          // 更新日時の表示を書き換え
+          const timeEl = document.getElementById('lastUpdateTime');
+          if (timeEl && resMeta.lastUpdate) {
+            timeEl.textContent = resMeta.lastUpdate;
+          }
+        } catch (err) {
+          console.error("データの読み込みに失敗しました:", err);
+        }
         loadPosConfig();
         loadGitHubConfig();
         renderPortfolioSection();
