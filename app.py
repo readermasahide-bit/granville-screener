@@ -1042,15 +1042,18 @@ for item in results_list:
     is_strong_relative = False
     if market_median_change <= -1.0:
         is_strong_relative = item["changeRate"] >= (market_median_change + 1.5)
+        
     if is_strong_relative:
         item["isStrongRelative"] = True
         for sys_key in ["short", "mid"]:
-            if item[sys_key]["category"] != "NONE":
-                new_score = min(10, item[sys_key]["score"] + 1)
-                item[sys_key]["score"] = new_score
-                if "score_reasons" not in item[sys_key] or item[sys_key]["score_reasons"] is None:
-                item[sys_key]["score_reasons"] = []
-                item[sys_key]["score_reasons"].append("🛡️ 地合い強気: +1")
+            sys_data = item[sys_key]
+            if sys_data["category"] != "NONE":
+                new_score = min(10, sys_data["score"] + 1)
+                sys_data["score"] = new_score
+                
+                if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
+                    sys_data["score_reasons"] = []
+                sys_data["score_reasons"].append("🛡️ 地合い強気: +1")
 
 # 履歴データ分割出力 (100分割シャーディング)
 print("AI相談用の履歴データを分割出力しています...")
