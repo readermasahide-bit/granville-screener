@@ -1048,6 +1048,9 @@ for item in results_list:
             if item[sys_key]["category"] != "NONE":
                 new_score = min(10, item[sys_key]["score"] + 1)
                 item[sys_key]["score"] = new_score
+                if "score_reasons" not in item[sys_key] or item[sys_key]["score_reasons"] is None:
+                item[sys_key]["score_reasons"] = []
+                item[sys_key]["score_reasons"].append("🛡️ 地合い強気: +1")
 
 # 履歴データ分割出力 (100分割シャーディング)
 print("AI相談用の履歴データを分割出力しています...")
