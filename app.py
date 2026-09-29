@@ -571,19 +571,33 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             badge_class = "bg-sky-600/10 text-sky-400 border border-sky-500/20"
             reason = f"上昇トレンド中、長期線を一時下抜け後に直下で踏み止まり。本日中に再上抜けが期待される状態です。"
 
-    # ----------------------------------------------------
+# ----------------------------------------------------
     # 買い3：押し目反発 ＆ 買い3-Pre（押し目待ち伏せ）
     # ----------------------------------------------------
+    # ★【新規】短期線（25日線）乖離率の事前計算
+    short_diff_rate = ((price_today - short_ma_today) / short_ma_today) * 100
+
+    # ★【改定1：急所1】中期設定(25/75)時の25日線トレンド健全性チェック
+    # 25日線が75日線の上にあり（GC状態維持）、かつ25日線乖離が-6.0%以内であること
+    is_mid_trend_sound = True
+    if long_window > 25:
+        is_mid_trend_sound = (short_ma_today >= long_ma_today) and (short_diff_rate >= -6.0)
+
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     is_close_to_ma = 0.0 < diff_rate <= 3.5
-    is_rebound = is_yang_candle and is_price_up
+
+    # ★【改定2：急所2】反発の質の向上
+    # 単なるプラス引けだけでなく、自力で実体+0.8%以上押し返していること（コマ足微反発の排除）
+    is_rebound = is_yang_candle and is_price_up and (candle_body_pct >= 0.8)
+
     not_crossed_below_recent = (df_temp.iloc[-6:-1]['Close'] >= df_temp.iloc[-6:-1]['long_ma']).all()
     is_initial_dip_rebound = is_long_bottoming_past and was_above_recently and is_close_to_ma and is_rebound and not_crossed_below_recent
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
     is_initial_dip_resting = is_long_bottoming_past and was_above_recently and is_resting_on_ma and not_crossed_below_recent
 
-    if category == "NONE" and not_crossed_below_recent and is_long_ma_rising:
+    # ★親IFに「is_mid_trend_sound (中期25日線の健全性)」を追加！
+    if category == "NONE" and not_crossed_below_recent and is_long_ma_rising and is_mid_trend_sound:
         if has_pulled_back and is_close_to_ma and is_rebound:
             category = "BUY3"
             category_name = "買い3：押し目反発"
@@ -604,7 +618,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             category_name = "買い3-Pre：初押し(待ち伏せ)"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
-
+            
     # ----------------------------------------------------
     # ★ 信用売りシグナル判定（売り5〜8 ＆ 売り7-Pre：貸借銘柄のみ点灯）
     # ----------------------------------------------------
