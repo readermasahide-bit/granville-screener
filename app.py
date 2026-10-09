@@ -1144,43 +1144,71 @@ if os.path.exists(portfolio_path):
                         is_crossed_below_long_ma = (yesterday_price >= ma_long_yesterday) and (current_price < ma_long_today)
                         is_yin = current_price < open_p
                         
-                        # エグジット判定
+                        # ======================================================
+                        # ★ 完全改定版エグジット判定（早すぎる同値狩り・ノイズ狩りの完全防止）
+                        # ======================================================
+                        recent_low10 = float(df_p['Low'].tail(10).min())
+                        
+                        # 0. デフォルト（初期状態: 0%〜3%未満の育成中）
                         status_label = "🟢 ホールド (順調)"
                         action_label = f"推奨逆指値: {base_sl:,} 円"
                         badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
-                        
+
+                        # 1. 損切り防衛（最優先）
                         if current_price <= base_sl or pl_rate <= -5.0:
                             status_label = "🛑 損切り執行"
                             action_label = "【現在値で即撤退】"
                             badge_class = "bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse font-bold"
+
+                        # 2. 戻り天井での逃げ（買値以下で長期線直下反落）
                         elif pl_rate < 0 and current_price < ma_long_today and diff_ma_long >= -3.5 and is_yin:
-                            # 買値以下で長期線直下まで戻り反落（最後の逃げ場）
                             status_label = "🏃 戻り撤退 (売り7)"
                             action_label = "【戻り天井で手仕舞い】"
                             badge_class = "bg-red-950/80 text-red-300 border border-red-500 font-bold"
+
+                        # 3. 異常過熱（大天井利確）
                         elif diff_ma_long >= 14.0 and is_yin and pl_rate >= 8.0:
                             status_label = "🏆 大天井利確 (売り8)"
                             action_label = "【全利確推奨】"
                             badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
+
+                        # 4. 長期トレンド崩壊（長期線割り込み）
                         elif pl_rate >= 2.0 and is_crossed_below_long_ma and buy_price >= ma_long_yesterday:
-                            # 長期線の上で買った株が、本日明確に長期線を割り込んだ時のみ最終利確
                             status_label = "🏁 最終利確 (売り5割込)"
                             action_label = "【トレンド終了全決済】"
                             badge_class = "bg-purple-950/80 text-purple-300 border border-purple-500 font-bold"
-                        elif pl_rate >= 3.0 and current_price < ma_short_today and yesterday_price >= ma_short_today:
-                            # 短期線を本日下抜けた先行利確
-                            status_label = "✨ 先行利確 (短期線割)"
-                            action_label = f"【逆指値を {math.floor(ma_short_today):,} 円へ】"
-                            badge_class = "bg-indigo-950/80 text-indigo-300 border border-indigo-500 font-bold"
-                        elif pl_rate >= 6.0:
-                            trail_stop = math.floor(max(buy_price * 1.03, recent_low5))
-                            status_label = "🛡️ 利益確保"
-                            action_label = f"【逆指値を {trail_stop:,} 円へ引き上げ】"
+
+                        # 5. 【利大確定ゾーン：+8.0%以上】
+                        elif pl_rate >= 8.0:
+                            if current_price < ma_short_today and yesterday_price >= ma_short_today:
+                                # +8%以上伸びた後であれば、短期線割れでの手仕舞いは「立派な利食い」
+                                status_label = "✨ 先行利確 (短期線割)"
+                                action_label = "【短期線割れのため成行決済】"
+                                badge_class = "bg-indigo-950/80 text-indigo-300 border border-indigo-500 font-bold"
+                            else:
+                                # 短期線を維持している間は直近5日安値に沿って利益を追従
+                                trail_stop = math.floor(max(buy_price * 1.04, recent_low5))
+                                status_label = "🏆 利益確保"
+                                action_label = f"【逆指値を {trail_stop:,} 円へ引き上げ】"
+                                badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
+
+                        # 6. 【安全圏移行ゾーン：+5.0%以上】
+                        # ★急所：押し目が買値を超えた（安値切り上げ）を確認できた時だけ、買値以上に引き上げる
+                        elif pl_rate >= 5.0 and recent_low5 >= buy_price:
+                            trail_stop = math.floor(max(buy_price * 1.005, recent_low5 * 0.995))
+                            status_label = "🛡️ 安全圏 (押し目上)"
+                            action_label = f"【逆指値を {trail_stop:,} 円に変更】"
                             badge_class = "bg-sky-950/80 text-sky-300 border border-sky-500 font-bold"
+
+                        # 7. 【巡航・育成ゾーン：+3.0%〜+5.0%未満】
+                        # ★急所：買値には戻さない！直近10日安値へSLを少し詰めるだけで、押し目の余白を残す
                         elif pl_rate >= 3.0:
-                            status_label = "🛡️ 安全圏"
-                            action_label = f"【逆指値を買値 {buy_price:,} 円に変更】"
-                            badge_class = "bg-sky-950/80 text-sky-300 border border-sky-500 font-bold"
+                            tight_sl = math.floor(max(base_sl, recent_low10 * 0.995))
+                            status_label = "🌱 巡航ホールド"
+                            action_label = f"SL維持・防衛 ({tight_sl:,} 円)"
+                            badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
+
+                        # 8. 押し目静観ゾーン（含み損だが初期損切りライン以上）
                         elif pl_rate < 0 and current_price > base_sl:
                             status_label = "⏳ 押し目許容 (静観)"
                             action_label = f"SL守り待機 ({base_sl:,} 円)"
