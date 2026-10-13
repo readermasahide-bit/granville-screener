@@ -1103,7 +1103,8 @@ print("保有銘柄ポートフォリオのエグジット判定を計算中..."
 portfolio_records = []
 if os.path.exists(portfolio_path):
     try:
-        df_port = pd.read_csv(portfolio_path)
+        # ★0銘柄対策: dtype=str で読み込み、コードが勝手に数値(1961.0など)化されるのを防ぐ
+        df_port = pd.read_csv(portfolio_path, dtype=str)
         c_cols = [c for c in df_port.columns if 'code' in str(c).lower() or 'コード' in str(c)]
         p_cols = [c for c in df_port.columns if 'price' in str(c).lower() or '買値' in str(c) or '単価' in str(c)]
         s_cols = [c for c in df_port.columns if 'share' in str(c).lower() or '株数' in str(c) or '数量' in str(c)]
@@ -1112,8 +1113,13 @@ if os.path.exists(portfolio_path):
             c_c, p_c, s_c = c_cols[0], p_cols[0], s_cols[0]
             for _, row in df_port.dropna(subset=[c_c, p_c, s_c]).iterrows():
                 try:
-                    c_str = str(row[c_c]).strip().replace('.T', '').zfill(4)
+                    # ★0銘柄対策: コード末尾に .0 がついても確実に「4桁コード」として抽出する
+                    raw_code = str(row[c_c]).strip().replace('.T', '')
+                    if '.' in raw_code:
+                        raw_code = raw_code.split('.')[0]
+                    c_str = raw_code.zfill(4)
                     t_key = f"{c_str}.T"
+                    
                     buy_price = float(row[p_c])
                     shares = int(float(row[s_c]))
                     
@@ -1129,7 +1135,10 @@ if os.path.exists(portfolio_path):
                         pl_amount = round((current_price - buy_price) * shares)
                         pl_rate = round(((current_price - buy_price) / buy_price) * 100, 2)
                         
+                        # ==========================================================
                         # ★システム設定（短期5/25 vs 中期25/75）に移動平均線を完全連動！
+                        # （以前正常に動作していた計算式をそのまま100%維持）
+                        # ==========================================================
                         ma_short_today = float(df_p['Close'].tail(short_window).mean())
                         ma_long_today = float(df_p['Close'].tail(long_window).mean()) if len(df_p) >= long_window else ma_short_today
                         ma_long_yesterday = float(df_p['Close'].iloc[-long_window-1:-1].mean()) if len(df_p) >= long_window + 1 else ma_long_today
@@ -1137,6 +1146,7 @@ if os.path.exists(portfolio_path):
                         diff_ma_long = ((current_price - ma_long_today) / ma_long_today) * 100
                         
                         recent_low20 = float(df_p['Low'].tail(20).min())
+                        recent_low10 = float(df_p['Low'].tail(10).min())  # 押し目余白用に追加
                         recent_low5 = float(df_p['Low'].tail(5).min())
                         base_sl = math.floor(recent_low20 * 0.995)
                         
@@ -1144,12 +1154,10 @@ if os.path.exists(portfolio_path):
                         is_crossed_below_long_ma = (yesterday_price >= ma_long_yesterday) and (current_price < ma_long_today)
                         is_yin = current_price < open_p
                         
-                        # ======================================================
-                        # ★ 完全改定版エグジット判定（早すぎる同値狩り・ノイズ狩りの完全防止）
-                        # ======================================================
-                        recent_low10 = float(df_p['Low'].tail(10).min())
-                        
-                        # 0. デフォルト（初期状態: 0%〜3%未満の育成中）
+                        # ----------------------------------------------------
+                        # エグジット判定（早すぎる同値狩り・ノイズ狩り防止の改良版）
+                        # ----------------------------------------------------
+                        # 0. デフォルト（0%〜3%未満の育成中）
                         status_label = "🟢 ホールド (順調)"
                         action_label = f"推奨逆指値: {base_sl:,} 円"
                         badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
@@ -1178,30 +1186,26 @@ if os.path.exists(portfolio_path):
                             action_label = "【トレンド終了全決済】"
                             badge_class = "bg-purple-950/80 text-purple-300 border border-purple-500 font-bold"
 
-                        # 5. 【利大確定ゾーン：+8.0%以上】
+                        # 5. 【利大確定ゾーン：+8.0%以上】短期線を割ったら利食い、維持なら直近5日安値で追従
                         elif pl_rate >= 8.0:
                             if current_price < ma_short_today and yesterday_price >= ma_short_today:
-                                # +8%以上伸びた後であれば、短期線割れでの手仕舞いは「立派な利食い」
                                 status_label = "✨ 先行利確 (短期線割)"
                                 action_label = "【短期線割れのため成行決済】"
                                 badge_class = "bg-indigo-950/80 text-indigo-300 border border-indigo-500 font-bold"
                             else:
-                                # 短期線を維持している間は直近5日安値に沿って利益を追従
                                 trail_stop = math.floor(max(buy_price * 1.04, recent_low5))
                                 status_label = "🏆 利益確保"
                                 action_label = f"【逆指値を {trail_stop:,} 円へ引き上げ】"
                                 badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
 
-                        # 6. 【安全圏移行ゾーン：+5.0%以上】
-                        # ★急所：押し目が買値を超えた（安値切り上げ）を確認できた時だけ、買値以上に引き上げる
+                        # 6. 【安全圏移行ゾーン：+5.0%以上】押し目安値が買値を超えた時だけ、買値以上に引き上げる
                         elif pl_rate >= 5.0 and recent_low5 >= buy_price:
                             trail_stop = math.floor(max(buy_price * 1.005, recent_low5 * 0.995))
                             status_label = "🛡️ 安全圏 (押し目上)"
                             action_label = f"【逆指値を {trail_stop:,} 円に変更】"
                             badge_class = "bg-sky-950/80 text-sky-300 border border-sky-500 font-bold"
 
-                        # 7. 【巡航・育成ゾーン：+3.0%〜+5.0%未満】
-                        # ★急所：買値には戻さない！直近10日安値へSLを少し詰めるだけで、押し目の余白を残す
+                        # 7. 【巡航・育成ゾーン：+3.0%〜+5.0%未満】買値には戻さず、直近10日安値へ少し詰めるだけ（遊びを残す）
                         elif pl_rate >= 3.0:
                             tight_sl = math.floor(max(base_sl, recent_low10 * 0.995))
                             status_label = "🌱 巡航ホールド"
@@ -1226,8 +1230,9 @@ if os.path.exists(portfolio_path):
                             "actionLabel": action_label,
                             "badgeClass": badge_class
                         })
-                except Exception:
-                    pass
+                except Exception as e:
+                    # ★万一エラーが起きてもログに理由を出力させる
+                    print(f"⚠️ 保有銘柄【{c_str}】の判定エラー: {e}")
         print(f" -> 保有ポートフォリオ: {len(portfolio_records)} 銘柄の判定完了")
     except Exception as e:
         print(f"⚠️ portfolio.csv の解析エラー（スキップ）: {e}")
