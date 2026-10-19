@@ -18,6 +18,7 @@ portfolio_path = "portfolio.csv"
 data_dir = "data"
 os.makedirs(data_dir, exist_ok=True)
 results_json_path = os.path.join(data_dir, "results.json")
+tse_margin_json_path = os.path.join(data_dir, "tse_margin.json")  # ★東証日次信用残高
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -46,44 +47,7 @@ def clean_val(val):
         return None
     return val
 
-def extract_results_json(text):
-    start_tag = '<script id="data-results" type="application/json">'
-    end_tag = '</script>'
-    start_pos = text.find(start_tag)
-    if start_pos != -1:
-        b_start = start_pos + len(start_tag)
-        end_pos = text.find(end_tag, b_start)
-        if end_pos != -1:
-            return text[b_start:end_pos].strip()
-            
-    start_pos = text.find("results:")
-    if start_pos != -1:
-        b_start = text.find("[", start_pos)
-        if b_start != -1:
-            depth = 0
-            in_string = False
-            escape = False
-            for i in range(b_start, len(text)):
-                char = text[i]
-                if escape:
-                    escape = False
-                    continue
-                if char == '\\':
-                    escape = True
-                    continue
-                if char == '"':
-                    in_string = not in_string
-                    continue
-                if not in_string:
-                    if char == '[':
-                        depth += 1
-                    elif char == ']':
-                        depth -= 1
-                        if depth == 0:
-                            return text[b_start:i+1]
-    return None
-
-# --- 前日データの読み込み（HTMLパースではなくJSONを直接読むだけでOKに！） ---
+# --- 前日データの読み込み ---
 prev_counts = {
     "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0},
     "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0}
@@ -115,6 +79,20 @@ if os.path.exists(results_json_path):
         print(f" -> 前日データの読み込みに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
     except Exception as e:
         print(f" -> 前日データの読み込みに失敗: {e}")
+
+# --- ★【新規】東証日次信用取引残高データのロード ---
+tse_margin_dict = {}
+if os.path.exists(tse_margin_json_path):
+    print("東証日次信用残高データ (tse_margin.json) を読み込み中...")
+    try:
+        with open(tse_margin_json_path, "r", encoding="utf-8") as f:
+            tse_payload = json.load(f)
+            tse_margin_dict = tse_payload.get("data", {})
+        print(f" -> 東証日次信用残高: {len(tse_margin_dict)} 銘柄をロード完了 (公表日: {tse_payload.get('date', '不明')})")
+    except Exception as e:
+        print(f"⚠️ 東証日次信用データの読み込みスキップ: {e}")
+else:
+    print(" -> ⚠️ data/tse_margin.json が未生成のため、東証信用判定はスキップされます（安全フォールバック）")
 
 # 1. JPXから上場銘柄一覧をダウンロード
 jpx_url = "https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xlsx"
@@ -352,8 +330,8 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# ★判定および採点ロジック関数（★売り6・売り7の初戻り完全補完版）
-def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE"):
+# ★判定および採点ロジック関数（ハイブリッド信用需給判定版）
+def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
@@ -497,32 +475,26 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     price_crossed_below = (price_yesterday > long_ma_yesterday) and (price_today <= long_ma_today)
     dc_occurred = (short_ma_yesterday > long_ma_yesterday) and (short_ma_today <= long_ma_today)
 
-    # 過去の底練り ＆ 天井圏滞在実績（初押し・初戻り判定用）
     lookback_period = 40
     offset = 10
     if len(df_temp) >= lookback_period + offset + 1:
         price_below_count_past = (df_temp.iloc[-lookback_period-offset-1:-offset-1]['Close'] < df_temp.iloc[-lookback_period-offset-1:-offset-1]['long_ma']).sum()
         is_long_bottoming_past = (price_below_count_past >= lookback_period * 0.8)
         
-        # ★【新規：完全反転】過去の天井圏滞在判定（初戻り用）
         price_above_count_past = (df_temp.iloc[-lookback_period-offset-1:-offset-1]['Close'] > df_temp.iloc[-lookback_period-offset-1:-offset-1]['long_ma']).sum()
         is_long_topping_past = (price_above_count_past >= lookback_period * 0.8)
     else:
         is_long_bottoming_past = False
         is_long_topping_past = False
 
-    # ----------------------------------------------------
     # 買い4：逆張りリバ
-    # ----------------------------------------------------
     if diff_rate <= oversold_threshold and is_long_ma_falling and (is_yang_candle or is_price_up):
         category = "BUY4"
         category_name = "買い4：逆張りリバ"
         badge_class = "bg-purple-500/15 text-purple-300 border border-purple-500/30"
         reason = f"下落中の{long_window}日移動平均線({long_ma_today:,.0f}円)から下方に大きく乖離({diff_rate:.1f}%)。本日反発しました。{warning_suffix}"
 
-    # ----------------------------------------------------
-    # 買い1：新規買い ＆ 買い1-Pre（突破前夜）
-    # ----------------------------------------------------
+    # 買い1：新規買い ＆ 買い1-Pre
     price_below_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] < df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
     is_long_bottoming = price_below_count >= (lookback_period * 0.7)
     past_max_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).max()
@@ -545,9 +517,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             badge_class = "bg-emerald-600/10 text-emerald-400 border border-emerald-500/20"
             reason = f"底練りを経て、長期線({long_window}日線)の直下まで肉薄。本日下げ止まりを見せており上抜け直前の仕込み状態です。"
         
-    # ----------------------------------------------------
-    # 買い2：再突き抜け ＆ 買い2-Pre（復帰前夜）
-    # ----------------------------------------------------
+    # 買い2：再突き抜け ＆ 買い2-Pre
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_15d <= 3
     was_above_recently = (df_temp.iloc[-21:-1]['Close'] >= df_temp.iloc[-21:-1]['long_ma']).any()
@@ -571,14 +541,8 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             badge_class = "bg-sky-600/10 text-sky-400 border border-sky-500/20"
             reason = f"上昇トレンド中、長期線を一時下抜け後に直下で踏み止まり。本日中に再上抜けが期待される状態です。"
 
-# ----------------------------------------------------
-    # 買い3：押し目反発 ＆ 買い3-Pre（押し目待ち伏せ）
-    # ----------------------------------------------------
-    # ★【新規】短期線（25日線）乖離率の事前計算
+    # 買い3：押し目反発 ＆ 買い3-Pre
     short_diff_rate = ((price_today - short_ma_today) / short_ma_today) * 100
-
-    # ★【改定1：急所1】中期設定(25/75)時の25日線トレンド健全性チェック
-    # 25日線が75日線の上にあり（GC状態維持）、かつ25日線乖離が-6.0%以内であること
     is_mid_trend_sound = True
     if long_window > 25:
         is_mid_trend_sound = (short_ma_today >= long_ma_today) and (short_diff_rate >= -6.0)
@@ -586,9 +550,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     max_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).max()
     has_pulled_back = max_diff_15d >= 4.0
     is_close_to_ma = 0.0 < diff_rate <= 3.5
-
-    # ★【改定2：急所2】反発の質の向上
-    # 単なるプラス引けだけでなく、自力で実体+0.8%以上押し返していること（コマ足微反発の排除）
     is_rebound = is_yang_candle and is_price_up and (candle_body_pct >= 0.8)
 
     not_crossed_below_recent = (df_temp.iloc[-6:-1]['Close'] >= df_temp.iloc[-6:-1]['long_ma']).all()
@@ -596,7 +557,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     is_resting_on_ma = -0.5 <= diff_rate <= 1.5
     is_initial_dip_resting = is_long_bottoming_past and was_above_recently and is_resting_on_ma and not_crossed_below_recent
 
-    # ★親IFに「is_mid_trend_sound (中期25日線の健全性)」を追加！
     if category == "NONE" and not_crossed_below_recent and is_long_ma_rising and is_mid_trend_sound:
         if has_pulled_back and is_close_to_ma and is_rebound:
             category = "BUY3"
@@ -619,9 +579,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
             
-    # ----------------------------------------------------
-    # ★ 信用売りシグナル判定（売り5〜8 ＆ 売り7-Pre：貸借銘柄のみ点灯）
-    # ----------------------------------------------------
+    # 信用売りシグナル判定（売り5〜8 ＆ 売り7-Pre：貸借銘柄のみ点灯）
     if category == "NONE" and is_margin_tradable:
         # 売り8：逆張り過熱売り
         if diff_rate >= overbought_threshold and is_long_ma_rising and (is_yin_candle or is_price_down):
@@ -646,7 +604,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 cross_type_sell = "デッドクロス" if dc_occurred else "価格の割り込み"
                 reason = f"高値圏・上昇トレンドを経て、横這い〜下降傾向の長期線に対し本日{cross_type_sell}が発生。下落トレンド入りの初動です。"
 
-        # 売り6：初戻り再下抜け（★初戻りパターンを完全補完）
+        # 売り6：再下抜け
         above_count_15d = (df_temp.iloc[-16:-1]['Close'] > df_temp.iloc[-16:-1]['long_ma']).sum()
         is_temp_pump = 1 <= above_count_15d <= 3
         was_below_recently = (df_temp.iloc[-21:-1]['Close'] <= df_temp.iloc[-21:-1]['long_ma']).any()
@@ -664,7 +622,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 badge_class = "bg-orange-500/15 text-orange-300 border border-orange-500/30"
                 reason = f"天井圏から脱却後、最初の戻りで長期線を一時上抜け、本日再び割り込んで下落トレンドを再開しました。"
 
-        # 売り7：戻り売り反落 ＆ 売り7-Pre（★初戻り反落・待ち伏せを完全補完）
+        # 売り7：戻り売り反落 ＆ 売り7-Pre
         min_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).min()
         has_dropped_deep = min_diff_15d <= -4.0
         is_close_under_ma = -3.5 <= diff_rate < 0.0
@@ -697,9 +655,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 badge_class = "bg-red-900/40 text-red-300 border border-red-500/20"
                 reason = f"天井圏から脱却後の最初の戻りで、長期線の抵抗線直下まで引き付けた状態です。"
 
-    # ----------------------------------------------------
-    # ★ テクニカル損切り価格 (stop_loss_price) 自動算出
-    # ----------------------------------------------------
+    # 損切り価格自動算出
     stop_loss_price = 0
     if category in ["BUY1", "BUY1_PRE"]:
         low_20d = df_temp['Low'].tail(20).min()
@@ -723,12 +679,13 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         stop_loss_price = math.ceil(high_today * 1.01)
 
     # ----------------------------------------------------
-    # 期待度スコア
+    # ★ 期待度スコア（ハイブリッド需給判定）
     # ----------------------------------------------------
     score = 5 
     score_reasons = []
     
     if category != "NONE":
+        # 1. 決算発表直前警戒
         if ticker in earnings_dates:
             e_date = earnings_dates[ticker]
             delta_days = (e_date - today_date).days
@@ -736,19 +693,25 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score -= 5
                 score_reasons.append(f"⚠️ 決算発表直前({e_date.strftime('%m/%d')}): -5")
 
+        # 2. ★【東証日次信用判定：全銘柄対象】買い残シコり玉チェック
+        tse_buy_balance = tse_info.get("buy_balance", 0) if tse_info else 0
+        tse_buy_days = (tse_buy_balance / vol_ma25) if vol_ma25 > 0 else 0
+        
+        # 3. ★【日証金判定：貸借銘柄対象】速報ベースの踏み上げ燃料チェック
         m_info = margin_balance_dict.get(ticker, {'ratio': 1.0, 'buy_balance': 0, 'short_balance': 0})
-        buy_cover_days = (m_info['buy_balance'] / vol_ma25) if vol_ma25 > 0 else 0
-        short_cover_days = (m_info['short_balance'] / vol_ma25) if vol_ma25 > 0 else 0
-        ratio = m_info['ratio']
+        jsf_short_days = (m_info['short_balance'] / vol_ma25) if vol_ma25 > 0 else 0
+        jsf_ratio = m_info['ratio']
 
         if category.startswith("BUY"):
-            if (ratio <= 0.7) and (short_cover_days >= 1.0) and is_yang_candle and is_price_up:
+            # 【買-加点】日証金ベースで貸株超過（売長）＆燃料過多のショートスクイーズ初動
+            if is_margin_tradable and (jsf_ratio <= 0.7) and (jsf_short_days >= 0.5) and is_yang_candle and is_price_up:
                 score += 1
-                score_reasons.append("🔥 需給完全合致(売長＆燃料過多のショートスクイーズ初動): +1")
+                score_reasons.append(f"🔥 日証金売長(倍率{jsf_ratio:.2f}倍・踏み上げ燃料過多): +1")
             
-            if buy_cover_days >= 1.5:
+            # 【買-減点】全市場共通：東証全体の買い残が25日平均出来高の3日分以上（重いシコり玉）
+            if tse_buy_days >= 3.0:
                 score -= 1
-                score_reasons.append("⚠️ 頭上に重いシコり玉(買い残1.5日分以上): -1")
+                score_reasons.append(f"⚠️ 東証買い残シコり玉({tse_buy_days:.1f}日分): -1")
 
             if (yesterday_cat in ["BUY1_PRE", "BUY2_PRE", "BUY3_PRE"]) and (category in ["BUY1", "BUY2", "BUY3"]):
                 score += 1
@@ -812,13 +775,15 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                     score -= 1
                     score_reasons.append("🕯️ 反発実体極小: -1")
         else:
-            if (ratio >= 5.0) and (buy_cover_days >= 1.2) and is_yin_candle and is_price_down:
+            # 【売-加点】買長かつシコり玉過多で陰線下落（追証・投げ連鎖初動）
+            if (jsf_ratio >= 5.0 or tse_buy_days >= 2.5) and is_yin_candle and is_price_down:
                 score += 1
-                score_reasons.append("📉 需給完全合致(買長＆シコり玉過多の追証連鎖初動): +1")
+                score_reasons.append("📉 需給完全合致(買長＆シコり玉過多の投げ連鎖初動): +1")
 
-            if short_cover_days >= 1.0:
+            # 【売-減点】下値に大量の空売り残高（買い戻し・踏み上げリスク）
+            if jsf_short_days >= 0.8:
                 score -= 1
-                score_reasons.append("⚠️ 下値に大量の空売り買い戻し圧力: -1")
+                score_reasons.append("⚠️ 下値に空売り買い戻し圧力(踏み上げ警戒): -1")
 
             if (yesterday_cat == "SELL7_PRE") and (category == "SELL7"):
                 score += 1
@@ -893,12 +858,15 @@ for ticker, df_stock in bulk_data.items():
         is_shortable = ticker in margin_shortable_tickers
         ticker_clean = ticker.replace(".T", "")
         yesterday_data = prev_results_by_ticker.get(ticker_clean)
+        
+        # ★東証日次信用データの辞書を取得
+        tse_info = tse_margin_dict.get(ticker_clean)
 
         yes_cat_short = yesterday_data.get("short", {}).get("category", "NONE") if yesterday_data else "NONE"
         yes_cat_mid = yesterday_data.get("mid", {}).get("category", "NONE") if yesterday_data else "NONE"
             
-        short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable, yes_cat_short)
-        mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable, yes_cat_mid)
+        short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable, yes_cat_short, tse_info)
+        mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable, yes_cat_mid, tse_info)
         
         if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
             continue
@@ -1096,14 +1064,11 @@ for shard_key, data_dict in shards.items():
             json.dump(data_dict, f, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
 
-# ======================================================================
-# ★【保有ポートフォリオ】完全修正版エグジット判定（移動平均線連動＆厳格クロス判定）
-# ======================================================================
+# 保有銘柄ポートフォリオ判定
 print("保有銘柄ポートフォリオのエグジット判定を計算中...")
 portfolio_records = []
 if os.path.exists(portfolio_path):
     try:
-        # ★0銘柄対策: dtype=str で読み込み、コードが勝手に数値(1961.0など)化されるのを防ぐ
         df_port = pd.read_csv(portfolio_path, dtype=str)
         c_cols = [c for c in df_port.columns if 'code' in str(c).lower() or 'コード' in str(c)]
         p_cols = [c for c in df_port.columns if 'price' in str(c).lower() or '買値' in str(c) or '単価' in str(c)]
@@ -1113,7 +1078,6 @@ if os.path.exists(portfolio_path):
             c_c, p_c, s_c = c_cols[0], p_cols[0], s_cols[0]
             for _, row in df_port.dropna(subset=[c_c, p_c, s_c]).iterrows():
                 try:
-                    # ★0銘柄対策: コード末尾に .0 がついても確実に「4桁コード」として抽出する
                     raw_code = str(row[c_c]).strip().replace('.T', '')
                     if '.' in raw_code:
                         raw_code = raw_code.split('.')[0]
@@ -1135,10 +1099,6 @@ if os.path.exists(portfolio_path):
                         pl_amount = round((current_price - buy_price) * shares)
                         pl_rate = round(((current_price - buy_price) / buy_price) * 100, 2)
                         
-                        # ==========================================================
-                        # ★システム設定（短期5/25 vs 中期25/75）に移動平均線を完全連動！
-                        # （以前正常に動作していた計算式をそのまま100%維持）
-                        # ==========================================================
                         ma_short_today = float(df_p['Close'].tail(short_window).mean())
                         ma_long_today = float(df_p['Close'].tail(long_window).mean()) if len(df_p) >= long_window else ma_short_today
                         ma_long_yesterday = float(df_p['Close'].iloc[-long_window-1:-1].mean()) if len(df_p) >= long_window + 1 else ma_long_today
@@ -1146,47 +1106,37 @@ if os.path.exists(portfolio_path):
                         diff_ma_long = ((current_price - ma_long_today) / ma_long_today) * 100
                         
                         recent_low20 = float(df_p['Low'].tail(20).min())
-                        recent_low10 = float(df_p['Low'].tail(10).min())  # 押し目余白用に追加
+                        recent_low10 = float(df_p['Low'].tail(10).min())
                         recent_low5 = float(df_p['Low'].tail(5).min())
                         base_sl = math.floor(recent_low20 * 0.995)
                         
-                        # ★厳格なクロス判定（昨日長期線以上 ➔ 本日長期線未満に割り込んだ瞬間）
                         is_crossed_below_long_ma = (yesterday_price >= ma_long_yesterday) and (current_price < ma_long_today)
                         is_yin = current_price < open_p
                         
-                        # ----------------------------------------------------
-                        # エグジット判定（早すぎる同値狩り・ノイズ狩り防止の改良版）
-                        # ----------------------------------------------------
-                        # 0. デフォルト（0%〜3%未満の育成中）
                         status_label = "🟢 ホールド (順調)"
                         action_label = f"推奨逆指値: {base_sl:,} 円"
                         badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
 
-                        # 1. 損切り防衛（最優先）
                         if current_price <= base_sl or pl_rate <= -5.0:
                             status_label = "🛑 損切り執行"
                             action_label = "【現在値で即撤退】"
                             badge_class = "bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse font-bold"
 
-                        # 2. 戻り天井での逃げ（買値以下で長期線直下反落）
                         elif pl_rate < 0 and current_price < ma_long_today and diff_ma_long >= -3.5 and is_yin:
                             status_label = "🏃 戻り撤退 (売り7)"
                             action_label = "【戻り天井で手仕舞い】"
                             badge_class = "bg-red-950/80 text-red-300 border border-red-500 font-bold"
 
-                        # 3. 異常過熱（大天井利確）
                         elif diff_ma_long >= 14.0 and is_yin and pl_rate >= 8.0:
                             status_label = "🏆 大天井利確 (売り8)"
                             action_label = "【全利確推奨】"
                             badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
 
-                        # 4. 長期トレンド崩壊（長期線割り込み）
                         elif pl_rate >= 2.0 and is_crossed_below_long_ma and buy_price >= ma_long_yesterday:
                             status_label = "🏁 最終利確 (売り5割込)"
                             action_label = "【トレンド終了全決済】"
                             badge_class = "bg-purple-950/80 text-purple-300 border border-purple-500 font-bold"
 
-                        # 5. 【利大確定ゾーン：+8.0%以上】短期線を割ったら利食い、維持なら直近5日安値で追従
                         elif pl_rate >= 8.0:
                             if current_price < ma_short_today and yesterday_price >= ma_short_today:
                                 status_label = "✨ 先行利確 (短期線割)"
@@ -1198,21 +1148,18 @@ if os.path.exists(portfolio_path):
                                 action_label = f"【逆指値を {trail_stop:,} 円へ引き上げ】"
                                 badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
 
-                        # 6. 【安全圏移行ゾーン：+5.0%以上】押し目安値が買値を超えた時だけ、買値以上に引き上げる
                         elif pl_rate >= 5.0 and recent_low5 >= buy_price:
                             trail_stop = math.floor(max(buy_price * 1.005, recent_low5 * 0.995))
                             status_label = "🛡️ 安全圏 (押し目上)"
                             action_label = f"【逆指値を {trail_stop:,} 円に変更】"
                             badge_class = "bg-sky-950/80 text-sky-300 border border-sky-500 font-bold"
 
-                        # 7. 【巡航・育成ゾーン：+3.0%〜+5.0%未満】買値には戻さず、直近10日安値へ少し詰めるだけ（遊びを残す）
                         elif pl_rate >= 3.0:
                             tight_sl = math.floor(max(base_sl, recent_low10 * 0.995))
                             status_label = "🌱 巡航ホールド"
                             action_label = f"SL維持・防衛 ({tight_sl:,} 円)"
                             badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
 
-                        # 8. 押し目静観ゾーン（含み損だが初期損切りライン以上）
                         elif pl_rate < 0 and current_price > base_sl:
                             status_label = "⏳ 押し目許容 (静観)"
                             action_label = f"SL守り待機 ({base_sl:,} 円)"
@@ -1231,7 +1178,6 @@ if os.path.exists(portfolio_path):
                             "badgeClass": badge_class
                         })
                 except Exception as e:
-                    # ★万一エラーが起きてもログに理由を出力させる
                     print(f"⚠️ 保有銘柄【{c_str}】の判定エラー: {e}")
         print(f" -> 保有ポートフォリオ: {len(portfolio_records)} 銘柄の判定完了")
     except Exception as e:
@@ -1239,15 +1185,9 @@ if os.path.exists(portfolio_path):
 else:
     print(" -> portfolio.csv が存在しないため保有銘柄セクションは空で出力します")
 
-# ==========================================
-# ★ データ出力（JSONファイルとして独立保存）
-# ==========================================
-data_dir = "data"
-os.makedirs(data_dir, exist_ok=True)
-
+# データ出力
 print("最新データを data/ フォルダに出力中...")
 
-# 1. 各データを個別のJSONファイルに保存
 with open(os.path.join(data_dir, "results.json"), "w", encoding="utf-8") as f:
     json.dump(results_list, f, ensure_ascii=False)
 
@@ -1260,7 +1200,6 @@ with open(os.path.join(data_dir, "prev_counts.json"), "w", encoding="utf-8") as 
 with open(os.path.join(data_dir, "portfolio.json"), "w", encoding="utf-8") as f:
     json.dump(portfolio_records, f, ensure_ascii=False)
 
-# 2. 更新時刻などのメタ情報も保存
 meta_info = {
     "lastUpdate": current_time_str,
     "marketMedian": round(market_median_change, 4)
@@ -1268,7 +1207,6 @@ meta_info = {
 with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
     json.dump(meta_info, f, ensure_ascii=False)
 
-# 3. template.html を index.html としてそのままコピー配置（データ置換は不要）
 template_path = "template.html"
 if os.path.exists(template_path):
     with open(template_path, "r", encoding="utf-8") as f:
