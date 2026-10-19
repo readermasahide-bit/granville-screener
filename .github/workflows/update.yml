@@ -24,6 +24,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # ★追加：東証信用残高PDFを解析して data/tse_margin.json を生成
+      # continue-on-error: true により、万が一JPXが遅延してもapp.pyを落とさず前日キャッシュで続行
+      - name: Fetch TSE Margin Data
+        continue-on-error: true
+        run: |
+          python fetch_tse_margin.py
+
       - name: Run Granville Screener
         run: |
           python app.py
