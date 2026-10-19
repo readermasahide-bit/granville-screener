@@ -744,10 +744,19 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score -= 1
                 score_reasons.append("🕯️ 上髭超過: -1")
                 
+            # ----------------------------------------------------
+            # ★ 単日急騰 ＆ 短期線飛びすぎ警戒ペナルティ
+            # ----------------------------------------------------
+            change_rate_today = ((price_today - price_yesterday) / price_yesterday) * 100 if price_yesterday > 0 else 0.0
             short_diff_rate = ((price_today - short_ma_today) / short_ma_today) * 100
-            if category in ["BUY1", "BUY2"] and short_diff_rate >= 5.0:
-                score -= 1
-                score_reasons.append("🚀 短期的な飛びすぎ警戒: -1")
+            
+            if category in ["BUY1", "BUY2"]:
+                if change_rate_today >= 5.0:
+                    score -= 1
+                    score_reasons.append("🚀 単日急騰(反動警戒): -1")
+                elif short_diff_rate >= 5.0:
+                    score -= 1
+                    score_reasons.append("🚀 短期的な飛びすぎ警戒: -1")
 
             if category in ["BUY1", "BUY1_PRE"]:
                 if is_slope_strong_relative:
