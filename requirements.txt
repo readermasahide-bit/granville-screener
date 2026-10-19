@@ -3,7 +3,4 @@ pandas
 xlrd
 requests
 openpyxl
-pandas
-requests
-yfinance
 pymupdf
