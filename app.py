@@ -18,7 +18,8 @@ portfolio_path = "portfolio.csv"
 data_dir = "data"
 os.makedirs(data_dir, exist_ok=True)
 results_json_path = os.path.join(data_dir, "results.json")
-tse_margin_json_path = os.path.join(data_dir, "tse_margin.json")  # ★東証日次信用残高
+tse_margin_json_path = os.path.join(data_dir, "tse_margin.json")
+tse_history_json_path = os.path.join(data_dir, "tse_margin_history.json")
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -80,19 +81,26 @@ if os.path.exists(results_json_path):
     except Exception as e:
         print(f" -> 前日データの読み込みに失敗: {e}")
 
-# --- ★【新規】東証日次信用取引残高データのロード ---
+# --- 東証日次信用取引残高＆時系列履歴のロード ---
 tse_margin_dict = {}
+tse_history_dict = {}
+
 if os.path.exists(tse_margin_json_path):
-    print("東証日次信用残高データ (tse_margin.json) を読み込み中...")
     try:
         with open(tse_margin_json_path, "r", encoding="utf-8") as f:
             tse_payload = json.load(f)
             tse_margin_dict = tse_payload.get("data", {})
-        print(f" -> 東証日次信用残高: {len(tse_margin_dict)} 銘柄をロード完了 (公表日: {tse_payload.get('date', '不明')})")
+        print(f" -> 東証日次信用残高: {len(tse_margin_dict)} 銘柄ロード完了 (公表日: {tse_payload.get('date', '不明')})")
     except Exception as e:
         print(f"⚠️ 東証日次信用データの読み込みスキップ: {e}")
-else:
-    print(" -> ⚠️ data/tse_margin.json が未生成のため、東証信用判定はスキップされます（安全フォールバック）")
+
+if os.path.exists(tse_history_json_path):
+    try:
+        with open(tse_history_json_path, "r", encoding="utf-8") as f:
+            tse_history_dict = json.load(f)
+        print(f" -> 東証信用時系列履歴: {len(tse_history_dict)} 営業日分をロード完了")
+    except Exception as e:
+        print(f"⚠️ 東証信用履歴の読み込みスキップ: {e}")
 
 # 1. JPXから上場銘柄一覧をダウンロード
 jpx_url = "https://www.jpx.co.jp/markets/statistics-equities/misc/tvdivq0000001vg2-att/data_j.xlsx"
@@ -330,8 +338,8 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# ★判定および採点ロジック関数（ハイブリッド信用需給判定版）
-def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None):
+# ★判定および採点ロジック関数（確定クオンツ需給モデル組み込み版）
+def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None, tse_ticker_hist=None):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
@@ -579,16 +587,14 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
             
-    # 信用売りシグナル判定（売り5〜8 ＆ 売り7-Pre：貸借銘柄のみ点灯）
+    # 信用売りシグナル判定
     if category == "NONE" and is_margin_tradable:
-        # 売り8：逆張り過熱売り
         if diff_rate >= overbought_threshold and is_long_ma_rising and (is_yin_candle or is_price_down):
             category = "SELL8"
             category_name = "売り8：過熱売り"
             badge_class = "bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
             reason = f"上昇中の長期線から上方に異常なほど急騰乖離({diff_rate:.1f}%)。本日天井反落を確認しました。"
 
-        # 売り5：新規売り初動
         price_above_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] > df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
         is_long_topping = price_above_count >= (lookback_period * 0.7)
         past_min_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).min()
@@ -604,7 +610,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 cross_type_sell = "デッドクロス" if dc_occurred else "価格の割り込み"
                 reason = f"高値圏・上昇トレンドを経て、横這い〜下降傾向の長期線に対し本日{cross_type_sell}が発生。下落トレンド入りの初動です。"
 
-        # 売り6：再下抜け
         above_count_15d = (df_temp.iloc[-16:-1]['Close'] > df_temp.iloc[-16:-1]['long_ma']).sum()
         is_temp_pump = 1 <= above_count_15d <= 3
         was_below_recently = (df_temp.iloc[-21:-1]['Close'] <= df_temp.iloc[-21:-1]['long_ma']).any()
@@ -622,7 +627,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 badge_class = "bg-orange-500/15 text-orange-300 border border-orange-500/30"
                 reason = f"天井圏から脱却後、最初の戻りで長期線を一時上抜け、本日再び割り込んで下落トレンドを再開しました。"
 
-        # 売り7：戻り売り反落 ＆ 売り7-Pre
         min_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).min()
         has_dropped_deep = min_diff_15d <= -4.0
         is_close_under_ma = -3.5 <= diff_rate < 0.0
@@ -655,7 +659,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 badge_class = "bg-red-900/40 text-red-300 border border-red-500/20"
                 reason = f"天井圏から脱却後の最初の戻りで、長期線の抵抗線直下まで引き付けた状態です。"
 
-    # 損切り価格自動算出
     stop_loss_price = 0
     if category in ["BUY1", "BUY1_PRE"]:
         low_20d = df_temp['Low'].tail(20).min()
@@ -679,13 +682,13 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         stop_loss_price = math.ceil(high_today * 1.01)
 
     # ----------------------------------------------------
-    # ★ 期待度スコア（ハイブリッド需給判定）
+    # ★ 期待度スコア（確定クオンツ需給判定モデル）
     # ----------------------------------------------------
     score = 5 
     score_reasons = []
     
     if category != "NONE":
-        # 1. 決算発表直前警戒
+        # 1. 決算直前警戒
         if ticker in earnings_dates:
             e_date = earnings_dates[ticker]
             delta_days = (e_date - today_date).days
@@ -693,26 +696,89 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score -= 5
                 score_reasons.append(f"⚠️ 決算発表直前({e_date.strftime('%m/%d')}): -5")
 
-        # 2. ★【東証日次信用判定：全銘柄対象】買い残シコり玉チェック
+        # 信用需給パラメータの整備
         tse_buy_balance = tse_info.get("buy_balance", 0) if tse_info else 0
+        tse_sell_balance = tse_info.get("sell_balance", 0) if tse_info else 0
+        diff_buy = tse_info.get("diff_buy", 0) if tse_info else 0
+        diff_sell = tse_info.get("diff_sell", 0) if tse_info else 0
+        tse_ratio = tse_info.get("ratio", 999.0) if tse_info else 999.0
         tse_buy_days = (tse_buy_balance / vol_ma25) if vol_ma25 > 0 else 0
-        
-        # 3. ★【日証金判定：貸借銘柄対象】速報ベースの踏み上げ燃料チェック
+
+        # 時系列履歴を用いた連続トレンド判定（履歴があれば活用）
+        is_multi_day_buy_decrease = False
+        is_multi_day_sell_increase = False
+        if tse_ticker_hist and len(tse_ticker_hist) >= 2:
+            # 最新日を含む直近営業日の推移
+            recent_diff_buys = [h.get("diff_buy", 0) for h in tse_ticker_hist[:3]]
+            recent_diff_sells = [h.get("diff_sell", 0) for h in tse_ticker_hist[:3]]
+            is_multi_day_buy_decrease = all(d < 0 for d in recent_diff_buys if d != 0)
+            is_multi_day_sell_increase = all(d > 0 for d in recent_diff_sells if d != 0)
+
+        # 日証金パラメータ
         m_info = margin_balance_dict.get(ticker, {'ratio': 1.0, 'buy_balance': 0, 'short_balance': 0})
         jsf_short_days = (m_info['short_balance'] / vol_ma25) if vol_ma25 > 0 else 0
         jsf_ratio = m_info['ratio']
 
         if category.startswith("BUY"):
-            # 【買-加点】日証金ベースで貸株超過（売長）＆燃料過多のショートスクイーズ初動
-            if is_margin_tradable and (jsf_ratio <= 0.7) and (jsf_short_days >= 0.5) and is_yang_candle and is_price_up:
-                score += 1
-                score_reasons.append(f"🔥 日証金売長(倍率{jsf_ratio:.2f}倍・踏み上げ燃料過多): +1")
-            
-            # 【買-減点】全市場共通：東証全体の買い残が25日平均出来高の3日分以上（重いシコり玉）
-            if tse_buy_days >= 3.0:
-                score -= 1
-                score_reasons.append(f"⚠️ 東証買い残シコり玉({tse_buy_days:.1f}日分): -1")
+            # ----------------------------------------------------
+            # 【買① アク抜け完了判定（買い1・3系：底打ち・初動加点）】
+            # ----------------------------------------------------
+            if category in ["BUY1", "BUY1_PRE", "BUY3", "BUY3_PRE"]:
+                # 下落調整を経て買残が減少（投げ売り一巡）＋本日陽線反発
+                if (diff_buy < 0 or is_multi_day_buy_decrease) and (is_yang_candle or is_price_up):
+                    score += 1
+                    reason_txt = "🛡️ アク抜け完了(連日買残減少局面の陽線反発): +1" if is_multi_day_buy_decrease else "🛡️ アク抜け完了(買残減少局面の陽線反発): +1"
+                    score_reasons.append(reason_txt)
 
+            # ----------------------------------------------------
+            # 【買④ 機関アキュムレーション判定（買い2系：強トレンド継続加点）】
+            # ----------------------------------------------------
+            elif category in ["BUY2", "BUY2_PRE"]:
+                # 上昇トレンド中、個人が利食いして買残が減少（上値シコり玉ゼロの青天井）
+                if (diff_buy < 0 or is_multi_day_buy_decrease) and is_yang_candle:
+                    score += 1
+                    score_reasons.append("💎 機関アキュムレーション(強上昇中の買残引き締まり・青天井): +1")
+
+            # ----------------------------------------------------
+            # 【買② ナンピン地獄判定（落ちるナイフ排除：全買い共通減点）】
+            # ----------------------------------------------------
+            # 株価調整局面なのに個人が逆張りナンピンして買残が明確に増加している
+            if (diff_buy > (vol_ma25 * 0.05)) and (not is_yang_candle or is_price_down):
+                score -= 1
+                score_reasons.append("⚠️ ナンピン地獄(調整局面での買残急増・シコり蓄積): -1")
+
+            # ----------------------------------------------------
+            # 【買 踏み上げ判定（質による階段評価）】
+            # ----------------------------------------------------
+            # 空売り燃料の充填: 東証売残急増、または日証金売長
+            has_short_squeeze_fuel = (diff_sell > (vol_ma25 * 0.03)) or (is_margin_tradable and jsf_ratio <= 0.7 and jsf_short_days >= 0.5) or is_multi_day_sell_increase
+            
+            if has_short_squeeze_fuel and is_yang_candle and is_price_up:
+                if tse_ratio <= 2.0:
+                    # 特級: 市場全体で売長傾向。上値シコり玉ゼロの本物
+                    score += 2
+                    score_reasons.append(f"🔥 特級ショートスクイーズ(東証倍率{tse_ratio:.1f}倍＆売残急増・本物の踏み上げ): +2")
+                elif tse_ratio <= 4.0:
+                    # 通常: 一般的な踏み上げ初動
+                    score += 1
+                    score_reasons.append(f"🔥 ショートスクイーズ初動(東証倍率{tse_ratio:.1f}倍＆空売り燃料チャージ): +1")
+                else:
+                    # 5.0倍超: 買い戻し後に10倍のシコり玉津波が控えているため、スイングとしては加点見送り(スルー)
+                    pass
+
+            # ----------------------------------------------------
+            # 【買 シコり玉判定 ＆ 出来高消化による救済】
+            # ----------------------------------------------------
+            if tse_buy_days >= 3.0:
+                # 救済ルール: 本日出来高が2倍以上の大商い陽線なら「シコり玉消化完了」とみなし減点を免除
+                if vol_ratio >= 2.0 and is_yang_candle:
+                    # 救済成立（減点なし）
+                    score_reasons.append(f"🌊 出来高急増によるシコり消化(出来高{vol_ratio:.1f}倍で買残{tse_buy_days:.1f}日分を突破・減点免除)")
+                else:
+                    score -= 1
+                    score_reasons.append(f"⚠️ 東証買い残シコり玉({tse_buy_days:.1f}日分): -1")
+
+            # テクニカル共通加減点
             if (yesterday_cat in ["BUY1_PRE", "BUY2_PRE", "BUY3_PRE"]) and (category in ["BUY1", "BUY2", "BUY3"]):
                 score += 1
                 score_reasons.append("🚀 パワー充填からの本発射: +1")
@@ -784,13 +850,12 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                     score -= 1
                     score_reasons.append("🕯️ 反発実体極小: -1")
         else:
-            # 【売-加点】買長かつシコり玉過多で陰線下落（追証・投げ連鎖初動）
+            # 売り側ロジック
             if (jsf_ratio >= 5.0 or tse_buy_days >= 2.5) and is_yin_candle and is_price_down:
                 score += 1
                 score_reasons.append("📉 需給完全合致(買長＆シコり玉過多の投げ連鎖初動): +1")
 
-            # 【売-減点】下値に大量の空売り残高（買い戻し・踏み上げリスク）
-            if jsf_short_days >= 0.8:
+            if jsf_short_days >= 0.8 or tse_ratio <= 1.5:
                 score -= 1
                 score_reasons.append("⚠️ 下値に空売り買い戻し圧力(踏み上げ警戒): -1")
 
@@ -838,6 +903,9 @@ MIN_REQUIRED_DAYS = 69
 sell_count_debug = 0
 buy_count_debug = 0
 
+# 日付降順でソートされた履歴リストを準備
+sorted_hist_dates = sorted(tse_history_dict.keys(), reverse=True)
+
 for ticker, df_stock in bulk_data.items():
     try:
         if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
@@ -868,14 +936,19 @@ for ticker, df_stock in bulk_data.items():
         ticker_clean = ticker.replace(".T", "")
         yesterday_data = prev_results_by_ticker.get(ticker_clean)
         
-        # ★東証日次信用データの辞書を取得
+        # 東証信用残高＆時系列履歴の取得
         tse_info = tse_margin_dict.get(ticker_clean)
+        tse_ticker_hist = []
+        for d_str in sorted_hist_dates:
+            day_data = tse_history_dict.get(d_str, {})
+            if ticker_clean in day_data:
+                tse_ticker_hist.append(day_data[ticker_clean])
 
         yes_cat_short = yesterday_data.get("short", {}).get("category", "NONE") if yesterday_data else "NONE"
         yes_cat_mid = yesterday_data.get("mid", {}).get("category", "NONE") if yesterday_data else "NONE"
             
-        short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable, yes_cat_short, tse_info)
-        mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable, yes_cat_mid, tse_info)
+        short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable, yes_cat_short, tse_info, tse_ticker_hist)
+        mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable, yes_cat_mid, tse_info, tse_ticker_hist)
         
         if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
             continue
