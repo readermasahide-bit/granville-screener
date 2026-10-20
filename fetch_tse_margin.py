@@ -1,6 +1,6 @@
 # ==========================================
-# fetch_tse_margin.py (修正版)
-# 東証日次PDF (銘柄別信用取引残高) 自動取得 & PyMuPDF爆速パーサー
+# fetch_tse_margin.py (確定版)
+# 東証日次PDF自動取得 & 前日比抽出 & 過去5営業日履歴蓄積
 # ==========================================
 
 import os
@@ -8,7 +8,7 @@ import re
 import json
 import time
 import requests
-import pymupdf as fitz
+import pymupdf as fitz  # 非推奨警告を解消
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -16,10 +16,11 @@ HEADERS = {
 
 DATA_DIR = "data"
 OUTPUT_JSON = os.path.join(DATA_DIR, "tse_margin.json")
+HISTORY_JSON = os.path.join(DATA_DIR, "tse_margin_history.json")
+MAX_HISTORY_DAYS = 5  # 保持する最大営業日数
 
 def get_latest_pdf_url():
     """JPXのWebページから最新の信用取引残高PDF(mtall.pdf)のURLを検出"""
-    # 個別銘柄の信用取引残高は 01.html
     candidate_pages = [
         "https://www.jpx.co.jp/markets/statistics-equities/margin/01.html",
         "https://www.jpx.co.jp/markets/statistics-equities/margin/index.html"
@@ -32,11 +33,7 @@ def get_latest_pdf_url():
             if res.status_code != 200:
                 continue
             
-            # ページ内の全PDFリンクを抽出
             links = re.findall(r'href=["\']([^"\']+\.pdf)["\']', res.text, re.IGNORECASE)
-            print(f"    検出されたPDFリンク総数: {len(links)}")
-            
-            # mtall を含むリンクを優先
             target_link = None
             for l in links:
                 if 'mtall' in l.lower():
@@ -55,24 +52,44 @@ def get_latest_pdf_url():
             
     return None, None
 
-def parse_num(s):
-    """カンマ区切り文字列を数値に変換"""
-    if not s or s == '-':
+def parse_num_token(token):
+    """カンマや記号をクレンジングして絶対値を返す"""
+    if not token or token == '-':
         return 0
-    s_clean = s.replace(',', '').replace('△', '').replace('▲', '').replace('-', '').strip()
+    clean = token.replace(',', '').replace('△', '').replace('▲', '').replace('-', '').replace('%', '').strip()
     try:
-        return int(float(s_clean))
+        return int(float(clean))
     except ValueError:
         return 0
 
+def parse_signed_diff(tokens, val_idx):
+    """
+    数値トークンの前または自身に '△' / '▲' があればマイナス値として返す
+    JPXの仕様: △ または ▲ は前日比マイナス（減少）
+    """
+    if val_idx >= len(tokens):
+        return 0
+    curr_tok = tokens[val_idx]
+    raw_val = parse_num_token(curr_tok)
+    
+    # 自身に △/▲ が含まれている場合
+    if '△' in curr_tok or '▲' in curr_tok:
+        return -raw_val
+        
+    # 前のトークンが単独の △/▲ だった場合
+    if val_idx > 0:
+        prev_tok = tokens[val_idx - 1].strip()
+        if prev_tok in ['△', '▲', '-']:
+            return -raw_val
+            
+    return raw_val
+
 def parse_tse_margin_pdf(pdf_bytes):
-    """PyMuPDFを用いて全ページから銘柄別信用買残・売残を抽出"""
+    """PyMuPDFを用いて全ページから銘柄別信用残高および前日比を抽出"""
     margin_dict = {}
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     total_pages = len(doc)
     
-    # 5桁コード(末尾0) + JP番号 + 株数 Shs. の後続テキストを柔軟に抽出
-    # 改行(\n)が含まれていても対応できるよう \s+ を使用
     pattern = re.compile(
         r'(\d{4})0\s+JP[A-Z0-9]{10}\s+株数\s+Shs\.\s+(.+?)(?=(?:\d{4}0\s+JP|\Z))',
         re.DOTALL
@@ -86,36 +103,66 @@ def parse_tse_margin_pdf(pdf_bytes):
             code_4digit = m.group(1)
             tail_text = m.group(2)
             
-            # トークンに分解
             tokens = tail_text.split()
-            # カンマ入りまたは純粋な数字のトークンを順番に抽出
-            nums = []
+            # 金額行(Val.)の手前までを株数列として抽出
+            stock_tokens = []
             for tok in tokens:
-                # 金額行や不要な記号の前の「株数列」を抽出
                 if "金額" in tok or "Val." in tok:
                     break
-                tok_clean = tok.replace(',', '').replace('△', '').replace('▲', '').replace('%', '').strip()
-                if tok_clean.isdigit():
-                    nums.append(tok)
+                stock_tokens.append(tok)
             
-            # 列並び: [売残高, 前日比, 買残高, 前日比, 一般売, 制度売, 一般買, 制度買]
-            if len(nums) >= 3:
-                sell_bal = parse_num(nums[0])
-                # 前日比の「△」が独立トークンになる場合があるため調整
-                buy_bal = parse_num(nums[2]) if len(nums) >= 3 else 0
-                if len(nums) >= 4 and parse_num(nums[1]) == 0 and nums[1] in ['△', '▲']:
-                    # 符号が分離していた場合のシフト
-                    buy_bal = parse_num(nums[3])
+            # 数値または符号トークンのインデックスを特定
+            num_indices = []
+            for idx, tok in enumerate(stock_tokens):
+                tok_c = tok.replace(',', '').replace('△', '').replace('▲', '').replace('%', '').strip()
+                if tok_c.isdigit():
+                    num_indices.append(idx)
+            
+            # 列並び: [0:売残高, 1:売前日比, 2:買残高, 3:買前日比, ...]
+            if len(num_indices) >= 4:
+                sell_idx = num_indices[0]
+                diff_sell_idx = num_indices[1]
+                buy_idx = num_indices[2]
+                diff_buy_idx = num_indices[3]
+                
+                sell_bal = parse_num_token(stock_tokens[sell_idx])
+                diff_sell = parse_signed_diff(stock_tokens, diff_sell_idx)
+                
+                buy_bal = parse_num_token(stock_tokens[buy_idx])
+                diff_buy = parse_signed_diff(stock_tokens, diff_buy_idx)
                 
                 ratio = round(buy_bal / sell_bal, 2) if sell_bal > 0 else 999.0
+                
                 margin_dict[code_4digit] = {
                     "buy_balance": buy_bal,
                     "sell_balance": sell_bal,
+                    "diff_buy": diff_buy,      # プラス=増加, マイナス=減少
+                    "diff_sell": diff_sell,    # プラス=増加, マイナス=減少
                     "ratio": ratio
                 }
                     
     doc.close()
     return margin_dict
+
+def update_history_json(date_str, current_data):
+    """過去5営業日分のスナップショットを蓄積保存"""
+    history = {}
+    if os.path.exists(HISTORY_JSON):
+        try:
+            with open(HISTORY_JSON, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            history = {}
+            
+    history[date_str] = current_data
+    
+    # 日付降順でソートし、最新5営業日のみ保持
+    sorted_dates = sorted(history.keys(), reverse=True)[:MAX_HISTORY_DAYS]
+    trimmed_history = {d: history[d] for d in sorted_dates}
+    
+    with open(HISTORY_JSON, "w", encoding="utf-8") as f:
+        json.dump(trimmed_history, f, ensure_ascii=False)
+    print(f"✅ {HISTORY_JSON} に履歴を更新保存しました (保持日数: {len(trimmed_history)}日分: {', '.join(sorted_dates)})")
 
 def main():
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -153,6 +200,9 @@ def main():
         with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
             json.dump(output_payload, f, ensure_ascii=False, indent=2)
         print(f"✅ {OUTPUT_JSON} に最新信用残高データを正常保存しました。")
+        
+        # 履歴データの蓄積保存を実行
+        update_history_json(date_str, margin_dict)
     else:
         print(f"⚠️ 抽出銘柄数が少なすぎます ({len(margin_dict)}件)。保存をスキップします。")
 
