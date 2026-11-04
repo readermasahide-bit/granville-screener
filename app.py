@@ -331,6 +331,62 @@ print(f"ダウンロード完了: 所要時間 {elapsed_sec/60:.1f} 分 ({elapse
 print(f"対象銘柄数: {len(tickers)} / 正常取得銘柄数: {len(bulk_data)} ({len(bulk_data)/len(tickers)*100:.1f}%)")
 print(f"==========================================")
 
+# ======================================================================
+# ★【全東証4,000銘柄完全網羅】東証市場全体の相場レジーム判定
+# ======================================================================
+print("東証全上場銘柄の騰落動向および相場レジームを完全解析中...")
+all_market_changes = []
+advance_count = 0
+decline_count = 0
+unchanged_count = 0
+
+for ticker, df_st in bulk_data.items():
+    if df_st is not None and len(df_st) >= 2:
+        try:
+            c_today = float(df_st['Close'].iloc[-1])
+            c_prev = float(df_st['Close'].iloc[-2])
+            if c_prev > 0:
+                pct = ((c_today - c_prev) / c_prev) * 100
+                all_market_changes.append(pct)
+                if pct > 0:
+                    advance_count += 1
+                elif pct < 0:
+                    decline_count += 1
+                else:
+                    unchanged_count += 1
+        except Exception:
+            pass
+
+total_valid_stocks = len(all_market_changes)
+all_market_median = float(pd.Series(all_market_changes).median()) if all_market_changes else 0.0
+advance_ratio = (advance_count / total_valid_stocks * 100) if total_valid_stocks > 0 else 50.0
+
+# 相場レジーム（4象限）の判定
+if advance_ratio >= 60.0 and all_market_median >= 0.3:
+    regime_status = "BUY_AGGRESSIVE"
+    regime_label = "🟢 積極買い向かい (リスクオン)"
+    regime_badge = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
+    regime_advice = "市場の6割以上が上昇。個別株へ資金が広く流入しており、買いシグナルに従って積極的にエントリー可能なボーナス局面です。"
+elif advance_ratio < 40.0 and all_market_median <= -0.4:
+    regime_status = "RISK_OFF"
+    regime_label = "🛑 警戒・買い控え (全面安リスクオフ)"
+    regime_badge = "bg-rose-950/80 text-rose-300 border border-rose-500/40"
+    regime_advice = "市場の6割以上が下落。個別株が全体地合いの急落に巻き込まれやすいため、新規買いは見送るか打診極小に留め、キャッシュを守る局面です。"
+elif 40.0 <= advance_ratio <= 60.0:
+    regime_status = "SELECTIVE"
+    regime_label = "🟡 個別選別 (押し目狙い)"
+    regime_badge = "bg-amber-950/80 text-amber-300 border border-amber-500/40"
+    regime_advice = "市場は強弱まちまち。地合い任せの買いは避け、★7以上の高需給銘柄や支持線反発（買い3）に絞った丁寧な指値エントリーが推奨される局面です。"
+else:
+    regime_status = "DIVERGENT"
+    regime_label = "⚡ 局地戦 (需給偏重相場)"
+    regime_badge = "bg-purple-950/80 text-purple-300 border border-purple-500/40"
+    regime_advice = "特定セクターや材料株のみに資金が偏在。インデックスに惑わされず、選ばれた強い個別銘柄のみに絞る局面です。"
+
+print(f" -> 東証完全集計(母集団: {total_valid_stocks}銘柄): 値上がり {advance_count}銘柄({advance_ratio:.1f}%) / 値下がり {decline_count}銘柄 / 変わらず {unchanged_count}銘柄")
+print(f" -> 東証全銘柄の真の騰落率中央値: {all_market_median:+.2f}%")
+print(f" -> 本日の相場レジーム: {regime_label}")
+
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -353,7 +409,7 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# ★判定および採点ロジック関数
+# ★判定および採点ロジック関数（厳格化クオンツ需給モデル組み込み版）
 def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None, tse_ticker_hist=None):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -696,7 +752,9 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     elif category == "SELL8":
         stop_loss_price = math.ceil(high_today * 1.02)
 
-    # 期待度スコア
+    # ----------------------------------------------------
+    # ★ 期待度スコア（厳格化クオンツ需給判定モデル）
+    # ----------------------------------------------------
     score = 5 
     score_reasons = []
     
@@ -779,11 +837,12 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score -= 1
                 score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
                 
-            if vol_ratio >= 1.2:
+            # ★【厳格化1】出来高加点は1.5倍以上かつ陽線引けのみ（安易な1.2倍を排除）
+            if vol_ratio >= 1.5:
                 if is_yang_candle:
                     score += 1
-                    score_reasons.append("📊 陽線で出来高増加(買い集め): +1")
-                elif vol_ratio >= 1.5:
+                    score_reasons.append("📊 陽線で出来高急増(大口買い集め): +1")
+                else:
                     score -= 1
                     score_reasons.append("⚠️ 陰線で出来高急増(売り抜け警戒): -1")
 
@@ -808,9 +867,10 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                     score += 1
                     score_reasons.append("📈 長期線トレンド加速: +1")
             elif category in ["BUY3", "BUY3_PRE"]:
-                if diff_rate <= 1.5:
+                # ★【厳格化2】支持線極近加点は1.0%以内かつ陽線引けのみ
+                if diff_rate <= 1.0 and is_yang_candle:
                     score += 1
-                    score_reasons.append("📏 支持線極近: +1")
+                    score_reasons.append("📏 支持線極近(実体反発): +1")
                 if candle_body_pct < 1.0:
                     score -= 1
                     score_reasons.append("🕯️ 反発実体小: -1")
@@ -834,13 +894,13 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score += 1
                 score_reasons.append("🚀 パワー充填からの本発射: +1")
 
-            if is_yin_candle and vol_ratio >= 1.2:
+            if is_yin_candle and vol_ratio >= 1.5:
                 score += 1
-                score_reasons.append("📊 陰線で出来高増加(売り圧力): +1")
+                score_reasons.append("📊 陰線で出来高急増(売り圧力): +1")
             if volume_today <= 10000:
                 score -= 1
                 score_reasons.append("⚠️ 流動性極低: -1")
-            if category in ["SELL7", "SELL7_PRE"] and abs(diff_rate) <= 1.5:
+            if category in ["SELL7", "SELL7_PRE"] and abs(diff_rate) <= 1.0 and is_yin_candle:
                 score += 1
                 score_reasons.append("📏 抵抗線極近の絶好戻り売り: +1")
                 
@@ -971,10 +1031,6 @@ for ticker, df_stock in bulk_data.items():
 
 print(f" -> 判定完了: 買い銘柄検知 {buy_count_debug} 件 / 売り銘柄検知 {sell_count_debug} 件 (総検出: {len(results_list)} 件)")
 
-all_rates = [item["changeRate"] for item in results_list if item["changeRate"] is not None]
-market_median_change = float(pd.Series(all_rates).median()) if all_rates else 0.0
-print(f" -> 本日の東証全上場銘柄の騰落率中央値: {market_median_change:.2f}%")
-
 def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
     sector_data = {}
     for ticker, df in bulk_data.items():
@@ -1041,13 +1097,13 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
 
 hot_sectors, all_sector_stats = calculate_hot_sectors(bulk_data, results_list, ticker_to_sector)
 hot_sector_names = [s["sector"] for s in hot_sectors]
-print(f" -> 本日のHOT業種 ({len(hot_sectors)}件検知): {', '.join(hot_sector_names) if hot_sectors else 'なし'}")
 
 for item in results_list:
     sector = item["sector"]
     is_hot = sector in hot_sector_names
     item["isHotSector"] = is_hot
-    if is_hot:
+    # ★【厳格化3】HOT業種加点は、その銘柄自身も当日プラス引け（changeRate > 0）の場合のみ
+    if is_hot and (item.get("changeRate", 0) > 0):
         for sys_key in ["short", "mid"]:
             sys_data = item[sys_key]
             if sys_data["category"] != "NONE":
@@ -1055,12 +1111,12 @@ for item in results_list:
                 sys_data["score"] = new_score
                 if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
                     sys_data["score_reasons"] = []
-                sys_data["score_reasons"].append(f"🔥 追い風業種 ({sector}): +1")
+                sys_data["score_reasons"].append(f"🔥 追い風業種 ({sector}・プラス引け): +1")
 
 for item in results_list:
     is_strong_relative = False
-    if market_median_change <= -1.0:
-        is_strong_relative = item["changeRate"] >= (market_median_change + 1.5)
+    if all_market_median <= -0.5:
+        is_strong_relative = item["changeRate"] >= (all_market_median + 1.5)
         
     if is_strong_relative:
         item["isStrongRelative"] = True
@@ -1069,10 +1125,9 @@ for item in results_list:
             if sys_data["category"] != "NONE":
                 new_score = min(10, sys_data["score"] + 1)
                 sys_data["score"] = new_score
-                
                 if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
                     sys_data["score_reasons"] = []
-                sys_data["score_reasons"].append("🛡️ 地合い強気: +1")
+                sys_data["score_reasons"].append("🛡️ 地合い強気(逆行高): +1")
 
 # 履歴データ分割出力 (100分割シャーディング)
 print("AI相談用の履歴データを分割出力しています...")
@@ -1115,10 +1170,7 @@ for shard_key, data_dict in shards.items():
             json.dump(data_dict, f, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
 
-# ======================================================================
-# ★【保有ポートフォリオ】完全確定版エグジット判定
-# （損切ラチェット機構 ＆ 決算カウント ＆ 売りサイン連動）
-# ======================================================================
+# 保有銘柄ポートフォリオ判定
 print("保有銘柄ポートフォリオのエグジット判定を計算中...")
 portfolio_records = []
 if os.path.exists(portfolio_path):
@@ -1144,7 +1196,6 @@ if os.path.exists(portfolio_path):
                     buy_price = float(row[p_c])
                     shares = int(float(row[s_c]))
                     
-                    # 案C: CSVに手動指定のSLがあるか確認
                     manual_sl = None
                     if sl_c and pd.notna(row[sl_c]):
                         try:
@@ -1174,9 +1225,6 @@ if os.path.exists(portfolio_path):
                         recent_low10 = float(df_p['Low'].tail(10).min())
                         recent_low5 = float(df_p['Low'].tail(5).min())
                         
-                        # ----------------------------------------------------
-                        # ★ 損切りラチェット機構（不可逆化 ＆ 床止め）
-                        # ----------------------------------------------------
                         prev_info = prev_portfolio_by_code.get(c_str, {})
                         prev_sl = prev_info.get("stopLossPrice", 0)
                         was_stop_loss_triggered = "損切り" in prev_info.get("statusLabel", "")
@@ -1184,14 +1232,9 @@ if os.path.exists(portfolio_path):
                         if manual_sl is not None and manual_sl > 0:
                             base_sl = math.floor(manual_sl)
                         else:
-                            # 自動計算：安値の2.0%下、買値の-7.5%で床止め
                             auto_sl = math.floor(max(recent_low20 * 0.98, buy_price * 0.925))
-                            # 不可逆ラチェット：前回のSLより低くならないよう床止め
                             base_sl = max(auto_sl, prev_sl) if prev_sl > 0 else auto_sl
 
-                        # ----------------------------------------------------
-                        # ★ 課題④：決算発表予定日カウントダウン判定
-                        # ----------------------------------------------------
                         earnings_badge = ""
                         is_earnings_urgent = False
                         if t_key in earnings_dates:
@@ -1204,9 +1247,6 @@ if os.path.exists(portfolio_path):
                                 earnings_badge = f"📢 {e_date.strftime('%m/%d')}(あと{delta_days}日)"
                                 is_earnings_urgent = True
 
-                        # ----------------------------------------------------
-                        # ★ 課題④：スクリーナー本体（SYSTEM_TYPE）の売りシグナル同期
-                        # ----------------------------------------------------
                         active_sys_res = None
                         for s_item in results_list:
                             if s_item["ticker"] == c_str:
@@ -1219,23 +1259,17 @@ if os.path.exists(portfolio_path):
                         is_crossed_below_long_ma = (yesterday_price >= ma_long_yesterday) and (current_price < ma_long_today)
                         is_yin = current_price < open_p
 
-                        # ----------------------------------------------------
-                        # ★ 保有ステータス判定（優先順位順）
-                        # ----------------------------------------------------
-                        # 0. 初期値
                         status_label = "🟢 ホールド"
                         action_label = f"推奨逆指値: {base_sl:,} 円"
                         badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
                         active_sl = base_sl
 
-                        # 1. 損切り防衛（最優先・ゾンビ防止）
                         is_zombie_loss = was_stop_loss_triggered and (current_price < buy_price)
                         if current_price <= base_sl or pl_rate <= -7.5 or is_zombie_loss:
                             status_label = "🛑 損切り執行"
                             action_label = "【現在値で即撤退】"
                             badge_class = "bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse font-bold"
 
-                        # 2. 売りシグナル連動（SYSTEM_TYPEに準拠）
                         elif is_system_sell:
                             if current_sell_cat == "SELL5":
                                 status_label = "🚨 売り5 (新規)"
@@ -1254,19 +1288,16 @@ if os.path.exists(portfolio_path):
                                 action_label = "【大天井過熱につき全利確】"
                             badge_class = "bg-rose-950/80 text-rose-300 border border-rose-500 font-bold"
 
-                        # 3. 異常過熱（大天井利確）
                         elif diff_ma_long >= 14.0 and is_yin and pl_rate >= 8.0:
                             status_label = "🏆 大天井利確"
                             action_label = "【全利確推奨】"
                             badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
 
-                        # 4. 長期トレンド崩壊（長期線割り込み）
                         elif pl_rate >= 2.0 and is_crossed_below_long_ma and buy_price >= ma_long_yesterday:
                             status_label = "🏁 トレンド終了"
                             action_label = "【長期線割れ・全決済】"
                             badge_class = "bg-purple-950/80 text-purple-300 border border-purple-500 font-bold"
 
-                        # 5. 【利大確定ゾーン：+8.0%以上】短期線を割ったら利食い、維持なら5日安値追従
                         elif pl_rate >= 8.0:
                             if current_price < ma_short_today and yesterday_price >= ma_short_today:
                                 status_label = "✨ 先行利確"
@@ -1278,29 +1309,23 @@ if os.path.exists(portfolio_path):
                                 action_label = f"【逆指値を {active_sl:,} 円へ引上】"
                                 badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
 
-                        # 6. 【安全圏移行ゾーン：+5.0%以上】押し目安値が買値を超えた時だけ引き上げ
                         elif pl_rate >= 5.0 and recent_low5 >= buy_price:
                             active_sl = math.floor(max(buy_price * 1.005, recent_low5 * 0.995, base_sl))
                             status_label = "🛡️ 安全圏"
                             action_label = f"【逆指値を {active_sl:,} 円に変更】"
                             badge_class = "bg-sky-950/80 text-sky-300 border border-sky-500 font-bold"
 
-                        # 7. 【巡航・育成ゾーン：+3.0%〜+5.0%未満】直近10日安値へ軽く詰める
                         elif pl_rate >= 3.0:
                             active_sl = math.floor(max(base_sl, recent_low10 * 0.995))
                             status_label = "🌱 巡航ホールド"
                             action_label = f"推奨逆指値: {active_sl:,} 円"
                             badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
 
-                        # 8. 押し目静観ゾーン（含み損だがSL以上）
                         elif pl_rate < 0 and current_price > base_sl:
                             status_label = "⏳ 押し目許容"
                             action_label = f"SL守り待機: {base_sl:,} 円"
                             badge_class = "bg-slate-800 text-slate-400 border border-slate-700"
 
-                        # ----------------------------------------------------
-                        # ★ 決算バッジのスマート結合 ＆ アクション注意喚起
-                        # ----------------------------------------------------
                         if earnings_badge:
                             status_label = f"{status_label} {earnings_badge}"
                             if is_earnings_urgent and "即撤退" not in action_label and "全利確" not in action_label:
@@ -1342,9 +1367,22 @@ with open(os.path.join(data_dir, "prev_counts.json"), "w", encoding="utf-8") as 
 with open(os.path.join(data_dir, "portfolio.json"), "w", encoding="utf-8") as f:
     json.dump(portfolio_records, f, ensure_ascii=False)
 
+# ★【拡張】東証4,000銘柄完全母集団の相場レジーム＆中央値を出力
 meta_info = {
     "lastUpdate": current_time_str,
-    "marketMedian": round(market_median_change, 4)
+    "marketMedian": round(all_market_median, 2),
+    "marketRegime": {
+        "status": regime_status,
+        "label": regime_label,
+        "badgeClass": regime_badge,
+        "advice": regime_advice,
+        "advanceCount": advance_count,
+        "declineCount": decline_count,
+        "unchangedCount": unchanged_count,
+        "totalCount": total_valid_stocks,
+        "advanceRatio": round(advance_ratio, 1),
+        "medianChange": round(all_market_median, 2)
+    }
 }
 with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
     json.dump(meta_info, f, ensure_ascii=False)
