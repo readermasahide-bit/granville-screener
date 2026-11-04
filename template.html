@@ -37,7 +37,6 @@
       ::-webkit-scrollbar-thumb { background: #28354c; border-radius: 4px; }
       ::-webkit-scrollbar-thumb:hover { background: #3c4f74; }
     </style>
-
   </head>
   <body class="min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white pb-16">
     
@@ -93,7 +92,7 @@
             <button id="btnOpenAddPortfolio" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/20 shrink-0">
               <span>➕</span> 保有登録
             </button>
-            <!-- ★新設：スクリーナー更新ボタン（任意で即時実行） -->
+            <!-- スクリーナー更新ボタン -->
             <button id="btnTriggerActions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-sm shrink-0" title="GitHub Actions を起動して最新データで全体更新">
               <span>🔄</span> スクリーナー更新
             </button>
@@ -130,10 +129,37 @@
 
       </section>
 
-      <div id="hotSectorsBanner" class="hidden bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-      </div>
+      <!-- ★【完全刷新】市場環境・相場レジーム概況バー ＆ ★7以上切り替えボタン -->
+      <section id="marketRegimeBanner" class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400 font-bold text-[11px] uppercase tracking-wider">市場環境:</span>
+            <span id="marketRegimeBadge" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 cursor-help" title="市場動向の解析中...">
+              解析中...
+            </span>
+          </div>
+          <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
+          <div id="marketBreadthInfo" class="flex items-center gap-2.5 font-mono text-[11px] text-slate-300 flex-wrap">
+            <span id="statAdvanceCount" class="text-emerald-400 font-bold">▲ 値上: -</span>
+            <span class="text-slate-700">|</span>
+            <span id="statDeclineCount" class="text-rose-400 font-bold">▼ 値下: -</span>
+            <span class="text-slate-700">|</span>
+            <span id="statMedianChange" class="text-slate-300">中央値: -</span>
+          </div>
+        </div>
+
+        <!-- 右端：★7以上（厳選） / すべて表示 切り替えボタングループ -->
+        <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs shrink-0">
+          <button id="btnFilterScore7" class="px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer">
+            🔥 ★7以上のみ (厳選)
+          </button>
+          <button id="btnFilterScoreAll" class="px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
+            📋 すべて表示
+          </button>
+        </div>
+      </section>
       
-      <!-- ★【完全集約：8大分類＋全シグナル窓タブ】 -->
+      <!-- 8大分類＋全シグナル窓タブ -->
       <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2.5" id="tabCardsContainer">
         
         <div data-tab="ALL" class="tab-card cursor-pointer bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-slate-600">
@@ -325,56 +351,56 @@
               <span class="font-bold text-emerald-300 block mb-1">買い1 / 1-Pre (突破前夜)</span>
               <p class="text-slate-400 text-[11px] leading-relaxed">
                 底練りを経て、横ばい〜上向き長期線に初上抜け(1)または直下肉薄(1-Pre)。<br>
-                損切り: 直近20日最安値✕0.995
+                損切り: 直近20日最安値✕0.98
               </p>
             </div>
             <div class="bg-slate-900/60 border border-sky-500/20 rounded-xl p-3.5">
               <span class="font-bold text-sky-300 block mb-1">買い2 / 2-Pre (復帰前夜)</span>
               <p class="text-slate-400 text-[11px] leading-relaxed">
                 上昇中、一時数日下抜け後に素早く復帰(2)または復帰前夜(2-Pre)。<br>
-                損切り: 直近5日最安値✕0.995
+                損切り: 直近5日最安値✕0.98
               </p>
             </div>
             <div class="bg-slate-900/60 border border-amber-500/20 rounded-xl p-3.5">
               <span class="font-bold text-amber-300 block mb-1">買い3 / 3-Pre (待ち伏せ)</span>
               <p class="text-slate-400 text-[11px] leading-relaxed">
                 長期上昇トレンド中、長期線を支持線とした陽線反発(3)または極近待ち伏せ(3-Pre)。<br>
-                損切り: 長期移動平均線✕0.985
+                損切り: 長期移動平均線✕0.98
               </p>
             </div>
             <div class="bg-slate-900/60 border border-purple-500/20 rounded-xl p-3.5">
               <span class="font-bold text-purple-300 block mb-1">買い4：逆張りリバ</span>
               <p class="text-slate-400 text-[11px] leading-relaxed">
                 下落中の長期線から大きく下方に下方乖離して本日反発。<br>
-                損切り: 当日安値✕0.99
+                損切り: 当日安値✕0.98
               </p>
             </div>
             <div class="bg-slate-900/60 border border-rose-500/20 rounded-xl p-3.5">
               <span class="font-bold text-rose-300 block mb-1">売り5：新規売り初動</span>
               <p class="text-slate-400 text-[11px] leading-relaxed">
                 高値圏・上昇トレンドを経て、横ばい〜下向き長期線を本日明確に下抜け(DC)。<br>
-                損切り: 直近20日最高値✕1.005
+                損切り: 直近20日最高値✕1.02
               </p>
             </div>
             <div class="bg-slate-900/60 border border-orange-500/20 rounded-xl p-3.5">
               <span class="font-bold text-orange-300 block mb-1">売り6：再下抜け</span>
               <p class="text-slate-400 text-[11px] leading-relaxed">
                 下降中、一時長期線を1〜3日上抜けるダマシ後に急激に下抜け復帰。<br>
-                損切り: 直近5日最高値✕1.005
+                損切り: 直近5日最高値✕1.02
               </p>
             </div>
             <div class="bg-slate-900/60 border border-red-600/20 rounded-xl p-3.5">
               <span class="font-bold text-red-400 block mb-1">売り7 / 7-Pre (戻り待ち伏せ) ★主力</span>
               <p class="text-slate-400 text-[11px] leading-relaxed">
                 下向き長期線に頭を押さえられて戻り陰線反落(7)または直下戻り待機(7-Pre)。<br>
-                損切り: 長期移動平均線✕1.015
+                損切り: 長期移動平均線✕1.02
               </p>
             </div>
             <div class="bg-slate-900/60 border border-fuchsia-500/20 rounded-xl p-3.5">
               <span class="font-bold text-fuchsia-300 block mb-1">売り8：逆張り過熱売り</span>
               <p class="text-slate-400 text-[11px] leading-relaxed">
                 上昇中の長期線から上に異常急騰乖離後、本日天井反落を確認。<br>
-                損切り: 当日高値✕1.01
+                損切り: 当日高値✕1.02
               </p>
             </div>
           </div>
@@ -391,7 +417,7 @@
         </div>
       </dialog>
 
-      <!-- 保有銘柄登録モーダル（連続登録対応版） -->
+      <!-- 保有銘柄登録モーダル -->
       <dialog id="portfolioEntryDialog" class="bg-slate-900 border border-indigo-500/40 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-md w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
         <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
           <h3 class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
@@ -416,7 +442,6 @@
             </div>
           </div>
 
-          <!-- 初回のみ必要なGitHub連携設定（アコーディオン） -->
           <details class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px] space-y-2">
             <summary class="font-bold text-indigo-400 cursor-pointer select-none">⚙️ GitHub連携設定（初回のみ必要）</summary>
             <div class="pt-2 space-y-2 text-[10px]">
@@ -447,20 +472,20 @@
 
     </main>
 
-<script>
-      // 1. 初期状態は空にしておく
+    <script>
       const state = {
         results: [],
-        hotSectors: [],
         prevCounts: { short: {}, mid: {} },
         portfolio: [],
         marketMedian: 0.0,
+        marketRegime: null,
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
         searchQuery: '',
         sortOrder: 'none',
-        sortScoreOrder: 'desc'
+        sortScoreOrder: 'desc',
+        minScoreFilter: 7 // ★初期状態：7以上（厳選）
       };
       
       const MAX_RENDER_ROWS = 150;
@@ -472,24 +497,21 @@
         unitShare: 100
       };
 
-      // 2. 画面起動時に data/ フォルダから各JSONを一括読み込み（async を追加）
       document.addEventListener('DOMContentLoaded', async () => {
         try {
-          const [resResults, resHot, resPrev, resPort, resMeta] = await Promise.all([
+          const [resResults, resPrev, resPort, resMeta] = await Promise.all([
             fetch('./data/results.json').then(r => r.json()),
-            fetch('./data/hot_sectors.json').then(r => r.json()),
             fetch('./data/prev_counts.json').then(r => r.json()),
             fetch('./data/portfolio.json').then(r => r.json()),
             fetch('./data/meta.json').then(r => r.json())
           ]);
 
           state.results = resResults;
-          state.hotSectors = resHot;
           state.prevCounts = resPrev;
           state.portfolio = resPort;
           state.marketMedian = resMeta.marketMedian || 0.0;
+          state.marketRegime = resMeta.marketRegime || null;
 
-          // 更新日時の表示を書き換え
           const timeEl = document.getElementById('lastUpdateTime');
           if (timeEl && resMeta.lastUpdate) {
             timeEl.textContent = resMeta.lastUpdate;
@@ -497,13 +519,26 @@
         } catch (err) {
           console.error("データの読み込みに失敗しました:", err);
         }
+
         loadPosConfig();
         loadGitHubConfig();
         renderPortfolioSection();
+        renderMarketRegimeBanner();
 
         document.getElementById('btnOpenAddPortfolio').addEventListener('click', openPortfolioEntryDialog);
-        // ★新設：スクリーナー更新ボタンイベント
         document.getElementById('btnTriggerActions').addEventListener('click', handleTriggerActions);
+
+        // ★期待度絞り込みボタン（★7以上 / すべて表示）
+        document.getElementById('btnFilterScore7').addEventListener('click', () => {
+          state.minScoreFilter = 7;
+          updateScoreFilterUI();
+          renderTable();
+        });
+        document.getElementById('btnFilterScoreAll').addEventListener('click', () => {
+          state.minScoreFilter = 1;
+          updateScoreFilterUI();
+          renderTable();
+        });
 
         document.getElementById('btnAiExtract').addEventListener('click', () => {
           const input = document.getElementById('aiExtractInput').value.trim();
@@ -536,7 +571,6 @@
           portDiag.addEventListener('click', (e) => { if (e.target === portDiag) portDiag.close(); });
         }
 
-        // 上部統計窓カードクリック処理（期待度降順ソート常時連動）
         document.querySelectorAll('.tab-card').forEach(card => {
           card.addEventListener('click', () => {
             const targetTab = card.dataset.tab;
@@ -563,9 +597,50 @@
           });
         });
 
-        renderHotSectorsBanner();
         switchSystem('mid');
       });
+
+      // ★市場環境・相場レジームの描画
+      function renderMarketRegimeBanner() {
+        const badge = document.getElementById('marketRegimeBadge');
+        const advEl = document.getElementById('statAdvanceCount');
+        const decEl = document.getElementById('statDeclineCount');
+        const medEl = document.getElementById('statMedianChange');
+        if (!badge) return;
+
+        const regime = state.marketRegime;
+        if (!regime) {
+          badge.textContent = "解析中...";
+          return;
+        }
+
+        badge.textContent = regime.label;
+        badge.className = `px-2.5 py-1 rounded-xl text-xs font-bold ${regime.badgeClass} cursor-help`;
+        badge.title = regime.advice;
+
+        if (advEl) advEl.textContent = `▲ 値上: ${regime.advanceCount.toLocaleString()} (${regime.advanceRatio}%)`;
+        if (decEl) decEl.textContent = `▼ 値下: ${regime.declineCount.toLocaleString()}`;
+        if (medEl) {
+          const sign = regime.medianChange > 0 ? '+' : '';
+          medEl.textContent = `中央値: ${sign}${regime.medianChange}%`;
+          medEl.className = regime.medianChange > 0 ? 'text-emerald-400 font-bold' : regime.medianChange < 0 ? 'text-rose-400 font-bold' : 'text-slate-400';
+        }
+      }
+
+      // ★スコア切り替えボタンUIの更新
+      function updateScoreFilterUI() {
+        const btn7 = document.getElementById('btnFilterScore7');
+        const btnAll = document.getElementById('btnFilterScoreAll');
+        if (!btn7 || !btnAll) return;
+
+        if (state.minScoreFilter >= 7) {
+          btn7.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer';
+          btnAll.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer';
+        } else {
+          btnAll.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 bg-slate-800 text-white border border-slate-700 shadow cursor-pointer';
+          btn7.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer';
+        }
+      }
 
       function renderPortfolioSection() {
         const tbody = document.getElementById('portfolioTableBody');
@@ -681,7 +756,6 @@
         document.getElementById('portfolioEntryDialog').close();
       }
 
-      // ★登録処理（Actionsは起動せず、CSVにのみ高速追記）
       async function handlePortfolioSubmit(e) {
         e.preventDefault();
         const code = document.getElementById('portInputCode').value.trim().replace(/[^0-9]/g, '');
@@ -752,7 +826,6 @@
 
           alert(`✅ [${code}] の登録が完了しました！\n\nGitHubの portfolio.csv に保存されました。続けて他の銘柄も登録できます。\n画面へ反映したい時は「🔄 スクリーナー更新」ボタンを押すか、夕方18時の自動更新をお待ちください。`);
           
-          // 入力フォームをクリアして連続入力しやすくする
           document.getElementById('portInputCode').value = '';
           document.getElementById('portInputPrice').value = '';
           document.getElementById('portInputCode').focus();
@@ -766,7 +839,6 @@
         }
       }
 
-      // ★削除処理（Actionsは起動せず、CSVからのみ高速削除）
       async function handleDeletePortfolioItem(targetCode) {
         if (!confirm(`銘柄コード [${targetCode}] を売却済として portfolio.csv から削除しますか？`)) {
           return;
@@ -829,7 +901,6 @@
         }
       }
 
-      // ★新設：手動でのスクリーナー全体更新トリガー
       async function handleTriggerActions() {
         const owner = localStorage.getItem('gh_owner') || '';
         const repo = localStorage.getItem('gh_repo') || '';
@@ -1080,7 +1151,7 @@
             const recentLows = history.slice(-20).map(r => r[1]).filter(v => v !== null && v > 0);
             if (recentLows.length > 0) {
               const minLow = Math.min(...recentLows);
-              stopLossPrice = stopLossPrice || Math.floor(minLow * 0.995);
+              stopLossPrice = stopLossPrice || Math.floor(minLow * 0.98);
             } else {
               stopLossPrice = stopLossPrice || Math.floor(price * 0.95);
             }
@@ -1275,6 +1346,11 @@
         let filtered = [...state.results];
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
+        // 期待度フィルターも反映
+        if (state.minScoreFilter > 1) {
+          filtered = filtered.filter(r => r[sys].score >= state.minScoreFilter);
+        }
+
         if (state.activeTab !== 'ALL') {
           if (state.activeTab === 'BUY1') filtered = filtered.filter(r => r[sys].category === 'BUY1' || r[sys].category === 'BUY1_PRE');
           else if (state.activeTab === 'BUY2') filtered = filtered.filter(r => r[sys].category === 'BUY2' || r[sys].category === 'BUY2_PRE');
@@ -1439,6 +1515,11 @@
         
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
+        // ★期待度スコアフィルター（初期値: ★7以上）
+        if (state.minScoreFilter > 1) {
+          filtered = filtered.filter(r => r[sys].score >= state.minScoreFilter);
+        }
+
         if (state.activeTab !== 'ALL') {
           if (state.activeTab === 'BUY1') filtered = filtered.filter(r => r[sys].category === 'BUY1' || r[sys].category === 'BUY1_PRE');
           else if (state.activeTab === 'BUY2') filtered = filtered.filter(r => r[sys].category === 'BUY2' || r[sys].category === 'BUY2_PRE');
@@ -1467,19 +1548,25 @@
 
         const totalFilteredCount = filtered.length;
         const warningBanner = document.getElementById('performanceWarning');
+        const scoreLabel = state.minScoreFilter >= 7 ? '【🔥 ★7以上厳選】' : '';
+
         if (totalFilteredCount > MAX_RENDER_ROWS) {
           warningBanner.classList.remove('hidden');
-          document.getElementById('displayCountLabel').textContent = `表示中: ${MAX_RENDER_ROWS} 件 / 該当数: ${totalFilteredCount} 件中`;
+          document.getElementById('displayCountLabel').textContent = `${scoreLabel} 表示中: ${MAX_RENDER_ROWS} 件 / 該当数: ${totalFilteredCount} 件中`;
           filtered = filtered.slice(0, MAX_RENDER_ROWS);
         } else {
           warningBanner.classList.add('hidden');
-          document.getElementById('displayCountLabel').textContent = `表示中: ${totalFilteredCount} 件`;
+          document.getElementById('displayCountLabel').textContent = `${scoreLabel} 表示中: ${totalFilteredCount} 件`;
         }
+
         if (filtered.length === 0) {
           const tr = document.createElement('tr');
+          const filterNote = state.minScoreFilter >= 7 
+            ? '<br><span class="text-xs text-amber-400/80 mt-1.5 inline-block">※現在「★7以上 (厳選)」で絞り込み中です。上の「📋 すべて表示」を押すと★6以下も展開されます。</span>' 
+            : '';
           tr.innerHTML = `
             <td colspan="10" class="py-14 text-center text-slate-500">
-              <p class="text-sm">該当する銘柄がありません</p>
+              <p class="text-sm">該当する銘柄がありません${filterNote}</p>
             </td>
           `;
           tbody.appendChild(tr);
@@ -1516,10 +1603,6 @@
 
           const rsBadge = item.isStrongRelative 
             ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold select-none cursor-help" title="逆行高銘柄">🛡️ 地合い強気</span>` 
-            : ``;
-
-          const hotSectorBadge = item.isHotSector 
-            ? `<span class="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-bold select-none cursor-help" title="資金集中セクター">🔥 HOT業種</span>` 
             : ``;
 
           const consecutiveBadge = sysData.consecutiveDays === 1 
@@ -1739,47 +1822,6 @@
         const dialog = document.getElementById('diagnosticDialog');
         dialog.close();
       }
-      
-      function renderHotSectorsBanner() {
-        const container = document.getElementById('hotSectorsBanner');
-        if (!container) return;
-        const sectors = state.hotSectors || [];
-        container.classList.remove('hidden');
-
-        if (sectors.length === 0) {
-          container.innerHTML = `
-            <div class="flex items-center gap-2 text-slate-400 font-medium text-xs">
-              <span class="text-amber-400 font-bold">🔥 本日のHOT業種:</span>
-              <span>該当なし（売買資金が分散中、または市場全体が警戒相場です）</span>
-            </div>
-          `;
-          return;
-        }
-
-        const badgesHtml = sectors.map((s, idx) => {
-          const rank = idx + 1;
-          const isPlus = s.changeRate >= 0;
-          const sign = isPlus ? '+' : '';
-          return `
-            <div class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950/80 border border-amber-500/30 rounded-xl font-mono text-xs">
-              <span class="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">#${rank}</span>
-              <span class="font-bold text-slate-200 font-sans">${s.sector}</span>
-              <span class="${isPlus ? 'text-emerald-400' : 'text-rose-400'} font-bold">${sign}${s.changeRate}%</span>
-            </div>
-          `;
-        }).join('');
-
-        container.innerHTML = `
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-amber-400 text-xs flex items-center gap-1 shrink-0">
-              <span>🔥</span> 本日のHOT業種 (資金集中セクター):
-            </span>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            ${badgesHtml}
-          </div>
-        `;
-      }          
     </script>
   </body>
 </html>
