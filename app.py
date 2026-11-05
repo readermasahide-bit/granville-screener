@@ -21,12 +21,15 @@ results_json_path = os.path.join(data_dir, "results.json")
 portfolio_json_path = os.path.join(data_dir, "portfolio.json")
 tse_margin_json_path = os.path.join(data_dir, "tse_margin.json")
 tse_history_json_path = os.path.join(data_dir, "tse_margin_history.json")
+shadow_trades_json_path = os.path.join(data_dir, "shadow_trades.json")
+tracker_summary_json_path = os.path.join(data_dir, "tracker_summary.json")
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
 now_jst = datetime.now(JST)
 current_time_str = now_jst.strftime("%Y-%m-%d %H:%M:%S")
 today_date = now_jst.date()
+today_str = today_date.strftime("%Y-%m-%d")
 
 if SYSTEM_TYPE == "short":
     short_window = 5
@@ -82,7 +85,7 @@ if os.path.exists(results_json_path):
     except Exception as e:
         print(f" -> 前日データの読み込みに失敗: {e}")
 
-# 前回の保有銘柄データの読み込み（ラチェット・ゾンビ防止用）
+# 前回の保有銘柄データの読み込み
 prev_portfolio_by_code = {}
 if os.path.exists(portfolio_json_path):
     try:
@@ -331,9 +334,7 @@ print(f"ダウンロード完了: 所要時間 {elapsed_sec/60:.1f} 分 ({elapse
 print(f"対象銘柄数: {len(tickers)} / 正常取得銘柄数: {len(bulk_data)} ({len(bulk_data)/len(tickers)*100:.1f}%)")
 print(f"==========================================")
 
-# ======================================================================
-# ★【全東証4,000銘柄完全網羅】東証市場全体の相場レジーム判定
-# ======================================================================
+# 東証市場全体の相場レジーム判定
 print("東証全上場銘柄の騰落動向および相場レジームを完全解析中...")
 all_market_changes = []
 advance_count = 0
@@ -361,7 +362,6 @@ total_valid_stocks = len(all_market_changes)
 all_market_median = float(pd.Series(all_market_changes).median()) if all_market_changes else 0.0
 advance_ratio = (advance_count / total_valid_stocks * 100) if total_valid_stocks > 0 else 50.0
 
-# 相場レジーム（4象限）の判定
 if advance_ratio >= 60.0 and all_market_median >= 0.3:
     regime_status = "BUY_AGGRESSIVE"
     regime_label = "🟢 積極買い向かい (リスクオン)"
@@ -409,7 +409,7 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# ★判定および採点ロジック関数（厳格化クオンツ需給モデル組み込み版）
+# 判定および採点ロジック関数
 def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None, tse_ticker_hist=None):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -428,7 +428,8 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             "diffRate": 0.0, "reason": "データが不足しています。",
             "ma_short": 0.0, "ma_long": 0.0, "score": 1,
             "stars": "★☆☆☆☆", "stop_loss_price": 0,
-            "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False
+            "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False,
+            "score_reasons": [], "factor_keys": []
         }
         
     today = df_temp.iloc[-1]
@@ -752,11 +753,10 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     elif category == "SELL8":
         stop_loss_price = math.ceil(high_today * 1.02)
 
-    # ----------------------------------------------------
-    # ★ 期待度スコア（厳格化クオンツ需給判定モデル）
-    # ----------------------------------------------------
+    # 期待度スコア
     score = 5 
     score_reasons = []
+    factor_keys = []
     
     if category != "NONE":
         if ticker in earnings_dates:
@@ -765,6 +765,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             if 0 <= delta_days <= 4:
                 score -= 5
                 score_reasons.append(f"⚠️ 決算発表直前({e_date.strftime('%m/%d')}): -5")
+                factor_keys.append("決算直前")
 
         tse_buy_balance = tse_info.get("buy_balance", 0) if tse_info else 0
         tse_sell_balance = tse_info.get("sell_balance", 0) if tse_info else 0
@@ -791,15 +792,18 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                     score += 1
                     reason_txt = "🛡️ アク抜け完了(連日買残減少局面の陽線反発): +1" if is_multi_day_buy_decrease else "🛡️ アク抜け完了(買残減少局面の陽線反発): +1"
                     score_reasons.append(reason_txt)
+                    factor_keys.append("アク抜け完了")
 
             elif category in ["BUY2", "BUY2_PRE"]:
                 if (diff_buy < 0 or is_multi_day_buy_decrease) and is_yang_candle:
                     score += 1
                     score_reasons.append("💎 機関アキュムレーション(強上昇中の買残引き締まり・青天井): +1")
+                    factor_keys.append("機関アキュムレーション")
 
             if (diff_buy > (vol_ma25 * 0.05)) and (not is_yang_candle or is_price_down):
                 score -= 1
                 score_reasons.append("⚠️ ナンピン地獄(調整局面での買残急増・シコり蓄積): -1")
+                factor_keys.append("ナンピン地獄")
 
             has_short_squeeze_fuel = (diff_sell > (vol_ma25 * 0.03)) or (is_margin_tradable and jsf_ratio <= 0.7 and jsf_short_days >= 0.5) or is_multi_day_sell_increase
             
@@ -807,58 +811,71 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 if tse_ratio <= 2.0:
                     score += 2
                     score_reasons.append(f"🔥 特級ショートスクイーズ(東証倍率{tse_ratio:.1f}倍＆売残急増・本物の踏み上げ): +2")
+                    factor_keys.append("特級踏み上げ")
                 elif tse_ratio <= 4.0:
                     score += 1
                     score_reasons.append(f"🔥 ショートスクイーズ初動(東証倍率{tse_ratio:.1f}倍＆空売り燃料チャージ): +1")
+                    factor_keys.append("通常踏み上げ")
 
             if tse_buy_days >= 3.0:
                 if vol_ratio >= 2.0 and is_yang_candle:
                     score_reasons.append(f"🌊 出来高急増によるシコり消化(出来高{vol_ratio:.1f}倍で買残{tse_buy_days:.1f}日分を突破・減点免除)")
+                    factor_keys.append("シコり消化")
                 else:
                     score -= 1
                     score_reasons.append(f"⚠️ 東証買い残シコり玉({tse_buy_days:.1f}日分): -1")
+                    factor_keys.append("シコり玉過多")
 
             if (yesterday_cat in ["BUY1_PRE", "BUY2_PRE", "BUY3_PRE"]) and (category in ["BUY1", "BUY2", "BUY3"]):
                 score += 1
                 score_reasons.append("🚀 パワー充填からの本発射: +1")
+                factor_keys.append("Pre本発射")
 
             if is_rsi_sell_warning:
                 score -= 1
                 score_reasons.append("⚠️ RSI過熱警戒: -1")
+                factor_keys.append("RSI過熱警戒")
             else:
                 if is_rsi_divergence:
                     score += 1
                     score_reasons.append("🛡️ 強気ダイバージェンス: +1")
+                    factor_keys.append("RSIダイバージェンス")
                 elif is_rsi_buy_reversal:
                     score += 1
                     score_reasons.append("🔄 RSIゾーン反発: +1")
+                    factor_keys.append("RSIゾーン反発")
 
             if volume_today <= 10000:
                 score -= 1
                 score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
+                factor_keys.append("流動性極低")
                 
-            # ★【厳格化1】出来高加点は1.5倍以上かつ陽線引けのみ（安易な1.2倍を排除）
             if vol_ratio >= 1.5:
                 if is_yang_candle:
                     score += 1
                     score_reasons.append("📊 陽線で出来高急増(大口買い集め): +1")
+                    factor_keys.append("陽線出来高急増")
                 else:
                     score -= 1
                     score_reasons.append("⚠️ 陰線で出来高急増(売り抜け警戒): -1")
+                    factor_keys.append("陰線出来高急増")
 
             if category not in ["BUY4", "BUY3_PRE"] and upper_shadow_pct >= 40.0:
                 score -= 1
                 score_reasons.append("🕯️ 上髭超過: -1")
+                factor_keys.append("上髭超過")
                 
             short_diff_rate = ((price_today - short_ma_today) / short_ma_today) * 100
             if category in ["BUY1", "BUY2"] and short_diff_rate >= 5.0:
                 score -= 1
                 score_reasons.append("🚀 短期的な飛びすぎ警戒: -1")
+                factor_keys.append("飛びすぎ警戒")
 
             if category in ["BUY1", "BUY1_PRE"]:
                 if is_slope_strong_relative:
                     score += 1
                     score_reasons.append("📈 長期線トレンド加速: +1")
+                    factor_keys.append("長期線加速")
                 if candle_body_pct < 0.5:
                     score -= 1
                     score_reasons.append("🕯️ 反発実体極小: -1")
@@ -866,11 +883,12 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 if is_slope_strong_relative:
                     score += 1
                     score_reasons.append("📈 長期線トレンド加速: +1")
+                    factor_keys.append("長期線加速")
             elif category in ["BUY3", "BUY3_PRE"]:
-                # ★【厳格化2】支持線極近加点は1.0%以内かつ陽線引けのみ
                 if diff_rate <= 1.0 and is_yang_candle:
                     score += 1
                     score_reasons.append("📏 支持線極近(実体反発): +1")
+                    factor_keys.append("支持線極近")
                 if candle_body_pct < 1.0:
                     score -= 1
                     score_reasons.append("🕯️ 反発実体小: -1")
@@ -878,6 +896,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 if candle_body_pct >= 3.0:
                     score += 1
                     score_reasons.append("📈 大陽線反発: +1")
+                    factor_keys.append("大陽線反発")
                 elif candle_body_pct < 0.5:
                     score -= 1
                     score_reasons.append("🕯️ 反発実体極小: -1")
@@ -885,24 +904,30 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             if (jsf_ratio >= 5.0 or tse_buy_days >= 2.5) and is_yin_candle and is_price_down:
                 score += 1
                 score_reasons.append("📉 需給完全合致(買長＆シコり玉過多の投げ連鎖初動): +1")
+                factor_keys.append("買長投げ連鎖")
 
             if jsf_short_days >= 0.8 or tse_ratio <= 1.5:
                 score -= 1
                 score_reasons.append("⚠️ 下値に空売り買い戻し圧力(踏み上げ警戒): -1")
+                factor_keys.append("空売り買戻圧力")
 
             if (yesterday_cat == "SELL7_PRE") and (category == "SELL7"):
                 score += 1
                 score_reasons.append("🚀 パワー充填からの本発射: +1")
+                factor_keys.append("Pre本発射")
 
             if is_yin_candle and vol_ratio >= 1.5:
                 score += 1
                 score_reasons.append("📊 陰線で出来高急増(売り圧力): +1")
+                factor_keys.append("陰線出来高急増")
             if volume_today <= 10000:
                 score -= 1
                 score_reasons.append("⚠️ 流動性極低: -1")
+                factor_keys.append("流動性極低")
             if category in ["SELL7", "SELL7_PRE"] and abs(diff_rate) <= 1.0 and is_yin_candle:
                 score += 1
                 score_reasons.append("📏 抵抗線極近の絶好戻り売り: +1")
+                factor_keys.append("抵抗線極近")
                 
     score = max(1, min(10, score))
     stars_str = "★" * min(5, score) + "☆" * max(0, 5 - min(5, score))
@@ -923,7 +948,8 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         "rsi_buy_reversal": is_rsi_buy_reversal,
         "rsi_double_bottom": is_rsi_double_bottom,
         "rsi_divergence": is_rsi_divergence,
-        "score_reasons": score_reasons
+        "score_reasons": score_reasons,
+        "factor_keys": factor_keys
     }
 
 # 4. 全データの判定実行
@@ -951,6 +977,7 @@ for ticker, df_stock in bulk_data.items():
         
         volume_today = float(today['Volume'])
         is_low_volume = volume_today <= 10000
+        yesterday_low = float(yesterday['Low'])
         
         market_raw = ticker_to_market.get(ticker, "")
         if "プライム" in market_raw:
@@ -1021,6 +1048,7 @@ for ticker, df_stock in bulk_data.items():
             "isLowVolume": clean_val(is_low_volume),
             "isStrongRelative": False,
             "isMarginTradable": is_shortable,
+            "yesterdayLow": yesterday_low,
             "short": short_res,
             "mid": mid_res
         }
@@ -1102,7 +1130,6 @@ for item in results_list:
     sector = item["sector"]
     is_hot = sector in hot_sector_names
     item["isHotSector"] = is_hot
-    # ★【厳格化3】HOT業種加点は、その銘柄自身も当日プラス引け（changeRate > 0）の場合のみ
     if is_hot and (item.get("changeRate", 0) > 0):
         for sys_key in ["short", "mid"]:
             sys_data = item[sys_key]
@@ -1112,6 +1139,9 @@ for item in results_list:
                 if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
                     sys_data["score_reasons"] = []
                 sys_data["score_reasons"].append(f"🔥 追い風業種 ({sector}・プラス引け): +1")
+                if "factor_keys" not in sys_data or sys_data["factor_keys"] is None:
+                    sys_data["factor_keys"] = []
+                sys_data["factor_keys"].append("追い風業種")
 
 for item in results_list:
     is_strong_relative = False
@@ -1128,6 +1158,9 @@ for item in results_list:
                 if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
                     sys_data["score_reasons"] = []
                 sys_data["score_reasons"].append("🛡️ 地合い強気(逆行高): +1")
+                if "factor_keys" not in sys_data or sys_data["factor_keys"] is None:
+                    sys_data["factor_keys"] = []
+                sys_data["factor_keys"].append("地合い強気")
 
 # 履歴データ分割出力 (100分割シャーディング)
 print("AI相談用の履歴データを分割出力しています...")
@@ -1352,6 +1385,260 @@ if os.path.exists(portfolio_path):
 else:
     print(" -> portfolio.csv が存在しないため保有銘柄セクションは空で出力します")
 
+# ======================================================================
+# ★【課題③】実戦同期型『Shadow Tracker』自動追跡＆集計エンジン
+# ======================================================================
+print("スクリーナーシグナルの実績追跡およびスコア精度検証エンジンを実行中...")
+
+shadow_trades = []
+if os.path.exists(shadow_trades_json_path):
+    try:
+        with open(shadow_trades_json_path, "r", encoding="utf-8") as f:
+            shadow_trades = json.load(f)
+    except Exception as e:
+        print(f"⚠️ 既存の shadow_trades.json 読み込みスキップ: {e}")
+        shadow_trades = []
+
+# 1. 過去の記録の追跡更新（bulk_dataの最新株価を照合）
+updated_trades = []
+for trade in shadow_trades:
+    try:
+        t_code = trade.get("ticker", "")
+        t_key = f"{t_code}.T"
+        if t_key not in bulk_data or bulk_data[t_key].empty:
+            updated_trades.append(trade)
+            continue
+
+        df_t = bulk_data[t_key]
+        sig_date_str = trade.get("signalDate", "")
+        
+        # シグナル日以降の営業日データを抽出
+        df_after = df_t[df_t.index > pd.to_datetime(sig_date_str)].copy()
+        days_count = len(df_after)
+
+        # エントリー判定（翌営業日始値）
+        if trade.get("entryStatus") == "PENDING_ENTRY" and days_count >= 1:
+            first_day = df_after.iloc[0]
+            entry_open = float(first_day['Open'])
+            sig_close = float(trade.get("signalClose", entry_open))
+            yesterday_low = float(trade.get("yesterdayLow", entry_open * 0.98))
+            
+            gap_rate = ((entry_open - sig_close) / sig_close) * 100 if sig_close > 0 else 0.0
+            trade["entryOpen"] = entry_open
+            trade["gapRate"] = round(gap_rate, 2)
+            trade["entryDate"] = df_after.index[0].strftime("%Y-%m-%d")
+
+            # 実戦スキップルールの適用
+            if gap_rate > 2.0:
+                trade["entryStatus"] = "SKIPPED_GAP_HIGH"  # 飛びつき高値掴み見送り
+            elif entry_open < yesterday_low:
+                trade["entryStatus"] = "SKIPPED_GAP_LOW"   # 前日安値割れ前提崩壊見送り
+            else:
+                trade["entryStatus"] = "ENTERED"           # 適正エントリー確定
+
+        # エントリー確定銘柄のパフォーマンス追跡（最大10営業日）
+        if trade.get("entryStatus") == "ENTERED" and days_count >= 1:
+            entry_p = float(trade.get("entryOpen", 1.0))
+            sl_p = float(trade.get("stopLossPrice", entry_p * 0.95))
+            
+            # 最大10営業日分のみ評価
+            df_eval = df_after.head(10)
+            trade["daysHeld"] = len(df_eval)
+
+            # 期間中最高値・最安値
+            high_eval = float(df_eval['High'].max())
+            low_eval = float(df_eval['Low'].min())
+            trade["highestPrice"] = high_eval
+            trade["lowestPrice"] = low_eval
+
+            # T+3時点終値
+            if len(df_eval) >= 3 and "return_T3" not in trade:
+                c3 = float(df_eval.iloc[2]['Close'])
+                trade["return_T3"] = round(((c3 - entry_p) / entry_p) * 100, 2)
+
+            # T+5時点終値
+            if len(df_eval) >= 5 and "return_T5" not in trade:
+                c5 = float(df_eval.iloc[4]['Close'])
+                trade["return_T5"] = round(((c5 - entry_p) / entry_p) * 100, 2)
+
+            # T+10時点終値
+            if len(df_eval) >= 10 and "return_T10" not in trade:
+                c10 = float(df_eval.iloc[9]['Close'])
+                trade["return_T10"] = round(((c10 - entry_p) / entry_p) * 100, 2)
+                trade["isCompleted"] = True
+
+        updated_trades.append(trade)
+    except Exception:
+        updated_trades.append(trade)
+
+# 2. 本日新規シグナル銘柄の登録
+existing_ids = {t.get("id") for t in updated_trades}
+for item in results_list:
+    sys_data = item.get(SYSTEM_TYPE, {})
+    cat = sys_data.get("category", "NONE")
+    if cat != "NONE" and cat.startswith("BUY"):  # 買いシグナルを追跡対象
+        trade_id = f"{today_str}_{item['ticker']}"
+        if trade_id not in existing_ids:
+            new_trade = {
+                "id": trade_id,
+                "signalDate": today_str,
+                "ticker": item["ticker"],
+                "name": item["name"],
+                "system": SYSTEM_TYPE,
+                "category": cat,
+                "score": int(sys_data.get("score", 5)),
+                "signalClose": float(item["price"]),
+                "yesterdayLow": float(item.get("yesterdayLow", item["price"] * 0.98)),
+                "stopLossPrice": float(sys_data.get("stop_loss_price", item["price"] * 0.95)),
+                "regime": regime_status,
+                "factor_keys": sys_data.get("factor_keys", []),
+                "entryStatus": "PENDING_ENTRY"
+            }
+            updated_trades.append(new_trade)
+
+# 最新300件程度に整理して保存
+updated_trades = updated_trades[-300:]
+with open(shadow_trades_json_path, "w", encoding="utf-8") as f:
+    json.dump(updated_trades, f, ensure_ascii=False, indent=2)
+
+# 3. 多次元集計エンジン（軸1・軸2・軸3のクロス分析）
+def build_score_table(trades_pool, return_key):
+    """スコア別（10〜5以下）の統計テーブルを算出"""
+    scores_def = [10, 9, 8, 7, 6, 5]
+    table_rows = []
+    
+    for sc in scores_def:
+        if sc == 5:
+            matched = [t for t in trades_pool if t.get("score", 5) <= 5 and return_key in t]
+            label = "★5以下"
+        else:
+            matched = [t for t in trades_pool if t.get("score") == sc and return_key in t]
+            label = f"★{sc}"
+            
+        count = len(matched)
+        if count == 0:
+            table_rows.append({
+                "score": sc, "label": label, "count": 0, "winRate": 0.0,
+                "avgGain": 0.0, "avgLoss": 0.0, "profitFactor": 0.0, "expectedValue": 0.0
+            })
+            continue
+
+        returns = [float(t[return_key]) for t in matched]
+        wins = [r for r in returns if r > 0]
+        losses = [r for r in returns if r <= 0]
+        
+        win_rate = round((len(wins) / count) * 100, 1)
+        avg_gain = round(pd.Series(wins).mean(), 1) if wins else 0.0
+        avg_loss = round(pd.Series(losses).mean(), 1) if losses else 0.0
+        
+        # 損益レシオ (Profit Factor)
+        if abs(avg_loss) > 0:
+            pf = round(avg_gain / abs(avg_loss), 2)
+        else:
+            pf = 99.0 if avg_gain > 0 else 0.0
+            
+        expected_val = round(pd.Series(returns).mean(), 1)
+        
+        table_rows.append({
+            "score": sc, "label": label, "count": count, "winRate": win_rate,
+            "avgGain": avg_gain, "avgLoss": avg_loss, "profitFactor": pf, "expectedValue": expected_val
+        })
+    return table_rows
+
+# 有効エントリー済みのトレード群
+valid_trades = [t for t in updated_trades if t.get("entryStatus") == "ENTERED"]
+
+# 軸1 ＆ 軸2：全地合いおよび地合い別の集計（T+5 と T+10）
+tracker_summary = {
+    "totalTracked": len(valid_trades),
+    "regimes": {
+        "ALL": {
+            "label": "🌐 全地合い通算",
+            "T5": build_score_table(valid_trades, "return_T5"),
+            "T10": build_score_table(valid_trades, "return_T10")
+        },
+        "BUY_AGGRESSIVE": {
+            "label": "🟢 買い向かい時",
+            "T5": build_score_table([t for t in valid_trades if t.get("regime") == "BUY_AGGRESSIVE"], "return_T5"),
+            "T10": build_score_table([t for t in valid_trades if t.get("regime") == "BUY_AGGRESSIVE"], "return_T10")
+        },
+        "SELECTIVE": {
+            "label": "🟡 選別時",
+            "T5": build_score_table([t for t in valid_trades if t.get("regime") == "SELECTIVE"], "return_T5"),
+            "T10": build_score_table([t for t in valid_trades if t.get("regime") == "SELECTIVE"], "return_T10")
+        },
+        "RISK_OFF": {
+            "label": "🛑 買い控え時",
+            "T5": build_score_table([t for t in valid_trades if t.get("regime") == "RISK_OFF"], "return_T5"),
+            "T10": build_score_table([t for t in valid_trades if t.get("regime") == "RISK_OFF"], "return_T10")
+        }
+    },
+    # 軸3：ファクター別・純粋寄与度分析 ＆ コード処方箋
+    "factors": []
+}
+
+# 主要ファクターのキー一覧
+target_factors = [
+    ("特級踏み上げ", "特級ショートスクイーズ"),
+    ("アク抜け完了", "アク抜け完了(買残減少)"),
+    ("陽線出来高急増", "陽線で出来高急増(1.5倍)"),
+    ("支持線極近", "支持線極近(1.0%実体反発)"),
+    ("RSIゾーン反発", "RSIゾーン反発"),
+    ("RSIダイバージェンス", "強気ダイバージェンス"),
+    ("Pre本発射", "Preからの本発射"),
+    ("追い風業種", "追い風HOT業種")
+]
+
+trades_with_t5 = [t for t in valid_trades if "return_T5" in t]
+base_win_rate = round(len([t for t in trades_with_t5 if float(t["return_T5"]) > 0]) / len(trades_with_t5) * 100, 1) if trades_with_t5 else 50.0
+
+factor_analysis_rows = []
+for f_key, f_name in target_factors:
+    active_pool = [t for t in trades_with_t5 if f_key in t.get("factor_keys", [])]
+    inactive_pool = [t for t in trades_with_t5 if f_key not in t.get("factor_keys", [])]
+    
+    act_count = len(active_pool)
+    if act_count >= 1:
+        act_wins = len([t for t in active_pool if float(t["return_T5"]) > 0])
+        act_rate = round((act_wins / act_count) * 100, 1)
+        
+        inact_wins = len([t for t in inactive_pool if float(t["return_T5"]) > 0])
+        inact_rate = round((inact_wins / len(inactive_pool)) * 100, 1) if inactive_pool else base_win_rate
+        
+        contrib = round(act_rate - inact_rate, 1)
+        
+        if contrib >= 15.0:
+            eval_badge = "◎ 極めて優秀"
+            advice = f"勝率寄与 +{contrib}% と極めて強力です。現在の配点を維持、または増点を推奨します。"
+        elif contrib >= 5.0:
+            eval_badge = "◯ 有効"
+            advice = f"勝率寄与 +{contrib}% で良好です。現状維持を推奨します。"
+        elif contrib >= -5.0:
+            eval_badge = "△ 寄与小"
+            advice = f"勝率寄与 {contrib:+}% で中立です。条件の厳格化（実体の大きさ等）を検討してください。"
+        else:
+            eval_badge = "✕ 悪化要因"
+            advice = f"勝率寄与 {contrib:+}% と全体平均を下回っています。app.py の加点をコメントアウトして無効化を推奨します。"
+            
+        factor_analysis_rows.append({
+            "key": f_key, "name": f_name, "count": act_count,
+            "activeWinRate": act_rate, "inactiveWinRate": inact_rate,
+            "contribution": contrib, "evaluation": eval_badge, "actionAdvice": advice
+        })
+    else:
+        factor_analysis_rows.append({
+            "key": f_key, "name": f_name, "count": 0,
+            "activeWinRate": 0.0, "inactiveWinRate": base_win_rate,
+            "contribution": 0.0, "evaluation": "－ 蓄積中", "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+        })
+
+tracker_summary["factors"] = factor_analysis_rows
+
+with open(tracker_summary_json_path, "w", encoding="utf-8") as f:
+    json.dump(tracker_summary, f, ensure_ascii=False, indent=2)
+
+print(f" -> スクリーナー実績追跡完了: 累積 {len(valid_trades)} 件を評価 (summary: {tracker_summary_json_path})")
+
 # データ出力
 print("最新データを data/ フォルダに出力中...")
 
@@ -1367,7 +1654,6 @@ with open(os.path.join(data_dir, "prev_counts.json"), "w", encoding="utf-8") as 
 with open(os.path.join(data_dir, "portfolio.json"), "w", encoding="utf-8") as f:
     json.dump(portfolio_records, f, ensure_ascii=False)
 
-# ★【拡張】東証4,000銘柄完全母集団の相場レジーム＆中央値を出力
 meta_info = {
     "lastUpdate": current_time_str,
     "marketMedian": round(all_market_median, 2),
