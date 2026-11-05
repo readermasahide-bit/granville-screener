@@ -300,11 +300,96 @@
 
       </section>
 
-      <!-- ボタンエリア（3大展開機能） -->
+      <!-- ★【常時表示】スクリーナー実績検証ダッシュボード（銘柄一覧の直下に配置） -->
+      <section id="trackerSection" class="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-2xl space-y-5">
+        
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h3 class="text-sm font-bold text-amber-300 tracking-tight flex items-center gap-2">
+              <span>📊</span> スクリーナー実績検証ダッシュボード
+            </h3>
+            <p class="text-[10px] text-slate-400 mt-0.5">
+              シグナル翌日の始値から追跡し、期待度スコアの精度と各加点ルールの勝率寄与度を自動分析中
+            </p>
+          </div>
+          
+          <!-- 軸1 時間軸トグル (T+5 / T+10) -->
+          <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs self-start sm:self-auto">
+            <button id="btnHorizonT5" class="px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer">
+              📅 T+5 (1週間後)
+            </button>
+            <button id="btnHorizonT10" class="px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
+              📅 T+10 (2週間後)
+            </button>
+          </div>
+        </div>
+
+        <!-- 軸2 地合い（相場レジーム）切り替えフィルターバー -->
+        <div class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 text-xs flex-wrap">
+          <span class="text-slate-500 px-2 font-bold text-[11px]">相場環境:</span>
+          <button data-regime="ALL" class="tracker-regime-btn px-3 py-1 rounded-lg font-bold bg-slate-800 text-white cursor-pointer">🌐 全地合い通算</button>
+          <button data-regime="BUY_AGGRESSIVE" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🟢 買い向かい時</button>
+          <button data-regime="SELECTIVE" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🟡 選別時</button>
+          <button data-regime="RISK_OFF" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🛑 買い控え時</button>
+        </div>
+
+        <!-- 軸1 スコア別 実績テーブル -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-300 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+              <span>🎯</span> スコア別・勝率＆リスクリワード分析
+              <span id="trackerActiveLabel" class="text-[10px] text-amber-400 font-mono font-normal">（全地合い / T+5基準）</span>
+            </span>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
+                  <th class="p-2.5 w-24">期待度スコア</th>
+                  <th class="p-2.5 text-right w-24">追跡サンプル</th>
+                  <th class="p-2.5 text-right w-24">勝率 (%)</th>
+                  <th class="p-2.5 text-right w-28">平均利益 (%)</th>
+                  <th class="p-2.5 text-right w-28">平均損失 (%)</th>
+                  <th class="p-2.5 text-right w-28">損益レシオ (PF)</th>
+                  <th class="p-2.5 text-right w-28">ネット期待値 (%)</th>
+                </tr>
+              </thead>
+              <tbody id="trackerScoreTableBody" class="divide-y divide-slate-800/60 font-mono">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 軸3 ファクター別・純粋寄与度 ＆ コード改善処方箋 -->
+        <div class="space-y-2 pt-3 border-t border-slate-800">
+          <span class="font-bold text-slate-300 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+            <span>🧬</span> 加点ファクター別・勝率寄与度分析 ＆ コード改善処方箋
+          </span>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
+                  <th class="p-2.5 min-w-[160px]">加点ルール名</th>
+                  <th class="p-2.5 text-right w-20">点灯件数</th>
+                  <th class="p-2.5 text-right w-24">点灯時勝率</th>
+                  <th class="p-2.5 text-right w-24">非点灯勝率</th>
+                  <th class="p-2.5 text-right w-24">勝率寄与度</th>
+                  <th class="p-2.5 text-center w-28">判定</th>
+                  <th class="p-2.5 text-left min-w-[280px]">コード改善アクション（処方箋）</th>
+                </tr>
+              </thead>
+              <tbody id="trackerFactorTableBody" class="divide-y divide-slate-800/60 text-[11px]">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ボタンエリア -->
       <div class="flex justify-center items-center gap-3 mt-6 flex-wrap">
-        <button id="btnToggleTracker" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md flex items-center gap-1.5">
-          <span>📊</span> 実績検証・改善処方箋
-        </button>
         <button id="btnToggleExplanation" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md">
           📖 解説を表示
         </button>
@@ -312,96 +397,6 @@
           <span>⚙️</span> 資金設定
         </button>
       </div>
-
-      <!-- ★【新設】スクリーナー実績検証 ＆ 期待度改善ダッシュボード（折りたたみ式） -->
-      <section id="trackerSection" class="pt-4 hidden space-y-4">
-        <div class="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-2xl space-y-5">
-          
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-            <div>
-              <h3 class="text-sm font-bold text-amber-300 tracking-tight flex items-center gap-2">
-                <span>📊</span> スクリーナー実績検証ダッシュボード（実戦フォワードテスト）
-              </h3>
-              <p class="text-[10px] text-slate-400 mt-0.5">
-                シグナル翌日の始値から追跡し、期待度スコアの精度と各加点ルールの勝率寄与度を自動分析中
-              </p>
-            </div>
-            
-            <!-- 軸1時間軸トグル (T+5 / T+10) -->
-            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs self-start sm:self-auto">
-              <button id="btnHorizonT5" class="px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer">
-                📅 T+5 (1週間後)
-              </button>
-              <button id="btnHorizonT10" class="px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
-                📅 T+10 (2週間後)
-              </button>
-            </div>
-          </div>
-
-          <!-- 軸2 地合い（相場レジーム）切り替えフィルターバー -->
-          <div class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 text-xs flex-wrap">
-            <span class="text-slate-500 px-2 font-bold text-[11px]">相場環境:</span>
-            <button data-regime="ALL" class="tracker-regime-btn px-3 py-1 rounded-lg font-bold bg-slate-800 text-white cursor-pointer">🌐 全地合い通算</button>
-            <button data-regime="BUY_AGGRESSIVE" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🟢 買い向かい時</button>
-            <button data-regime="SELECTIVE" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🟡 選別時</button>
-            <button data-regime="RISK_OFF" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🛑 買い控え時</button>
-          </div>
-
-          <!-- 軸1 スコア別 実績テーブル -->
-          <div class="space-y-1.5">
-            <div class="flex justify-between items-center text-xs">
-              <span class="font-bold text-slate-300 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-                <span>🎯</span> スコア別・勝率＆リスクリワード分析
-                <span id="trackerActiveLabel" class="text-[10px] text-amber-400 font-mono font-normal">（全地合い / T+5基準）</span>
-              </span>
-            </div>
-            
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs">
-                <thead>
-                  <tr class="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
-                    <th class="p-2.5 w-24">期待度スコア</th>
-                    <th class="p-2.5 text-right w-24">追跡サンプル</th>
-                    <th class="p-2.5 text-right w-24">勝率 (%)</th>
-                    <th class="p-2.5 text-right w-28">平均利益 (%)</th>
-                    <th class="p-2.5 text-right w-28">平均損失 (%)</th>
-                    <th class="p-2.5 text-right w-28">損益レシオ (PF)</th>
-                    <th class="p-2.5 text-right w-28">ネット期待値 (%)</th>
-                  </tr>
-                </thead>
-                <tbody id="trackerScoreTableBody" class="divide-y divide-slate-800/60 font-mono">
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- 軸3 ファクター別・純粋寄与度 ＆ コード改善処方箋 -->
-          <div class="space-y-2 pt-3 border-t border-slate-800">
-            <span class="font-bold text-slate-300 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
-              <span>🧬</span> 加点ファクター別・勝率寄与度分析 ＆ コード改善処方箋
-            </span>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs">
-                <thead>
-                  <tr class="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
-                    <th class="p-2.5 min-w-[160px]">加点ルール名</th>
-                    <th class="p-2.5 text-right w-20">点灯件数</th>
-                    <th class="p-2.5 text-right w-24">点灯時勝率</th>
-                    <th class="p-2.5 text-right w-24">非点灯勝率</th>
-                    <th class="p-2.5 text-right w-24">勝率寄与度</th>
-                    <th class="p-2.5 text-center w-28">判定</th>
-                    <th class="p-2.5 text-left min-w-[280px]">コード改善アクション（処方箋）</th>
-                  </tr>
-                </thead>
-                <tbody id="trackerFactorTableBody" class="divide-y divide-slate-800/60 text-[11px]">
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-      </section>
 
       <!-- 資金管理設定アコーディオンエリア -->
       <section id="settingsSection" class="pt-4 hidden">
@@ -573,9 +568,9 @@
         portfolio: [],
         marketMedian: 0.0,
         marketRegime: null,
-        trackerSummary: null, // ★新設：検証ダッシュボードデータ
-        trackerRegime: 'ALL', // 軸2フィルター: ALL, BUY_AGGRESSIVE, SELECTIVE, RISK_OFF
-        trackerHorizon: 'T5',  // 軸1時間軸: T5, T10
+        trackerSummary: null,
+        trackerRegime: 'ALL',
+        trackerHorizon: 'T5',
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
@@ -639,9 +634,6 @@
           updateScoreFilterUI();
           renderTable();
         });
-
-        // ダッシュボードトグルボタン
-        document.getElementById('btnToggleTracker').addEventListener('click', toggleTracker);
 
         // 軸1 時間軸トグル (T+5 / T+10)
         document.getElementById('btnHorizonT5').addEventListener('click', () => {
@@ -725,7 +717,6 @@
         switchSystem('mid');
       });
 
-      // 市場環境・相場レジームの描画
       function renderMarketRegimeBanner() {
         const badge = document.getElementById('marketRegimeBadge');
         const advEl = document.getElementById('statAdvanceCount');
@@ -766,18 +757,6 @@
         }
       }
 
-      function toggleTracker() {
-        const sec = document.getElementById('trackerSection');
-        const btn = document.getElementById('btnToggleTracker');
-        if (sec.classList.contains('hidden')) {
-          sec.classList.remove('hidden');
-          btn.innerHTML = `<span>📊</span> 実績検証を閉じる`;
-        } else {
-          sec.classList.add('hidden');
-          btn.innerHTML = `<span>📊</span> 実績検証・改善処方箋`;
-        }
-      }
-
       function updateTrackerHorizonUI() {
         const btn5 = document.getElementById('btnHorizonT5');
         const btn10 = document.getElementById('btnHorizonT10');
@@ -792,7 +771,6 @@
         }
       }
 
-      // ★新設：実績検証＆期待度改善ダッシュボードの描画
       function renderTrackerDashboard() {
         const summary = state.trackerSummary;
         const scoreTbody = document.getElementById('trackerScoreTableBody');
@@ -819,7 +797,6 @@
         const horizonLabel = currentHorizonKey === 'T5' ? 'T+5基準(1週間)' : 'T+10基準(2週間)';
         activeLabelEl.textContent = `（${regimeData.label} / ${horizonLabel}）`;
 
-        // 1. 軸1 スコア別テーブル描画
         scoreRows.forEach(row => {
           const tr = document.createElement('tr');
           tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/40 transition select-none';
@@ -841,7 +818,6 @@
           scoreTbody.appendChild(tr);
         });
 
-        // 2. 軸3 ファクター寄与度 ＆ 処方箋テーブル描画
         const factorRows = summary.factors || [];
         factorRows.forEach(f => {
           const tr = document.createElement('tr');
