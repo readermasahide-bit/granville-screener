@@ -129,7 +129,7 @@
 
       </section>
 
-      <!-- ★【完全刷新】市場環境・相場レジーム概況バー ＆ ★7以上切り替えボタン -->
+      <!-- 市場環境・相場レジーム概況バー ＆ ★7以上切り替えボタン -->
       <section id="marketRegimeBanner" class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
         <div class="flex items-center gap-3 flex-wrap">
           <div class="flex items-center gap-2">
@@ -228,6 +228,7 @@
 
       </section>
 
+      <!-- メインスクリーナー結果テーブル -->
       <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col">
         
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
@@ -299,8 +300,11 @@
 
       </section>
 
-      <!-- ボタンエリア -->
+      <!-- ボタンエリア（3大展開機能） -->
       <div class="flex justify-center items-center gap-3 mt-6 flex-wrap">
+        <button id="btnToggleTracker" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md flex items-center gap-1.5">
+          <span>📊</span> 実績検証・改善処方箋
+        </button>
         <button id="btnToggleExplanation" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md">
           📖 解説を表示
         </button>
@@ -308,6 +312,96 @@
           <span>⚙️</span> 資金設定
         </button>
       </div>
+
+      <!-- ★【新設】スクリーナー実績検証 ＆ 期待度改善ダッシュボード（折りたたみ式） -->
+      <section id="trackerSection" class="pt-4 hidden space-y-4">
+        <div class="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-2xl space-y-5">
+          
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+            <div>
+              <h3 class="text-sm font-bold text-amber-300 tracking-tight flex items-center gap-2">
+                <span>📊</span> スクリーナー実績検証ダッシュボード（実戦フォワードテスト）
+              </h3>
+              <p class="text-[10px] text-slate-400 mt-0.5">
+                シグナル翌日の始値から追跡し、期待度スコアの精度と各加点ルールの勝率寄与度を自動分析中
+              </p>
+            </div>
+            
+            <!-- 軸1時間軸トグル (T+5 / T+10) -->
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs self-start sm:self-auto">
+              <button id="btnHorizonT5" class="px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer">
+                📅 T+5 (1週間後)
+              </button>
+              <button id="btnHorizonT10" class="px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
+                📅 T+10 (2週間後)
+              </button>
+            </div>
+          </div>
+
+          <!-- 軸2 地合い（相場レジーム）切り替えフィルターバー -->
+          <div class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 text-xs flex-wrap">
+            <span class="text-slate-500 px-2 font-bold text-[11px]">相場環境:</span>
+            <button data-regime="ALL" class="tracker-regime-btn px-3 py-1 rounded-lg font-bold bg-slate-800 text-white cursor-pointer">🌐 全地合い通算</button>
+            <button data-regime="BUY_AGGRESSIVE" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🟢 買い向かい時</button>
+            <button data-regime="SELECTIVE" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🟡 選別時</button>
+            <button data-regime="RISK_OFF" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🛑 買い控え時</button>
+          </div>
+
+          <!-- 軸1 スコア別 実績テーブル -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-bold text-slate-300 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                <span>🎯</span> スコア別・勝率＆リスクリワード分析
+                <span id="trackerActiveLabel" class="text-[10px] text-amber-400 font-mono font-normal">（全地合い / T+5基準）</span>
+              </span>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
+                    <th class="p-2.5 w-24">期待度スコア</th>
+                    <th class="p-2.5 text-right w-24">追跡サンプル</th>
+                    <th class="p-2.5 text-right w-24">勝率 (%)</th>
+                    <th class="p-2.5 text-right w-28">平均利益 (%)</th>
+                    <th class="p-2.5 text-right w-28">平均損失 (%)</th>
+                    <th class="p-2.5 text-right w-28">損益レシオ (PF)</th>
+                    <th class="p-2.5 text-right w-28">ネット期待値 (%)</th>
+                  </tr>
+                </thead>
+                <tbody id="trackerScoreTableBody" class="divide-y divide-slate-800/60 font-mono">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 軸3 ファクター別・純粋寄与度 ＆ コード改善処方箋 -->
+          <div class="space-y-2 pt-3 border-t border-slate-800">
+            <span class="font-bold text-slate-300 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+              <span>🧬</span> 加点ファクター別・勝率寄与度分析 ＆ コード改善処方箋
+            </span>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
+                    <th class="p-2.5 min-w-[160px]">加点ルール名</th>
+                    <th class="p-2.5 text-right w-20">点灯件数</th>
+                    <th class="p-2.5 text-right w-24">点灯時勝率</th>
+                    <th class="p-2.5 text-right w-24">非点灯勝率</th>
+                    <th class="p-2.5 text-right w-24">勝率寄与度</th>
+                    <th class="p-2.5 text-center w-28">判定</th>
+                    <th class="p-2.5 text-left min-w-[280px]">コード改善アクション（処方箋）</th>
+                  </tr>
+                </thead>
+                <tbody id="trackerFactorTableBody" class="divide-y divide-slate-800/60 text-[11px]">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
 
       <!-- 資金管理設定アコーディオンエリア -->
       <section id="settingsSection" class="pt-4 hidden">
@@ -479,13 +573,16 @@
         portfolio: [],
         marketMedian: 0.0,
         marketRegime: null,
+        trackerSummary: null, // ★新設：検証ダッシュボードデータ
+        trackerRegime: 'ALL', // 軸2フィルター: ALL, BUY_AGGRESSIVE, SELECTIVE, RISK_OFF
+        trackerHorizon: 'T5',  // 軸1時間軸: T5, T10
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
         searchQuery: '',
         sortOrder: 'none',
         sortScoreOrder: 'desc',
-        minScoreFilter: 7 // ★初期状態：7以上（厳選）
+        minScoreFilter: 7
       };
       
       const MAX_RENDER_ROWS = 150;
@@ -499,11 +596,12 @@
 
       document.addEventListener('DOMContentLoaded', async () => {
         try {
-          const [resResults, resPrev, resPort, resMeta] = await Promise.all([
+          const [resResults, resPrev, resPort, resMeta, resTracker] = await Promise.all([
             fetch('./data/results.json').then(r => r.json()),
             fetch('./data/prev_counts.json').then(r => r.json()),
             fetch('./data/portfolio.json').then(r => r.json()),
-            fetch('./data/meta.json').then(r => r.json())
+            fetch('./data/meta.json').then(r => r.json()),
+            fetch('./data/tracker_summary.json').then(r => r.json()).catch(() => null)
           ]);
 
           state.results = resResults;
@@ -511,6 +609,7 @@
           state.portfolio = resPort;
           state.marketMedian = resMeta.marketMedian || 0.0;
           state.marketRegime = resMeta.marketRegime || null;
+          state.trackerSummary = resTracker;
 
           const timeEl = document.getElementById('lastUpdateTime');
           if (timeEl && resMeta.lastUpdate) {
@@ -524,11 +623,12 @@
         loadGitHubConfig();
         renderPortfolioSection();
         renderMarketRegimeBanner();
+        renderTrackerDashboard();
 
         document.getElementById('btnOpenAddPortfolio').addEventListener('click', openPortfolioEntryDialog);
         document.getElementById('btnTriggerActions').addEventListener('click', handleTriggerActions);
 
-        // ★期待度絞り込みボタン（★7以上 / すべて表示）
+        // 期待度絞り込みボタン
         document.getElementById('btnFilterScore7').addEventListener('click', () => {
           state.minScoreFilter = 7;
           updateScoreFilterUI();
@@ -538,6 +638,31 @@
           state.minScoreFilter = 1;
           updateScoreFilterUI();
           renderTable();
+        });
+
+        // ダッシュボードトグルボタン
+        document.getElementById('btnToggleTracker').addEventListener('click', toggleTracker);
+
+        // 軸1 時間軸トグル (T+5 / T+10)
+        document.getElementById('btnHorizonT5').addEventListener('click', () => {
+          state.trackerHorizon = 'T5';
+          updateTrackerHorizonUI();
+          renderTrackerDashboard();
+        });
+        document.getElementById('btnHorizonT10').addEventListener('click', () => {
+          state.trackerHorizon = 'T10';
+          updateTrackerHorizonUI();
+          renderTrackerDashboard();
+        });
+
+        // 軸2 地合い切り替えフィルターボタン
+        document.querySelectorAll('.tracker-regime-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.tracker-regime-btn').forEach(b => b.className = 'tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer');
+            btn.className = 'tracker-regime-btn px-3 py-1 rounded-lg font-bold bg-slate-800 text-white cursor-pointer';
+            state.trackerRegime = btn.dataset.regime;
+            renderTrackerDashboard();
+          });
         });
 
         document.getElementById('btnAiExtract').addEventListener('click', () => {
@@ -600,7 +725,7 @@
         switchSystem('mid');
       });
 
-      // ★市場環境・相場レジームの描画
+      // 市場環境・相場レジームの描画
       function renderMarketRegimeBanner() {
         const badge = document.getElementById('marketRegimeBadge');
         const advEl = document.getElementById('statAdvanceCount');
@@ -627,7 +752,6 @@
         }
       }
 
-      // ★スコア切り替えボタンUIの更新
       function updateScoreFilterUI() {
         const btn7 = document.getElementById('btnFilterScore7');
         const btnAll = document.getElementById('btnFilterScoreAll');
@@ -640,6 +764,111 @@
           btnAll.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 bg-slate-800 text-white border border-slate-700 shadow cursor-pointer';
           btn7.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer';
         }
+      }
+
+      function toggleTracker() {
+        const sec = document.getElementById('trackerSection');
+        const btn = document.getElementById('btnToggleTracker');
+        if (sec.classList.contains('hidden')) {
+          sec.classList.remove('hidden');
+          btn.innerHTML = `<span>📊</span> 実績検証を閉じる`;
+        } else {
+          sec.classList.add('hidden');
+          btn.innerHTML = `<span>📊</span> 実績検証・改善処方箋`;
+        }
+      }
+
+      function updateTrackerHorizonUI() {
+        const btn5 = document.getElementById('btnHorizonT5');
+        const btn10 = document.getElementById('btnHorizonT10');
+        if (!btn5 || !btn10) return;
+
+        if (state.trackerHorizon === 'T5') {
+          btn5.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer';
+          btn10.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer';
+        } else {
+          btn10.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer';
+          btn5.className = 'px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer';
+        }
+      }
+
+      // ★新設：実績検証＆期待度改善ダッシュボードの描画
+      function renderTrackerDashboard() {
+        const summary = state.trackerSummary;
+        const scoreTbody = document.getElementById('trackerScoreTableBody');
+        const factorTbody = document.getElementById('trackerFactorTableBody');
+        const activeLabelEl = document.getElementById('trackerActiveLabel');
+        if (!scoreTbody || !factorTbody) return;
+
+        scoreTbody.innerHTML = '';
+        factorTbody.innerHTML = '';
+
+        if (!summary || !summary.regimes) {
+          scoreTbody.innerHTML = `
+            <tr><td colspan="7" class="p-6 text-center text-slate-500 font-sans">
+              🌱 実績追跡データを初期化中です。日々のシグナルと将来リターンが自動蓄積されると表示されます。
+            </td></tr>`;
+          return;
+        }
+
+        const currentRegimeKey = state.trackerRegime || 'ALL';
+        const currentHorizonKey = state.trackerHorizon || 'T5';
+        const regimeData = summary.regimes[currentRegimeKey] || summary.regimes['ALL'];
+        const scoreRows = regimeData[currentHorizonKey] || [];
+
+        const horizonLabel = currentHorizonKey === 'T5' ? 'T+5基準(1週間)' : 'T+10基準(2週間)';
+        activeLabelEl.textContent = `（${regimeData.label} / ${horizonLabel}）`;
+
+        // 1. 軸1 スコア別テーブル描画
+        scoreRows.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/40 transition select-none';
+
+          const pfStr = row.profitFactor >= 99.0 ? 'MAX' : row.profitFactor.toFixed(2);
+          const isExpPlus = row.expectedValue >= 0;
+          const expSign = isExpPlus ? '+' : '';
+          const expColor = isExpPlus ? 'text-emerald-400' : 'text-rose-400';
+
+          tr.innerHTML = `
+            <td class="p-2.5 font-bold text-white">${row.label}</td>
+            <td class="p-2.5 text-right text-slate-400">${row.count} 件</td>
+            <td class="p-2.5 text-right font-bold ${row.winRate >= 60 ? 'text-emerald-400' : row.winRate <= 45 ? 'text-rose-400' : 'text-slate-200'}">${row.count > 0 ? row.winRate.toFixed(1) + '%' : '-'}</td>
+            <td class="p-2.5 text-right text-emerald-400 font-bold">${row.count > 0 ? '+' + row.avgGain.toFixed(1) + '%' : '-'}</td>
+            <td class="p-2.5 text-right text-rose-400 font-bold">${row.count > 0 ? row.avgLoss.toFixed(1) + '%' : '-'}</td>
+            <td class="p-2.5 text-right font-bold ${row.profitFactor >= 1.5 ? 'text-amber-300' : 'text-slate-300'}">${row.count > 0 ? pfStr : '-'}</td>
+            <td class="p-2.5 text-right font-bold ${expColor}">${row.count > 0 ? expSign + row.expectedValue.toFixed(1) + '%' : '-'}</td>
+          `;
+          scoreTbody.appendChild(tr);
+        });
+
+        // 2. 軸3 ファクター寄与度 ＆ 処方箋テーブル描画
+        const factorRows = summary.factors || [];
+        factorRows.forEach(f => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/40 transition select-none';
+
+          const isContribPlus = f.contribution >= 0;
+          const contribSign = isContribPlus ? '+' : '';
+          const contribColor = f.contribution >= 5 ? 'text-emerald-400' : f.contribution <= -5 ? 'text-rose-400' : 'text-slate-400';
+
+          let evalClass = "bg-slate-800 text-slate-400";
+          if (f.evaluation.includes('優秀')) evalClass = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 font-bold";
+          else if (f.evaluation.includes('有効')) evalClass = "bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-bold";
+          else if (f.evaluation.includes('悪化')) evalClass = "bg-rose-950/80 text-rose-300 border border-rose-500/40 font-bold";
+
+          tr.innerHTML = `
+            <td class="p-2.5 font-bold text-slate-200">${f.name}</td>
+            <td class="p-2.5 text-right font-mono text-slate-400">${f.count} 件</td>
+            <td class="p-2.5 text-right font-mono font-bold text-slate-200">${f.count > 0 ? f.activeWinRate.toFixed(1) + '%' : '-'}</td>
+            <td class="p-2.5 text-right font-mono text-slate-400">${f.count > 0 ? f.inactiveWinRate.toFixed(1) + '%' : '-'}</td>
+            <td class="p-2.5 text-right font-mono font-bold ${contribColor}">${f.count > 0 ? contribSign + f.contribution.toFixed(1) + '%' : '-'}</td>
+            <td class="p-2.5 text-center">
+              <span class="px-2 py-0.5 rounded text-[10px] ${evalClass}">${f.evaluation}</span>
+            </td>
+            <td class="p-2.5 text-slate-300 leading-relaxed font-sans text-[11px]">${f.actionAdvice}</td>
+          `;
+          factorTbody.appendChild(tr);
+        });
       }
 
       function renderPortfolioSection() {
@@ -1346,7 +1575,6 @@
         let filtered = [...state.results];
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
-        // 期待度フィルターも反映
         if (state.minScoreFilter > 1) {
           filtered = filtered.filter(r => r[sys].score >= state.minScoreFilter);
         }
@@ -1515,7 +1743,6 @@
         
         filtered = filtered.filter(r => r[sys].category !== "NONE");
 
-        // ★期待度スコアフィルター（初期値: ★7以上）
         if (state.minScoreFilter > 1) {
           filtered = filtered.filter(r => r[sys].score >= state.minScoreFilter);
         }
