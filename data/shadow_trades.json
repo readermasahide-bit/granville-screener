@@ -1,818 +1,5 @@
 [
   {
-    "id": "2026-11-05_2220",
-    "signalDate": "2026-11-05",
-    "ticker": "2220",
-    "name": "亀田製菓",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 7,
-    "signalClose": 1310.0,
-    "yesterdayLow": 1237.0,
-    "stopLossPrice": 1206.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "特級踏み上げ"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2388",
-    "signalDate": "2026-11-05",
-    "ticker": "2388",
-    "name": "ウェッジホールディングス",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 5,
-    "signalClose": 10.0,
-    "yesterdayLow": 9.0,
-    "stopLossPrice": 8.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "追い風業種"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2464",
-    "signalDate": "2026-11-05",
-    "ticker": "2464",
-    "name": "Ａｏｂａ‐ＢＢＴ",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 5,
-    "signalClose": 355.0,
-    "yesterdayLow": 348.0,
-    "stopLossPrice": 341.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "機関アキュムレーション",
-      "シコり玉過多",
-      "流動性極低",
-      "長期線加速"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2488",
-    "signalDate": "2026-11-05",
-    "ticker": "2488",
-    "name": "ＪＴＰ",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 6,
-    "signalClose": 1434.0,
-    "yesterdayLow": 1340.0,
-    "stopLossPrice": 1313.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "機関アキュムレーション",
-      "シコり消化",
-      "陽線出来高急増",
-      "上髭超過"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2491",
-    "signalDate": "2026-11-05",
-    "ticker": "2491",
-    "name": "バリューコマース",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 7,
-    "signalClose": 384.0,
-    "yesterdayLow": 368.0,
-    "stopLossPrice": 363.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "通常踏み上げ",
-      "シコり玉過多",
-      "RSIゾーン反発",
-      "大陽線反発"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2586",
-    "signalDate": "2026-11-05",
-    "ticker": "2586",
-    "name": "フルッタフルッタ",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 4,
-    "signalClose": 46.0,
-    "yesterdayLow": 44.0,
-    "stopLossPrice": 44.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "RSIゾーン反発"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_25935",
-    "signalDate": "2026-11-05",
-    "ticker": "25935",
-    "name": "伊藤園第１種優先株式",
-    "system": "mid",
-    "category": "BUY3",
-    "score": 6,
-    "signalClose": 1849.0,
-    "yesterdayLow": 1819.0,
-    "stopLossPrice": 1784.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "Pre本発射"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_264A",
-    "signalDate": "2026-11-05",
-    "ticker": "264A",
-    "name": "Ｓｃｈｏｏ",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 4,
-    "signalClose": 227.0,
-    "yesterdayLow": 213.0,
-    "stopLossPrice": 219.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2667",
-    "signalDate": "2026-11-05",
-    "ticker": "2667",
-    "name": "イメージ　ワン",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 8,
-    "signalClose": 80.0,
-    "yesterdayLow": 63.0,
-    "stopLossPrice": 65.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり消化",
-      "RSIゾーン反発",
-      "陽線出来高急増",
-      "大陽線反発"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2683",
-    "signalDate": "2026-11-05",
-    "ticker": "2683",
-    "name": "ＵＯＧｒｏｕｐ",
-    "system": "mid",
-    "category": "BUY1_PRE",
-    "score": 3,
-    "signalClose": 989.0,
-    "yesterdayLow": 989.0,
-    "stopLossPrice": 967.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "流動性極低",
-      "陽線出来高急増"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2689",
-    "signalDate": "2026-11-05",
-    "ticker": "2689",
-    "name": "オルバディーブイエックスヘルスケア",
-    "system": "mid",
-    "category": "BUY1_PRE",
-    "score": 1,
-    "signalClose": 1905.0,
-    "yesterdayLow": 1896.0,
-    "stopLossPrice": 1857.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "ナンピン地獄",
-      "シコり玉過多",
-      "流動性極低",
-      "上髭超過"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_269A",
-    "signalDate": "2026-11-05",
-    "ticker": "269A",
-    "name": "Ｓａｐｅｅｔ",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 5,
-    "signalClose": 2740.0,
-    "yesterdayLow": 2561.0,
-    "stopLossPrice": 2509.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "流動性極低",
-      "長期線加速"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2764",
-    "signalDate": "2026-11-05",
-    "ticker": "2764",
-    "name": "ひらまつ",
-    "system": "mid",
-    "category": "BUY2",
-    "score": 3,
-    "signalClose": 157.0,
-    "yesterdayLow": 153.0,
-    "stopLossPrice": 149.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "上髭超過"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2780",
-    "signalDate": "2026-11-05",
-    "ticker": "2780",
-    "name": "コメ兵ホールディングス",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 5,
-    "signalClose": 3785.0,
-    "yesterdayLow": 3640.0,
-    "stopLossPrice": 3660.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "RSIゾーン反発"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2798",
-    "signalDate": "2026-11-05",
-    "ticker": "2798",
-    "name": "ワイズテーブルコーポレーション",
-    "system": "mid",
-    "category": "BUY1",
-    "score": 3,
-    "signalClose": 3030.0,
-    "yesterdayLow": 3010.0,
-    "stopLossPrice": 2932.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "Pre本発射",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2806",
-    "signalDate": "2026-11-05",
-    "ticker": "2806",
-    "name": "ユタカフーズ",
-    "system": "mid",
-    "category": "BUY3_PRE",
-    "score": 2,
-    "signalClose": 1931.0,
-    "yesterdayLow": 1916.0,
-    "stopLossPrice": 1884.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "ナンピン地獄",
-      "シコり玉過多",
-      "流動性極低",
-      "支持線極近"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2874",
-    "signalDate": "2026-11-05",
-    "ticker": "2874",
-    "name": "横浜冷凍",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 6,
-    "signalClose": 1775.0,
-    "yesterdayLow": 1718.0,
-    "stopLossPrice": 1709.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "RSIダイバージェンス"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2882",
-    "signalDate": "2026-11-05",
-    "ticker": "2882",
-    "name": "イートアンドホールディングス",
-    "system": "mid",
-    "category": "BUY1_PRE",
-    "score": 6,
-    "signalClose": 2015.0,
-    "yesterdayLow": 1978.0,
-    "stopLossPrice": 1922.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "アク抜け完了"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2892",
-    "signalDate": "2026-11-05",
-    "ticker": "2892",
-    "name": "日本食品化工",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 2,
-    "signalClose": 4645.0,
-    "yesterdayLow": 4585.0,
-    "stopLossPrice": 4483.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "流動性極低",
-      "上髭超過"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2904",
-    "signalDate": "2026-11-05",
-    "ticker": "2904",
-    "name": "一正蒲鉾",
-    "system": "mid",
-    "category": "BUY1_PRE",
-    "score": 1,
-    "signalClose": 755.0,
-    "yesterdayLow": 752.0,
-    "stopLossPrice": 736.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "ナンピン地獄",
-      "シコり玉過多",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_291A",
-    "signalDate": "2026-11-05",
-    "ticker": "291A",
-    "name": "リスキル",
-    "system": "mid",
-    "category": "BUY3_PRE",
-    "score": 3,
-    "signalClose": 1960.0,
-    "yesterdayLow": 2002.0,
-    "stopLossPrice": 1911.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2934",
-    "signalDate": "2026-11-05",
-    "ticker": "2934",
-    "name": "ジェイフロンティア",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 2,
-    "signalClose": 1955.0,
-    "yesterdayLow": 1908.0,
-    "stopLossPrice": 1862.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "ナンピン地獄",
-      "シコり玉過多",
-      "上髭超過"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_2984",
-    "signalDate": "2026-11-05",
-    "ticker": "2984",
-    "name": "ヤマイチエステート",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 3,
-    "signalClose": 760.0,
-    "yesterdayLow": 742.0,
-    "stopLossPrice": 727.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3002",
-    "signalDate": "2026-11-05",
-    "ticker": "3002",
-    "name": "グンゼ",
-    "system": "mid",
-    "category": "BUY2",
-    "score": 6,
-    "signalClose": 4130.0,
-    "yesterdayLow": 4005.0,
-    "stopLossPrice": 3924.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "機関アキュムレーション",
-      "上髭超過",
-      "追い風業種"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3020",
-    "signalDate": "2026-11-05",
-    "ticker": "3020",
-    "name": "アプライド",
-    "system": "mid",
-    "category": "BUY3_PRE",
-    "score": 2,
-    "signalClose": 4520.0,
-    "yesterdayLow": 4585.0,
-    "stopLossPrice": 4399.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3021",
-    "signalDate": "2026-11-05",
-    "ticker": "3021",
-    "name": "パシフィックネット",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 3,
-    "signalClose": 1188.0,
-    "yesterdayLow": 1142.0,
-    "stopLossPrice": 1161.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "RSIゾーン反発",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3024",
-    "signalDate": "2026-11-05",
-    "ticker": "3024",
-    "name": "クリエイト",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 3,
-    "signalClose": 1150.0,
-    "yesterdayLow": 1132.0,
-    "stopLossPrice": 1109.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3045",
-    "signalDate": "2026-11-05",
-    "ticker": "3045",
-    "name": "カワサキ",
-    "system": "mid",
-    "category": "BUY1_PRE",
-    "score": 3,
-    "signalClose": 1477.0,
-    "yesterdayLow": 1471.0,
-    "stopLossPrice": 1421.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "アク抜け完了",
-      "シコり玉過多",
-      "流動性極低",
-      "陽線出来高急増",
-      "上髭超過"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3046",
-    "signalDate": "2026-11-05",
-    "ticker": "3046",
-    "name": "ジンズホールディングス",
-    "system": "mid",
-    "category": "BUY2",
-    "score": 5,
-    "signalClose": 6150.0,
-    "yesterdayLow": 5920.0,
-    "stopLossPrice": 5723.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "機関アキュムレーション",
-      "上髭超過"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3065",
-    "signalDate": "2026-11-05",
-    "ticker": "3065",
-    "name": "ライフフーズ",
-    "system": "mid",
-    "category": "BUY1_PRE",
-    "score": 3,
-    "signalClose": 1590.0,
-    "yesterdayLow": 1586.0,
-    "stopLossPrice": 1553.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "アク抜け完了",
-      "シコり玉過多",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3070",
-    "signalDate": "2026-11-05",
-    "ticker": "3070",
-    "name": "ジェリービーンズグループ",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 6,
-    "signalClose": 36.0,
-    "yesterdayLow": 32.0,
-    "stopLossPrice": 33.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "RSIゾーン反発",
-      "大陽線反発"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3168",
-    "signalDate": "2026-11-05",
-    "ticker": "3168",
-    "name": "ＭＥＲＦ",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 4,
-    "signalClose": 931.0,
-    "yesterdayLow": 886.0,
-    "stopLossPrice": 912.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "RSIダイバージェンス"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3172",
-    "signalDate": "2026-11-05",
-    "ticker": "3172",
-    "name": "ティーライフ",
-    "system": "mid",
-    "category": "BUY1",
-    "score": 2,
-    "signalClose": 1131.0,
-    "yesterdayLow": 1129.0,
-    "stopLossPrice": 1097.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3180",
-    "signalDate": "2026-11-05",
-    "ticker": "3180",
-    "name": "ビューティガレージ",
-    "system": "mid",
-    "category": "BUY2",
-    "score": 4,
-    "signalClose": 1585.0,
-    "yesterdayLow": 1541.0,
-    "stopLossPrice": 1485.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "上髭超過",
-      "長期線加速"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3181",
-    "signalDate": "2026-11-05",
-    "ticker": "3181",
-    "name": "買取王国",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 4,
-    "signalClose": 1062.0,
-    "yesterdayLow": 1050.0,
-    "stopLossPrice": 1029.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "機関アキュムレーション",
-      "シコり玉過多",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3185",
-    "signalDate": "2026-11-05",
-    "ticker": "3185",
-    "name": "夢展望",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 5,
-    "signalClose": 75.0,
-    "yesterdayLow": 70.0,
-    "stopLossPrice": 71.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "RSIゾーン反発"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3186",
-    "signalDate": "2026-11-05",
-    "ticker": "3186",
-    "name": "ネクステージ",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 6,
-    "signalClose": 2647.0,
-    "yesterdayLow": 2419.0,
-    "stopLossPrice": 2528.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "RSIゾーン反発"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3189",
-    "signalDate": "2026-11-05",
-    "ticker": "3189",
-    "name": "ＡＮＡＰホールディングス",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 6,
-    "signalClose": 58.0,
-    "yesterdayLow": 51.0,
-    "stopLossPrice": 53.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "RSIゾーン反発",
-      "大陽線反発"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3192",
-    "signalDate": "2026-11-05",
-    "ticker": "3192",
-    "name": "白鳩",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 3,
-    "signalClose": 196.0,
-    "yesterdayLow": 190.0,
-    "stopLossPrice": 187.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "流動性極低"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3204",
-    "signalDate": "2026-11-05",
-    "ticker": "3204",
-    "name": "トーア紡コーポレーション",
-    "system": "mid",
-    "category": "BUY1_PRE",
-    "score": 2,
-    "signalClose": 494.0,
-    "yesterdayLow": 490.0,
-    "stopLossPrice": 480.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "ナンピン地獄",
-      "シコり玉過多",
-      "流動性極低",
-      "追い風業種"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3236",
-    "signalDate": "2026-11-05",
-    "ticker": "3236",
-    "name": "プロパスト",
-    "system": "mid",
-    "category": "BUY3",
-    "score": 5,
-    "signalClose": 295.0,
-    "yesterdayLow": 283.0,
-    "stopLossPrice": 279.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多",
-      "Pre本発射"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3237",
-    "signalDate": "2026-11-05",
-    "ticker": "3237",
-    "name": "イントランス",
-    "system": "mid",
-    "category": "BUY4",
-    "score": 3,
-    "signalClose": 68.0,
-    "yesterdayLow": 63.0,
-    "stopLossPrice": 65.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "シコり玉過多"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3241",
-    "signalDate": "2026-11-05",
-    "ticker": "3241",
-    "name": "ウィル",
-    "system": "mid",
-    "category": "BUY2_PRE",
-    "score": 3,
-    "signalClose": 586.0,
-    "yesterdayLow": 585.0,
-    "stopLossPrice": 573.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "機関アキュムレーション",
-      "シコり玉過多",
-      "流動性極低",
-      "上髭超過"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
-    "id": "2026-11-05_3242",
-    "signalDate": "2026-11-05",
-    "ticker": "3242",
-    "name": "アーバネットコーポレーション",
-    "system": "mid",
-    "category": "BUY3",
-    "score": 6,
-    "signalClose": 535.0,
-    "yesterdayLow": 525.0,
-    "stopLossPrice": 512.0,
-    "regime": "BUY_AGGRESSIVE",
-    "factor_keys": [
-      "通常踏み上げ",
-      "シコり玉過多",
-      "Pre本発射"
-    ],
-    "entryStatus": "PENDING_ENTRY"
-  },
-  {
     "id": "2026-11-05_3277",
     "signalDate": "2026-11-05",
     "ticker": "3277",
@@ -5398,6 +4585,777 @@
     "factor_keys": [
       "流動性極低",
       "上髭超過"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1380",
+    "signalDate": "2026-11-05",
+    "ticker": "1380",
+    "name": "秋川牧園",
+    "system": "mid",
+    "category": "BUY1",
+    "score": 4,
+    "signalClose": 1000.0,
+    "yesterdayLow": 993.0,
+    "stopLossPrice": 970.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了",
+      "シコり玉過多",
+      "流動性極低",
+      "追い風業種"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1414",
+    "signalDate": "2026-11-05",
+    "ticker": "1414",
+    "name": "ショーボンドホールディングス",
+    "system": "mid",
+    "category": "BUY1",
+    "score": 6,
+    "signalClose": 1295.0,
+    "yesterdayLow": 1260.5,
+    "stopLossPrice": 1169.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1420",
+    "signalDate": "2026-11-05",
+    "ticker": "1420",
+    "name": "サンヨーホームズ",
+    "system": "mid",
+    "category": "BUY1_PRE",
+    "score": 3,
+    "signalClose": 631.0,
+    "yesterdayLow": 628.0,
+    "stopLossPrice": 615.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了",
+      "シコり玉過多",
+      "流動性極低"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1430",
+    "signalDate": "2026-11-05",
+    "ticker": "1430",
+    "name": "ファーストコーポレーション",
+    "system": "mid",
+    "category": "BUY3",
+    "score": 5,
+    "signalClose": 1080.0,
+    "yesterdayLow": 1057.0,
+    "stopLossPrice": 1026.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了",
+      "シコり玉過多"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_148A",
+    "signalDate": "2026-11-05",
+    "ticker": "148A",
+    "name": "ハッチ・ワーク",
+    "system": "mid",
+    "category": "BUY2",
+    "score": 4,
+    "signalClose": 1750.0,
+    "yesterdayLow": 1691.0,
+    "stopLossPrice": 1657.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "流動性極低"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_149A",
+    "signalDate": "2026-11-05",
+    "ticker": "149A",
+    "name": "シンカ",
+    "system": "mid",
+    "category": "BUY3_PRE",
+    "score": 4,
+    "signalClose": 793.0,
+    "yesterdayLow": 786.0,
+    "stopLossPrice": 771.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "流動性極低",
+      "支持線極近"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1518",
+    "signalDate": "2026-11-05",
+    "ticker": "1518",
+    "name": "三井松島ホールディングス",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 6,
+    "signalClose": 2213.0,
+    "yesterdayLow": 2179.0,
+    "stopLossPrice": 2135.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "長期線加速"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1721",
+    "signalDate": "2026-11-05",
+    "ticker": "1721",
+    "name": "コムシスホールディングス",
+    "system": "mid",
+    "category": "BUY2",
+    "score": 6,
+    "signalClose": 5439.0,
+    "yesterdayLow": 5317.0,
+    "stopLossPrice": 5210.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "Pre本発射"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1724",
+    "signalDate": "2026-11-05",
+    "ticker": "1724",
+    "name": "シンクレイヤ",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 4,
+    "signalClose": 707.0,
+    "yesterdayLow": 699.0,
+    "stopLossPrice": 685.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "RSIダイバージェンス",
+      "流動性極低"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1807",
+    "signalDate": "2026-11-05",
+    "ticker": "1807",
+    "name": "佐藤渡辺",
+    "system": "mid",
+    "category": "BUY3_PRE",
+    "score": 1,
+    "signalClose": 1900.0,
+    "yesterdayLow": 1911.0,
+    "stopLossPrice": 1871.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "ナンピン地獄",
+      "シコり玉過多",
+      "流動性極低"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1960",
+    "signalDate": "2026-11-05",
+    "ticker": "1960",
+    "name": "サンテック",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 3,
+    "signalClose": 1605.0,
+    "yesterdayLow": 1592.0,
+    "stopLossPrice": 1560.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "上髭超過"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_1997",
+    "signalDate": "2026-11-05",
+    "ticker": "1997",
+    "name": "暁飯島工業",
+    "system": "mid",
+    "category": "BUY3_PRE",
+    "score": 2,
+    "signalClose": 4050.0,
+    "yesterdayLow": 4130.0,
+    "stopLossPrice": 3965.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "流動性極低"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_2060",
+    "signalDate": "2026-11-05",
+    "ticker": "2060",
+    "name": "フィード・ワン",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 7,
+    "signalClose": 1370.0,
+    "yesterdayLow": 1325.0,
+    "stopLossPrice": 1298.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "機関アキュムレーション",
+      "RSIゾーン反発"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_2108",
+    "signalDate": "2026-11-05",
+    "ticker": "2108",
+    "name": "ニッテン",
+    "system": "mid",
+    "category": "BUY2",
+    "score": 3,
+    "signalClose": 1776.0,
+    "yesterdayLow": 1705.0,
+    "stopLossPrice": 1670.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "上髭超過"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_2130",
+    "signalDate": "2026-11-05",
+    "ticker": "2130",
+    "name": "メンバーズ",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 6,
+    "signalClose": 612.0,
+    "yesterdayLow": 581.0,
+    "stopLossPrice": 583.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "RSIゾーン反発"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_2169",
+    "signalDate": "2026-11-05",
+    "ticker": "2169",
+    "name": "ＣＤＳ",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 2,
+    "signalClose": 1720.0,
+    "yesterdayLow": 1715.0,
+    "stopLossPrice": 1680.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "流動性極低",
+      "上髭超過"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_2175",
+    "signalDate": "2026-11-05",
+    "ticker": "2175",
+    "name": "エス・エム・エス",
+    "system": "mid",
+    "category": "BUY2",
+    "score": 6,
+    "signalClose": 2536.0,
+    "yesterdayLow": 2453.0,
+    "stopLossPrice": 2371.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "機関アキュムレーション"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_2206",
+    "signalDate": "2026-11-05",
+    "ticker": "2206",
+    "name": "江崎グリコ",
+    "system": "mid",
+    "category": "BUY1",
+    "score": 6,
+    "signalClose": 5181.0,
+    "yesterdayLow": 5005.0,
+    "stopLossPrice": 4783.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_2370",
+    "signalDate": "2026-11-05",
+    "ticker": "2370",
+    "name": "メディネット",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 6,
+    "signalClose": 19.0,
+    "yesterdayLow": 16.0,
+    "stopLossPrice": 17.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "RSIゾーン反発",
+      "大陽線反発"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_2481",
+    "signalDate": "2026-11-05",
+    "ticker": "2481",
+    "name": "タウンニュース社",
+    "system": "mid",
+    "category": "BUY3_PRE",
+    "score": 3,
+    "signalClose": 694.0,
+    "yesterdayLow": 700.0,
+    "stopLossPrice": 670.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了",
+      "シコり玉過多",
+      "流動性極低"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_256A",
+    "signalDate": "2026-11-05",
+    "ticker": "256A",
+    "name": "飛島ホールディングス",
+    "system": "mid",
+    "category": "BUY3",
+    "score": 3,
+    "signalClose": 2235.0,
+    "yesterdayLow": 2173.0,
+    "stopLossPrice": 2134.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "上髭超過"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_3011",
+    "signalDate": "2026-11-05",
+    "ticker": "3011",
+    "name": "バナーズ",
+    "system": "mid",
+    "category": "BUY1_PRE",
+    "score": 4,
+    "signalClose": 143.0,
+    "yesterdayLow": 142.0,
+    "stopLossPrice": 137.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了",
+      "シコり玉過多",
+      "流動性極低"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_3182",
+    "signalDate": "2026-11-05",
+    "ticker": "3182",
+    "name": "オイシックス",
+    "system": "mid",
+    "category": "BUY2",
+    "score": 6,
+    "signalClose": 1728.0,
+    "yesterdayLow": 1629.0,
+    "stopLossPrice": 1559.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "長期線加速"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_3187",
+    "signalDate": "2026-11-05",
+    "ticker": "3187",
+    "name": "ミラタップ",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 5,
+    "signalClose": 357.0,
+    "yesterdayLow": 357.0,
+    "stopLossPrice": 339.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "機関アキュムレーション",
+      "シコり玉過多"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_3624",
+    "signalDate": "2026-11-05",
+    "ticker": "3624",
+    "name": "アクセルマーク",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 4,
+    "signalClose": 30.0,
+    "yesterdayLow": 28.0,
+    "stopLossPrice": 28.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_3691",
+    "signalDate": "2026-11-05",
+    "ticker": "3691",
+    "name": "デジタルプラス",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 3,
+    "signalClose": 1313.0,
+    "yesterdayLow": 1254.0,
+    "stopLossPrice": 1264.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_3779",
+    "signalDate": "2026-11-05",
+    "ticker": "3779",
+    "name": "ジェイ・エスコムホールディングス",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 5,
+    "signalClose": 100.0,
+    "yesterdayLow": 95.0,
+    "stopLossPrice": 95.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_5707",
+    "signalDate": "2026-11-05",
+    "ticker": "5707",
+    "name": "東邦亜鉛",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 4,
+    "signalClose": 714.0,
+    "yesterdayLow": 660.0,
+    "stopLossPrice": 683.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "RSIゾーン反発"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_5820",
+    "signalDate": "2026-11-05",
+    "ticker": "5820",
+    "name": "三ッ星",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 3,
+    "signalClose": 810.0,
+    "yesterdayLow": 800.0,
+    "stopLossPrice": 763.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "ナンピン地獄",
+      "シコり玉過多"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_6016",
+    "signalDate": "2026-11-05",
+    "ticker": "6016",
+    "name": "ジャパンエンジンコーポレーション",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 5,
+    "signalClose": 10620.0,
+    "yesterdayLow": 10380.0,
+    "stopLossPrice": 10172.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_6228",
+    "signalDate": "2026-11-05",
+    "ticker": "6228",
+    "name": "ジェイ・イー・ティ",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 4,
+    "signalClose": 552.0,
+    "yesterdayLow": 560.0,
+    "stopLossPrice": 525.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "ナンピン地獄"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_6301",
+    "signalDate": "2026-11-05",
+    "ticker": "6301",
+    "name": "小松製作所",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 4,
+    "signalClose": 6238.0,
+    "yesterdayLow": 6047.0,
+    "stopLossPrice": 6001.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_6370",
+    "signalDate": "2026-11-05",
+    "ticker": "6370",
+    "name": "栗田工業",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 8,
+    "signalClose": 5430.0,
+    "yesterdayLow": 4927.0,
+    "stopLossPrice": 5174.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "特級踏み上げ",
+      "RSIゾーン反発"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_6571",
+    "signalDate": "2026-11-05",
+    "ticker": "6571",
+    "name": "キュービーネットホールディングス",
+    "system": "mid",
+    "category": "BUY1_PRE",
+    "score": 6,
+    "signalClose": 1263.0,
+    "yesterdayLow": 1235.0,
+    "stopLossPrice": 1189.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_6952",
+    "signalDate": "2026-11-05",
+    "ticker": "6952",
+    "name": "カシオ計算機",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 5,
+    "signalClose": 2149.5,
+    "yesterdayLow": 2057.0,
+    "stopLossPrice": 2015.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_7012",
+    "signalDate": "2026-11-05",
+    "ticker": "7012",
+    "name": "川崎重工業",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 5,
+    "signalClose": 2090.5,
+    "yesterdayLow": 1966.0,
+    "stopLossPrice": 2007.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "RSIダイバージェンス"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_7078",
+    "signalDate": "2026-11-05",
+    "ticker": "7078",
+    "name": "ＩＮＣＬＵＳＩＶＥ　Ｈｏｌｄｉｎｇｓ",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 5,
+    "signalClose": 266.0,
+    "yesterdayLow": 255.0,
+    "stopLossPrice": 255.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "RSIゾーン反発"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_7476",
+    "signalDate": "2026-11-05",
+    "ticker": "7476",
+    "name": "アズワン",
+    "system": "mid",
+    "category": "BUY2",
+    "score": 8,
+    "signalClose": 2602.0,
+    "yesterdayLow": 2463.0,
+    "stopLossPrice": 2378.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "機関アキュムレーション",
+      "特級踏み上げ"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_8078",
+    "signalDate": "2026-11-05",
+    "ticker": "8078",
+    "name": "阪和興業",
+    "system": "mid",
+    "category": "BUY2_PRE",
+    "score": 5,
+    "signalClose": 1813.0,
+    "yesterdayLow": 1727.0,
+    "stopLossPrice": 1692.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_8338",
+    "signalDate": "2026-11-05",
+    "ticker": "8338",
+    "name": "筑波銀行",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 4,
+    "signalClose": 615.0,
+    "yesterdayLow": 578.0,
+    "stopLossPrice": 593.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "ナンピン地獄",
+      "追い風業種"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_8366",
+    "signalDate": "2026-11-05",
+    "ticker": "8366",
+    "name": "滋賀銀行",
+    "system": "mid",
+    "category": "BUY4",
+    "score": 5,
+    "signalClose": 2412.0,
+    "yesterdayLow": 2297.5,
+    "stopLossPrice": 2340.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "追い風業種"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_8904",
+    "signalDate": "2026-11-05",
+    "ticker": "8904",
+    "name": "ＡＶＡＮＴＩＡ",
+    "system": "mid",
+    "category": "BUY1_PRE",
+    "score": 2,
+    "signalClose": 827.0,
+    "yesterdayLow": 817.0,
+    "stopLossPrice": 800.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "アク抜け完了",
+      "シコり玉過多",
+      "流動性極低",
+      "上髭超過"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_9366",
+    "signalDate": "2026-11-05",
+    "ticker": "9366",
+    "name": "サンリツ",
+    "system": "mid",
+    "category": "BUY3_PRE",
+    "score": 2,
+    "signalClose": 1144.0,
+    "yesterdayLow": 1133.0,
+    "stopLossPrice": 1113.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "ナンピン地獄",
+      "シコり玉過多"
+    ],
+    "entryStatus": "PENDING_ENTRY"
+  },
+  {
+    "id": "2026-11-05_9557",
+    "signalDate": "2026-11-05",
+    "ticker": "9557",
+    "name": "エアークローゼット",
+    "system": "mid",
+    "category": "BUY3_PRE",
+    "score": 2,
+    "signalClose": 228.0,
+    "yesterdayLow": 225.0,
+    "stopLossPrice": 222.0,
+    "regime": "BUY_AGGRESSIVE",
+    "factor_keys": [
+      "シコり玉過多",
+      "流動性極低"
     ],
     "entryStatus": "PENDING_ENTRY"
   }
