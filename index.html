@@ -467,6 +467,23 @@
               <input type="number" id="portInputShares" placeholder="例: 100" step="100" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500 transition">
             </div>
           </div>
+          <div class="pt-3 border-t border-slate-800 space-y-2.5">
+            <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">🔗 GitHub連携設定（自動保存・更新用）</span>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-slate-400 font-medium mb-1">ユーザー名 (Owner)</label>
+                <input type="text" id="ghOwnerInput" placeholder="例: your-name" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
+              </div>
+              <div>
+                <label class="block text-slate-400 font-medium mb-1">リポジトリ名 (Repo)</label>
+                <input type="text" id="ghRepoInput" placeholder="例: granville-screener" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
+              </div>
+            </div>
+            <div>
+              <label class="block text-slate-400 font-medium mb-1">Personal Access Token</label>
+              <input type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxx" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
+            </div>
+          </div>
           <div class="pt-2 flex justify-end gap-2">
             <button type="button" onclick="closePortfolioEntryDialog()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold cursor-pointer">閉じる</button>
             <button type="submit" id="btnSubmitPortfolio" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20 cursor-pointer flex items-center gap-1.5">
@@ -975,13 +992,16 @@
         document.getElementById('badgeActionHold').textContent = `🟢 ホールド: ${countHold}件`;
       }
 
-      function loadGitHubConfig() {
+function loadGitHubConfig() {
         const owner = localStorage.getItem('gh_owner') || '';
         const repo = localStorage.getItem('gh_repo') || '';
         const token = localStorage.getItem('gh_token') || '';
-        document.getElementById('ghOwnerInput').value = owner;
-        document.getElementById('ghRepoInput').value = repo;
-        document.getElementById('ghTokenInput').value = token;
+        const ownerEl = document.getElementById('ghOwnerInput');
+        const repoEl = document.getElementById('ghRepoInput');
+        const tokenEl = document.getElementById('ghTokenInput');
+        if (ownerEl) ownerEl.value = owner;
+        if (repoEl) repoEl.value = repo;
+        if (tokenEl) tokenEl.value = token;
       }
 
       function openPortfolioEntryDialog() {
@@ -1674,11 +1694,12 @@
         renderTable();
       }
 
-      function toggleScoreSort() {
+function toggleScoreSort() {
         state.sortOrder = 'none';
         state.sortScoreOrder = state.sortScoreOrder === 'none' ? 'desc' : state.sortScoreOrder === 'desc' ? 'asc' : 'none';
         const sortScoreIcon = document.getElementById('sortScoreIcon');
-        sortScoreIcon.textContent = state.sortScoreIcon === 'asc' ? '▲' : state.sortScoreIcon === 'desc' ? '▼' : '↕';
+        // 誤: state.sortScoreIcon → 正: state.sortScoreOrder
+        sortScoreIcon.textContent = state.sortScoreOrder === 'asc' ? '▲' : state.sortScoreOrder === 'desc' ? '▼' : '↕';
         renderTable();
       }
 
