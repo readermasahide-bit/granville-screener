@@ -68,7 +68,6 @@
 
       <!-- マイ保有ポートフォリオ専用セクション -->
       <section id="portfolioSection" class="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl flex flex-col space-y-4">
-        
         <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div class="flex items-center gap-2">
             <span class="w-7 h-7 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center text-sm font-bold">📋</span>
@@ -88,12 +87,10 @@
               <div class="text-slate-700">|</div>
               <div><span class="text-slate-400 text-[10px]">損益:</span> <strong id="portTotalPL" class="font-bold text-emerald-400">0 円</strong></div>
             </div>
-            <!-- 保有登録ボタン -->
             <button id="btnOpenAddPortfolio" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/20 shrink-0">
               <span>➕</span> 保有登録
             </button>
-            <!-- スクリーナー更新ボタン -->
-            <button id="btnTriggerActions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-sm shrink-0" title="GitHub Actions を起動して最新データで全体更新">
+            <button id="btnTriggerActions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-sm shrink-0">
               <span>🔄</span> スクリーナー更新
             </button>
           </div>
@@ -122,11 +119,9 @@
                 <th class="p-2.5 text-center w-20">決済・記録</th>
               </tr>
             </thead>
-            <tbody id="portfolioTableBody" class="divide-y divide-slate-800/60 text-xs">
-            </tbody>
+            <tbody id="portfolioTableBody" class="divide-y divide-slate-800/60 text-xs"></tbody>
           </table>
         </div>
-
       </section>
 
       <!-- 市場環境・相場レジーム概況バー ＆ ★7以上切り替えボタン -->
@@ -158,13 +153,13 @@
         </div>
       </section>
       
-      <!-- 8大分類＋全シグナル窓タブ -->
+      <!-- 8大分類＋全シグナル窓タブ（★初期選択は「全シグナル」に修正） -->
       <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2.5" id="tabCardsContainer">
-        <div data-tab="ALL" class="tab-card cursor-pointer bg-slate-900/80 border border-slate-800 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-slate-600">
+        <div data-tab="ALL" class="tab-card cursor-pointer bg-slate-800/90 border border-slate-800 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-slate-600 ring-2 ring-cyan-400">
           <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">全シグナル</span>
           <div class="flex items-baseline justify-between mt-1"><span id="statTotal" class="text-base font-bold text-white">0</span><span id="statTotalDiff" class="text-[9px] font-bold ml-0.5"></span></div>
         </div>
-        <div data-tab="BUY1" class="tab-card cursor-pointer bg-slate-900/80 border border-emerald-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-emerald-400 ring-2 ring-emerald-500/80 bg-emerald-950/20">
+        <div data-tab="BUY1" class="tab-card cursor-pointer bg-slate-900/80 border border-emerald-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-emerald-400">
           <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">買い1 (新規/Pre)</span>
           <div class="flex items-baseline justify-between mt-1" id="statBuy1"><span class="text-base font-bold text-emerald-400">0</span></div>
         </div>
@@ -210,13 +205,8 @@
           </div>
           <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-end">
             <input type="text" id="aiExtractInput" placeholder="銘柄コード (例: 7974)" class="w-full sm:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest">
-            <button id="btnAiExtract" class="bg-indigo-900/50 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-700/50 hover:border-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0" title="AI相談用時系列データをコピー">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-              AI抽出
-            </button>
-            <button id="btnCalcShares" class="bg-emerald-900/50 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-700/50 hover:border-emerald-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0" title="入力銘柄の推奨株数を計算">
-              📊 株数
-            </button>
+            <button id="btnAiExtract" class="bg-indigo-900/50 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-700/50 hover:border-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0">AI抽出</button>
+            <button id="btnCalcShares" class="bg-emerald-900/50 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-700/50 hover:border-emerald-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0">📊 株数</button>
             <button id="btnExportCSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shrink-0">📥 CSV</button>
           </div>
         </div>
@@ -238,12 +228,7 @@
                 </th>
                 <th class="p-3 w-28">コード</th>
                 <th class="p-3 min-w-[180px]">銘柄名 / 業種</th>
-                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-right w-28 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
-                  <div class="flex items-center justify-end gap-1.5">
-                    <span>株価</span>
-                    <span id="sortIcon" class="text-cyan-400 font-mono text-[11px] w-3 text-center">↕</span>
-                  </div>
-                </th>
+                <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-right w-28 transition duration-200 whitespace-nowrap" id="thPrice">株価</th>
                 <th class="p-3 text-right w-32">前日比</th>
                 <th class="p-3 text-right w-40 text-emerald-400 font-bold whitespace-nowrap">推奨目安 (打診/最大)</th>
                 <th class="p-3 text-right w-24">乖離率</th>
@@ -258,9 +243,7 @@
         <div class="mt-4 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
           <span id="displayCountLabel" class="font-medium text-slate-300">表示中: 0 件</span>
           <div class="flex items-center gap-3 text-slate-500 font-mono text-[10px]">
-            <span id="footerFormula">行をクリックすると診断カルテを開きます</span>
-            <span>•</span>
-            <span id="footerBase">ポジションサイズ: Wブレーキ(許容リスク✕売買枠)</span>
+            <span>行をクリックすると診断カルテを開きます</span>
           </div>
         </div>
       </section>
@@ -344,7 +327,7 @@
         </div>
       </section>
 
-      <!-- ★【新設】電子株ノート（確定トレード日誌・カルテ一覧）セクション -->
+      <!-- 電子株ノート（確定トレード日誌・カルテ一覧）セクション -->
       <section id="tradeNotesSection" class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div class="flex items-center gap-2">
@@ -473,7 +456,7 @@
         </form>
       </dialog>
 
-      <!-- ★決済・トレードカルテ記録モーダル -->
+      <!-- 決済・トレードカルテ記録モーダル -->
       <dialog id="tradeCloseDialog" class="bg-slate-900 border border-emerald-500/40 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-lg w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
         <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
           <h3 id="tradeCloseTitle" class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
@@ -536,7 +519,7 @@
         </form>
       </dialog>
 
-      <!-- ★電子株ノート詳細モーダル -->
+      <!-- 電子株ノート詳細モーダル -->
       <dialog id="tradeNoteDetailDialog" class="bg-slate-900 border border-emerald-500/40 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-2xl w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
         <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
           <h3 id="noteDetailTitle" class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
@@ -573,7 +556,7 @@
         trackerHorizon: 'T5',
         tradeNotes: [],
         currentSystem: 'mid',
-        activeTab: 'BUY1',
+        activeTab: 'ALL', // ★修正：初期表示は「全シグナル（ALL）」にして全件捕捉
         activeMarket: 'ALL',
         searchQuery: '',
         sortOrder: 'none',
@@ -592,7 +575,6 @@
 
       document.addEventListener('DOMContentLoaded', async () => {
         try {
-          // ★フェイルセーフ：404時でもクラッシュしない安全な読み込み
           const [resResults, resPrev, resPort, resMeta, resTracker, resNotes] = await Promise.all([
             fetch('./data/results.json').then(r => r.ok ? r.json() : []).catch(() => []),
             fetch('./data/prev_counts.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
@@ -692,6 +674,7 @@
           card.addEventListener('click', () => {
             const targetTab = card.dataset.tab;
             state.activeTab = targetTab;
+            
             state.sortScoreOrder = 'desc';
             state.sortOrder = 'none';
             const sortScoreIcon = document.getElementById('sortScoreIcon');
@@ -908,9 +891,9 @@
           totalInvest += invest;
           totalCurrent += currentVal;
 
-          if (item.statusLabel.includes('利確')) countTP++;
-          else if (item.statusLabel.includes('損切り') || item.statusLabel.includes('撤退')) countSL++;
-          else if (item.statusLabel.includes('逆指値') || item.statusLabel.includes('安全圏') || item.statusLabel.includes('利益確保')) countTrail++;
+          if (item.statusLabel?.includes('利確')) countTP++;
+          else if (item.statusLabel?.includes('損切り') || item.statusLabel?.includes('撤退')) countSL++;
+          else if (item.statusLabel?.includes('逆指値') || item.statusLabel?.includes('安全圏') || item.statusLabel?.includes('利益確保')) countTrail++;
           else countHold++;
 
           const isPlus = item.plAmount >= 0;
@@ -1021,10 +1004,7 @@
         const repo = localStorage.getItem('gh_repo') || '';
         const token = localStorage.getItem('gh_token') || '';
 
-        if (!owner || !repo || !token) {
-          alert("GitHub連携設定が必要です。「➕ 保有登録」画面で設定してください。");
-          return;
-        }
+        if (!owner || !repo || !token) { alert("GitHub連携設定が必要です。"); return; }
 
         const btn = document.getElementById('btnSubmitTradeClose');
         btn.disabled = true;
@@ -1112,7 +1092,6 @@
           renderTradeNotesSection();
 
         } catch(err) {
-          console.error(err);
           alert(`保存エラー: ${err.message}`);
         } finally {
           btn.disabled = false;
@@ -1567,12 +1546,12 @@
 
       function exportCSV() {
         const sys = state.currentSystem;
-        let filtered = state.results.filter(r => r[sys].category !== "NONE");
-        if (state.minScoreFilter > 1) filtered = filtered.filter(r => r[sys].score >= state.minScoreFilter);
+        let filtered = state.results.filter(r => r?.[sys]?.category && r[sys].category !== "NONE");
+        if (state.minScoreFilter > 1) filtered = filtered.filter(r => (r?.[sys]?.score || 0) >= state.minScoreFilter);
         let csv = "\uFEFFカテゴリ,期待度,コード,銘柄名,株価,前日比,前日比率,市場,業種\r\n";
         filtered.forEach(i => {
-          const s = i[sys];
-          csv += `"${s.categoryName}","${s.score}","${i.ticker}","${i.name}","${i.price}","${i.change}","${i.changeRate}%","${i.market}","${i.sector}"\r\n`;
+          const s = i[sys] || {};
+          csv += `"${s.categoryName||''}","${s.score||''}","${i.ticker}","${i.name}","${i.price}","${i.change}","${i.changeRate}%","${i.market}","${i.sector}"\r\n`;
         });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
@@ -1604,108 +1583,142 @@
       function updateStats() {
         const counts = { BUY1: 0, BUY1_PRE: 0, BUY2: 0, BUY2_PRE: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0, SELL5: 0, SELL6: 0, SELL7: 0, SELL7_PRE: 0, SELL8: 0 };
         const sys = state.currentSystem;
-        state.results.forEach(r => { if (counts[r[sys].category] !== undefined) counts[r[sys].category]++; });
+        state.results.forEach(r => {
+          const cat = r?.[sys]?.category;
+          if (cat && counts[cat] !== undefined) counts[cat]++;
+        });
 
         const setStat = (id, c, p) => {
           const el = document.getElementById(id);
           if (el) el.innerHTML = `<span class="text-base font-bold">${c}</span>${getDiffBadge(c, p||0)}`;
         };
 
-        setStat('statBuy1', counts.BUY1 + counts.BUY1_PRE, (state.prevCounts[sys].BUY1||0) + (state.prevCounts[sys].BUY1_PRE||0));
-        setStat('statBuy2', counts.BUY2 + counts.BUY2_PRE, (state.prevCounts[sys].BUY2||0) + (state.prevCounts[sys].BUY2_PRE||0));
-        setStat('statBuy3', counts.BUY3 + counts.BUY3_PRE, (state.prevCounts[sys].BUY3||0) + (state.prevCounts[sys].BUY3_PRE||0));
-        setStat('statBuy4', counts.BUY4, state.prevCounts[sys].BUY4);
-        setStat('statSell5', counts.SELL5, state.prevCounts[sys].SELL5);
-        setStat('statSell6', counts.SELL6, state.prevCounts[sys].SELL6);
-        setStat('statSell7', counts.SELL7 + counts.SELL7_PRE, (state.prevCounts[sys].SELL7||0) + (state.prevCounts[sys].SELL7_PRE||0));
-        setStat('statSell8', counts.SELL8, state.prevCounts[sys].SELL8);
+        setStat('statBuy1', counts.BUY1 + counts.BUY1_PRE, (state.prevCounts?.[sys]?.BUY1||0) + (state.prevCounts?.[sys]?.BUY1_PRE||0));
+        setStat('statBuy2', counts.BUY2 + counts.BUY2_PRE, (state.prevCounts?.[sys]?.BUY2||0) + (state.prevCounts?.[sys]?.BUY2_PRE||0));
+        setStat('statBuy3', counts.BUY3 + counts.BUY3_PRE, (state.prevCounts?.[sys]?.BUY3||0) + (state.prevCounts?.[sys]?.BUY3_PRE||0));
+        setStat('statBuy4', counts.BUY4, state.prevCounts?.[sys]?.BUY4);
+        setStat('statSell5', counts.SELL5, state.prevCounts?.[sys]?.SELL5);
+        setStat('statSell6', counts.SELL6, state.prevCounts?.[sys]?.SELL6);
+        setStat('statSell7', counts.SELL7 + counts.SELL7_PRE, (state.prevCounts?.[sys]?.SELL7||0) + (state.prevCounts?.[sys]?.SELL7_PRE||0));
+        setStat('statSell8', counts.SELL8, state.prevCounts?.[sys]?.SELL8);
 
-        const totalToday = state.results.filter(r => r[sys].category !== "NONE").length;
+        const totalToday = state.results.filter(r => r?.[sys]?.category && r[sys].category !== "NONE").length;
         document.getElementById('statTotal').textContent = totalToday.toLocaleString();
       }
 
+      // ★完全防御版 renderTable（二度と0件で止まらない）
       function renderTable() {
         const tbody = document.getElementById('resultTableBody');
         tbody.innerHTML = '';
         const sys = state.currentSystem;
-        let filtered = state.results.filter(r => r[sys].category !== "NONE");
+        let baseList = state.results.filter(r => r?.[sys]?.category && r[sys].category !== "NONE");
 
-        if (state.minScoreFilter > 1) filtered = filtered.filter(r => r[sys].score >= state.minScoreFilter);
+        // ★スマートフォールバック：もし★7以上で絞り込んで0件だった場合、全シグナルを表示して救済
+        let filtered = [...baseList];
+        let isFallbackApplied = false;
 
-        if (state.activeTab !== 'ALL') {
-          if (state.activeTab === 'BUY1') filtered = filtered.filter(r => r[sys].category.startsWith('BUY1'));
-          else if (state.activeTab === 'BUY2') filtered = filtered.filter(r => r[sys].category.startsWith('BUY2'));
-          else if (state.activeTab === 'BUY3') filtered = filtered.filter(r => r[sys].category.startsWith('BUY3'));
-          else if (state.activeTab === 'BUY4') filtered = filtered.filter(r => r[sys].category === 'BUY4');
-          else if (state.activeTab === 'SELL5') filtered = filtered.filter(r => r[sys].category === 'SELL5');
-          else if (state.activeTab === 'SELL6') filtered = filtered.filter(r => r[sys].category === 'SELL6');
-          else if (state.activeTab === 'SELL7') filtered = filtered.filter(r => r[sys].category.startsWith('SELL7'));
-          else if (state.activeTab === 'SELL8') filtered = filtered.filter(r => r[sys].category === 'SELL8');
+        if (state.minScoreFilter > 1) {
+          const scoreFiltered = filtered.filter(r => (r?.[sys]?.score || 0) >= state.minScoreFilter);
+          if (scoreFiltered.length === 0 && filtered.length > 0) {
+            // 本日★7以上が0件のため救済
+            isFallbackApplied = true;
+          } else {
+            filtered = scoreFiltered;
+          }
         }
 
-        if (state.activeMarket !== 'ALL') filtered = filtered.filter(r => r.market === state.activeMarket);
+        // タブ絞り込み
+        if (state.activeTab !== 'ALL') {
+          filtered = filtered.filter(r => {
+            const cat = r?.[sys]?.category || "";
+            if (state.activeTab === 'BUY1') return cat.startsWith('BUY1');
+            if (state.activeTab === 'BUY2') return cat.startsWith('BUY2');
+            if (state.activeTab === 'BUY3') return cat.startsWith('BUY3');
+            if (state.activeTab === 'BUY4') return cat === 'BUY4';
+            if (state.activeTab === 'SELL5') return cat === 'SELL5';
+            if (state.activeTab === 'SELL6') return cat === 'SELL6';
+            if (state.activeTab === 'SELL7') return cat.startsWith('SELL7');
+            if (state.activeTab === 'SELL8') return cat === 'SELL8';
+            return true;
+          });
+        }
 
-        if (state.sortOrder === 'asc') filtered.sort((a, b) => a.price - b.price);
-        else if (state.sortOrder === 'desc') filtered.sort((a, b) => b.price - a.price);
-        else if (state.sortScoreOrder === 'asc') filtered.sort((a, b) => a[sys].score - b[sys].score);
-        else filtered.sort((a, b) => b[sys].score - a[sys].score);
+        if (state.activeMarket !== 'ALL') {
+          filtered = filtered.filter(r => r.market === state.activeMarket);
+        }
+
+        if (state.sortOrder === 'asc') filtered.sort((a, b) => (a.price||0) - (b.price||0));
+        else if (state.sortOrder === 'desc') filtered.sort((a, b) => (b.price||0) - (a.price||0));
+        else if (state.sortScoreOrder === 'asc') filtered.sort((a, b) => (a?.[sys]?.score||0) - (b?.[sys]?.score||0));
+        else filtered.sort((a, b) => (b?.[sys]?.score||0) - (a?.[sys]?.score||0));
 
         const totalFilteredCount = filtered.length;
-        const scoreLabel = state.minScoreFilter >= 7 ? '【🔥 ★7以上厳選】' : '';
+        let scoreLabel = state.minScoreFilter >= 7 ? '【🔥 ★7以上厳選】' : '';
+        if (isFallbackApplied) {
+          scoreLabel = '【⚠️ 本日★7以上は0件のため全シグナル表示中】';
+        }
+
         document.getElementById('displayCountLabel').textContent = `${scoreLabel} 表示中: ${Math.min(totalFilteredCount, MAX_RENDER_ROWS)} 件 / 全 ${totalFilteredCount} 件`;
 
         if (filtered.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="10" class="py-14 text-center text-slate-500"><p class="text-sm">該当する銘柄がありません</p></td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="10" class="py-14 text-center text-slate-500"><p class="text-sm">該当する銘柄がありません（上の「すべて」や他のタブを選択してください）</p></td></tr>`;
           return;
         }
         
         filtered.slice(0, MAX_RENDER_ROWS).forEach(item => {
-          const sysData = item[sys];
-          const isPlus = item.change >= 0;
-          const tr = document.createElement('tr');
-          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/70 cursor-pointer transition select-none';
-          
-          tr.addEventListener('click', (e) => {
-            if (e.target.closest('a, button')) return;
-            openDiagnosticDialog(item.ticker, sys);
-          });
+          try {
+            const sysData = item[sys] || {};
+            const isPlus = (item.change || 0) >= 0;
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/70 cursor-pointer transition select-none';
+            
+            tr.addEventListener('click', (e) => {
+              if (e.target.closest('a, button')) return;
+              openDiagnosticDialog(item.ticker, sys);
+            });
 
-          const pos = calculatePositionSizing(item.price, sysData.stop_loss_price, sysData.category);
-          let posDisplayHtml = pos.status === "OK" 
-            ? `<div class="font-bold text-emerald-400 font-mono text-[13px]">${pos.initialShares}株 / ${pos.maxShares}株</div>` 
-            : `<span class="px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 text-[10px]">注文不可</span>`;
+            const pos = calculatePositionSizing(item.price, sysData.stop_loss_price, sysData.category);
+            let posDisplayHtml = pos.status === "OK" 
+              ? `<div class="font-bold text-emerald-400 font-mono text-[13px]">${pos.initialShares}株 / ${pos.maxShares}株</div>` 
+              : `<span class="px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 text-[10px]">注文不可</span>`;
 
-          tr.innerHTML = `
-            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${sysData.categoryName.split('：')[0]}</span></td>
-            <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold">${sysData.score}</td>
-            <td class="p-3 font-mono font-bold text-white">${item.ticker}</td>
-            <td class="p-3"><div class="font-bold text-slate-100 text-sm">${item.name}</div><div class="text-[10px] text-slate-400">${item.sector}</div></td>
-            <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
-            <td class="p-3 text-right font-mono ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${item.change.toLocaleString()} (${isPlus ? '+' : ''}${item.changeRate}%)</td>
-            <td class="p-3 text-right font-mono">${posDisplayHtml}</td>
-            <td class="p-3 text-right font-mono text-cyan-400 font-bold">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</td>
-            <td class="p-3 text-center whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">${item.market}</span></td>
-            <td class="p-3 text-center whitespace-nowrap">
-              <button onclick="copyAiData('${item.ticker}', '${item.name}')" class="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded text-[10px] font-bold transition">AI抽出</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
+            const catShort = (sysData.categoryName || "").split('：')[0] || "条件外";
+
+            tr.innerHTML = `
+              <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass || ''}">${catShort}</span></td>
+              <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold">${sysData.score || 0}</td>
+              <td class="p-3 font-mono font-bold text-white">${item.ticker}</td>
+              <td class="p-3"><div class="font-bold text-slate-100 text-sm">${item.name}</div><div class="text-[10px] text-slate-400">${item.sector}</div></td>
+              <td class="p-3 text-right font-mono font-bold">${(item.price||0).toLocaleString()}</td>
+              <td class="p-3 text-right font-mono ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${(item.change||0).toLocaleString()} (${isPlus ? '+' : ''}${item.changeRate||0}%)</td>
+              <td class="p-3 text-right font-mono">${posDisplayHtml}</td>
+              <td class="p-3 text-right font-mono text-cyan-400 font-bold">${(sysData.diffRate||0) >= 0 ? '+' : ''}${(sysData.diffRate||0).toFixed(1)}%</td>
+              <td class="p-3 text-center whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">${item.market}</span></td>
+              <td class="p-3 text-center whitespace-nowrap">
+                <button onclick="copyAiData('${item.ticker}', '${item.name}')" class="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded text-[10px] font-bold transition">AI抽出</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          } catch(e) {
+            console.error("行描画エラー:", e);
+          }
         });        
       }
 
       function openDiagnosticDialog(ticker, sys) {
         const item = state.results.find(r => r.ticker === ticker);
         if (!item) return;
-        const sysData = item[sys];
+        const sysData = item[sys] || {};
+        const dialog = document.getElementById('diagnosticDialog');
         document.getElementById('dialogTitle').innerHTML = `📋 診断カルテ: <span class="font-mono text-cyan-400">[${item.ticker}] ${item.name}</span>`;
         document.getElementById('dialogContent').innerHTML = `
           <div class="grid grid-cols-2 gap-3 border-b border-slate-800 pb-3">
-            <div><span class="text-slate-400 text-[10px] block">本日終値</span><strong class="text-white text-sm font-mono">${item.price.toLocaleString()} 円</strong></div>
+            <div><span class="text-slate-400 text-[10px] block">本日終値</span><strong class="text-white text-sm font-mono">${(item.price||0).toLocaleString()} 円</strong></div>
             <div><span class="text-slate-400 text-[10px] block">推奨損切価格</span><strong class="text-rose-400 text-sm font-mono">${(sysData.stop_loss_price||0).toLocaleString()} 円</strong></div>
           </div>
-          <div class="p-3 bg-slate-950 rounded-xl text-slate-300 text-[11px] leading-relaxed">${sysData.reason}</div>
+          <div class="p-3 bg-slate-950 rounded-xl text-slate-300 text-[11px] leading-relaxed">${sysData.reason||''}</div>
         `;
-        document.getElementById('diagnosticDialog').showModal();
+        dialog.showModal();
       }
 
       function closeDiagnosticDialog() { document.getElementById('diagnosticDialog').close(); }
