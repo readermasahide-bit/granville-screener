@@ -13,7 +13,6 @@ from datetime import datetime, timedelta, timezone
 # ★ 設定パラメータ
 # ==========================================
 SYSTEM_TYPE = "mid"
-html_output_path = "index.html"
 portfolio_path = "portfolio.csv"
 data_dir = "data"
 os.makedirs(data_dir, exist_ok=True)
@@ -23,7 +22,7 @@ tse_margin_json_path = os.path.join(data_dir, "tse_margin.json")
 tse_history_json_path = os.path.join(data_dir, "tse_margin_history.json")
 shadow_trades_json_path = os.path.join(data_dir, "shadow_trades.json")
 tracker_summary_json_path = os.path.join(data_dir, "tracker_summary.json")
-trade_notes_json_path = os.path.join(data_dir, "trade_notes.json")  # ★新設：電子株ノート
+trade_notes_json_path = os.path.join(data_dir, "trade_notes.json")
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -410,7 +409,6 @@ def find_swing_lows(series, window=25):
             low_indices.append(i)
     return low_indices
 
-# 判定および採点ロジック関数
 def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None, tse_ticker_hist=None):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
@@ -1385,9 +1383,7 @@ if os.path.exists(portfolio_path):
 else:
     print(" -> portfolio.csv が存在しないため保有銘柄セクションは空で出力します")
 
-# ======================================================================
-# ★【新設】電子株ノート（売買時期チャートの永久固定化スナップショット補完）
-# ======================================================================
+# 電子株ノート（売買時期チャートの永久固定化スナップショット補完）
 print("電子株ノート（売買カルテ・永久固定チャート）の更新処理中...")
 trade_notes = []
 if os.path.exists(trade_notes_json_path):
@@ -1395,10 +1391,8 @@ if os.path.exists(trade_notes_json_path):
         with open(trade_notes_json_path, "r", encoding="utf-8") as f:
             trade_notes = json.load(f)
     except Exception as e:
-        print(f"⚠️ trade_notes.json 読み込みスキップ: {e}")
         trade_notes = []
 
-# カルテ内でチャートスナップショットが未生成の銘柄があれば、bulk_dataから自動生成して永久保存
 notes_updated = False
 for note in trade_notes:
     if "chartSnapshot" not in note or not note["chartSnapshot"]:
@@ -1414,11 +1408,9 @@ for note in trade_notes:
             out_dt_str = note.get("outDate", today_str)
             
             try:
-                # エントリー日の約25営業日前からエグジット日までの日足スナップショットを生成
                 in_dt = pd.to_datetime(in_dt_str) if in_dt_str else df_n.index[-40]
                 out_dt = pd.to_datetime(out_dt_str) if out_dt_str else df_n.index[-1]
                 
-                # エントリー日以前のデータを25営業日分確保
                 df_before = df_n[df_n.index <= in_dt].tail(25)
                 df_during = df_n[(df_n.index > in_dt) & (df_n.index <= out_dt)]
                 df_slice = pd.concat([df_before, df_during])
@@ -1439,7 +1431,7 @@ for note in trade_notes:
                 note["chartSnapshot"] = snapshot
                 notes_updated = True
             except Exception as e:
-                print(f"⚠️ {n_code} のチャートスナップショット生成スキップ: {e}")
+                pass
 
 if notes_updated or not os.path.exists(trade_notes_json_path):
     with open(trade_notes_json_path, "w", encoding="utf-8") as f:
@@ -1671,7 +1663,7 @@ with open(tracker_summary_json_path, "w", encoding="utf-8") as f:
 
 print(f" -> スクリーナー実績追跡完了: 累積 {len(valid_trades)} 件を評価 (summary: {tracker_summary_json_path})")
 
-# データ出力
+# データ出力（★危険なHTML上書き処理は完全削除し、データのみ純粋に出力）
 print("最新データを data/ フォルダに出力中...")
 
 with open(os.path.join(data_dir, "results.json"), "w", encoding="utf-8") as f:
@@ -1704,14 +1696,6 @@ meta_info = {
 }
 with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
     json.dump(meta_info, f, ensure_ascii=False)
-
-template_path = "template.html"
-if os.path.exists(template_path):
-    with open(template_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
-    with open(html_output_path, "w", encoding="utf-8") as f:
-        f.write(html_content)
-    print(f"👉 画面ファイル配置完了: {html_output_path}")
 
 print(f"\n--- データ更新およびファイル出力が完了しました ---")
 print(f"👉 出力フォルダ: {data_dir}/ (自動更新時刻：{current_time_str})")
