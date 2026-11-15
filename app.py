@@ -47,10 +47,32 @@ def clean_val(val):
         except Exception:
             return str(val)
     elif hasattr(val, 'item'):
-        return val.item()
+        val = val.item()
+    if isinstance(val, float):
+        if math.isnan(val) or math.isinf(val):
+            return None
     elif pd.isna(val):
         return None
     return val
+
+# ★【最重要】ブラウザのJSONパース即死を防ぐ完全無毒化関数
+def sanitize_for_json(obj):
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    elif isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(v) for v in obj]
+    elif hasattr(obj, 'item'):
+        val = obj.item()
+        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+            return None
+        return val
+    elif pd.isna(obj):
+        return None
+    return obj
 
 # --- 前日データの読み込み ---
 prev_counts = {
@@ -348,13 +370,14 @@ for ticker, df_st in bulk_data.items():
             c_prev = float(df_st['Close'].iloc[-2])
             if c_prev > 0:
                 pct = ((c_today - c_prev) / c_prev) * 100
-                all_market_changes.append(pct)
-                if pct > 0:
-                    advance_count += 1
-                elif pct < 0:
-                    decline_count += 1
-                else:
-                    unchanged_count += 1
+                if not (math.isnan(pct) or math.isinf(pct)):
+                    all_market_changes.append(pct)
+                    if pct > 0:
+                        advance_count += 1
+                    elif pct < 0:
+                        decline_count += 1
+                    else:
+                        unchanged_count += 1
         except Exception:
             pass
 
@@ -1046,7 +1069,7 @@ for ticker, df_stock in bulk_data.items():
             "isLowVolume": clean_val(is_low_volume),
             "isStrongRelative": False,
             "isMarginTradable": is_shortable,
-            "yesterdayLow": yesterday_low,
+            "yesterdayLow": clean_val(yesterday_low),
             "short": short_res,
             "mid": mid_res
         }
@@ -1198,7 +1221,7 @@ for shard_key, data_dict in shards.items():
     if data_dict:
         file_path = os.path.join(history_dir, f"data_{shard_key}.json")
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(data_dict, f, separators=(',', ':'))
+            json.dump(sanitize_for_json(data_dict), f, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
 
 # 保有銘柄ポートフォリオ判定
@@ -1366,14 +1389,14 @@ if os.path.exists(portfolio_path):
                             "code": c_str,
                             "name": clean_val(ticker_to_name.get(t_key, "不明")),
                             "shares": shares,
-                            "buyPrice": buy_price,
-                            "currentPrice": current_price,
-                            "plAmount": pl_amount,
-                            "plRate": pl_rate,
-                            "stopLossPrice": active_sl,
-                            "statusLabel": status_label,
-                            "actionLabel": action_label,
-                            "badgeClass": badge_class
+                            "buyPrice": clean_val(buy_price),
+                            "currentPrice": clean_val(current_price),
+                            "plAmount": clean_val(pl_amount),
+                            "plRate": clean_val(pl_rate),
+                            "stopLossPrice": clean_val(active_sl),
+                            "statusLabel": clean_val(status_label),
+                            "actionLabel": clean_val(action_label),
+                            "badgeClass": clean_val(badge_class)
                         })
                 except Exception as e:
                     print(f"⚠️ 保有銘柄【{c_str}】の判定エラー: {e}")
@@ -1383,7 +1406,7 @@ if os.path.exists(portfolio_path):
 else:
     print(" -> portfolio.csv が存在しないため保有銘柄セクションは空で出力します")
 
-# 電子株ノート（売買時期チャートの永久固定化スナップショット補完）
+# 電子株ノート処理
 print("電子株ノート（売買カルテ・永久固定チャート）の更新処理中...")
 trade_notes = []
 if os.path.exists(trade_notes_json_path):
@@ -1420,13 +1443,13 @@ for note in trade_notes:
                     d_txt = dt_idx.strftime("%m/%d")
                     snapshot.append([
                         d_txt,
-                        float(r_val['Open']) if pd.notna(r_val['Open']) else None,
-                        float(r_val['High']) if pd.notna(r_val['High']) else None,
-                        float(r_val['Low']) if pd.notna(r_val['Low']) else None,
-                        float(r_val['Close']) if pd.notna(r_val['Close']) else None,
-                        float(r_val['ma5']) if pd.notna(r_val['ma5']) else None,
-                        float(r_val['ma25']) if pd.notna(r_val['ma25']) else None,
-                        float(r_val['ma75']) if pd.notna(r_val['ma75']) else None
+                        clean_val(float(r_val['Open'])) if pd.notna(r_val['Open']) else None,
+                        clean_val(float(r_val['High'])) if pd.notna(r_val['High']) else None,
+                        clean_val(float(r_val['Low'])) if pd.notna(r_val['Low']) else None,
+                        clean_val(float(r_val['Close'])) if pd.notna(r_val['Close']) else None,
+                        clean_val(float(r_val['ma5'])) if pd.notna(r_val['ma5']) else None,
+                        clean_val(float(r_val['ma25'])) if pd.notna(r_val['ma25']) else None,
+                        clean_val(float(r_val['ma75'])) if pd.notna(r_val['ma75']) else None
                     ])
                 note["chartSnapshot"] = snapshot
                 notes_updated = True
@@ -1435,7 +1458,7 @@ for note in trade_notes:
 
 if notes_updated or not os.path.exists(trade_notes_json_path):
     with open(trade_notes_json_path, "w", encoding="utf-8") as f:
-        json.dump(trade_notes, f, ensure_ascii=False, indent=2)
+        json.dump(sanitize_for_json(trade_notes), f, ensure_ascii=False, indent=2)
 print(f" -> 電子株ノート: 累計 {len(trade_notes)} 件のカルテを同期完了")
 
 # 実績検証 Shadow Tracker 処理
@@ -1469,8 +1492,8 @@ for trade in shadow_trades:
             yesterday_low = float(trade.get("yesterdayLow", entry_open * 0.98))
             
             gap_rate = ((entry_open - sig_close) / sig_close) * 100 if sig_close > 0 else 0.0
-            trade["entryOpen"] = entry_open
-            trade["gapRate"] = round(gap_rate, 2)
+            trade["entryOpen"] = clean_val(entry_open)
+            trade["gapRate"] = clean_val(round(gap_rate, 2))
             trade["entryDate"] = df_after.index[0].strftime("%Y-%m-%d")
 
             if gap_rate > 2.0:
@@ -1484,20 +1507,20 @@ for trade in shadow_trades:
             entry_p = float(trade.get("entryOpen", 1.0))
             df_eval = df_after.head(10)
             trade["daysHeld"] = len(df_eval)
-            trade["highestPrice"] = float(df_eval['High'].max())
-            trade["lowestPrice"] = float(df_eval['Low'].min())
+            trade["highestPrice"] = clean_val(float(df_eval['High'].max()))
+            trade["lowestPrice"] = clean_val(float(df_eval['Low'].min()))
 
             if len(df_eval) >= 3 and "return_T3" not in trade:
                 c3 = float(df_eval.iloc[2]['Close'])
-                trade["return_T3"] = round(((c3 - entry_p) / entry_p) * 100, 2)
+                trade["return_T3"] = clean_val(round(((c3 - entry_p) / entry_p) * 100, 2))
 
             if len(df_eval) >= 5 and "return_T5" not in trade:
                 c5 = float(df_eval.iloc[4]['Close'])
-                trade["return_T5"] = round(((c5 - entry_p) / entry_p) * 100, 2)
+                trade["return_T5"] = clean_val(round(((c5 - entry_p) / entry_p) * 100, 2))
 
             if len(df_eval) >= 10 and "return_T10" not in trade:
                 c10 = float(df_eval.iloc[9]['Close'])
-                trade["return_T10"] = round(((c10 - entry_p) / entry_p) * 100, 2)
+                trade["return_T10"] = clean_val(round(((c10 - entry_p) / entry_p) * 100, 2))
                 trade["isCompleted"] = True
 
         updated_trades.append(trade)
@@ -1519,9 +1542,9 @@ for item in results_list:
                 "system": SYSTEM_TYPE,
                 "category": cat,
                 "score": int(sys_data.get("score", 5)),
-                "signalClose": float(item["price"]),
-                "yesterdayLow": float(item.get("yesterdayLow", item["price"] * 0.98)),
-                "stopLossPrice": float(sys_data.get("stop_loss_price", item["price"] * 0.95)),
+                "signalClose": clean_val(float(item["price"])),
+                "yesterdayLow": clean_val(float(item.get("yesterdayLow", item["price"] * 0.98))),
+                "stopLossPrice": clean_val(float(sys_data.get("stop_loss_price", item["price"] * 0.95))),
                 "regime": regime_status,
                 "factor_keys": sys_data.get("factor_keys", []),
                 "entryStatus": "PENDING_ENTRY"
@@ -1530,7 +1553,7 @@ for item in results_list:
 
 updated_trades = updated_trades[-300:]
 with open(shadow_trades_json_path, "w", encoding="utf-8") as f:
-    json.dump(updated_trades, f, ensure_ascii=False, indent=2)
+    json.dump(sanitize_for_json(updated_trades), f, ensure_ascii=False, indent=2)
 
 def build_score_table(trades_pool, return_key):
     scores_def = [10, 9, 8, 7, 6, 5]
@@ -1538,10 +1561,10 @@ def build_score_table(trades_pool, return_key):
     
     for sc in scores_def:
         if sc == 5:
-            matched = [t for t in trades_pool if t.get("score", 5) <= 5 and return_key in t]
+            matched = [t for t in trades_pool if t.get("score", 5) <= 5 and return_key in t and t.get(return_key) is not None]
             label = "★5以下"
         else:
-            matched = [t for t in trades_pool if t.get("score") == sc and return_key in t]
+            matched = [t for t in trades_pool if t.get("score") == sc and return_key in t and t.get(return_key) is not None]
             label = f"★{sc}"
             
         count = len(matched)
@@ -1557,19 +1580,19 @@ def build_score_table(trades_pool, return_key):
         losses = [r for r in returns if r <= 0]
         
         win_rate = round((len(wins) / count) * 100, 1)
-        avg_gain = round(pd.Series(wins).mean(), 1) if wins else 0.0
-        avg_loss = round(pd.Series(losses).mean(), 1) if losses else 0.0
+        avg_gain = round(float(pd.Series(wins).mean()), 1) if wins else 0.0
+        avg_loss = round(float(pd.Series(losses).mean()), 1) if losses else 0.0
         
         if abs(avg_loss) > 0:
             pf = round(avg_gain / abs(avg_loss), 2)
         else:
             pf = 99.0 if avg_gain > 0 else 0.0
             
-        expected_val = round(pd.Series(returns).mean(), 1)
+        expected_val = round(float(pd.Series(returns).mean()), 1)
         
         table_rows.append({
-            "score": sc, "label": label, "count": count, "winRate": win_rate,
-            "avgGain": avg_gain, "avgLoss": avg_loss, "profitFactor": pf, "expectedValue": expected_val
+            "score": sc, "label": label, "count": count, "winRate": clean_val(win_rate),
+            "avgGain": clean_val(avg_gain), "avgLoss": clean_val(avg_loss), "profitFactor": clean_val(pf), "expectedValue": clean_val(expected_val)
         })
     return table_rows
 
@@ -1613,7 +1636,7 @@ target_factors = [
     ("追い風業種", "追い風HOT業種")
 ]
 
-trades_with_t5 = [t for t in valid_trades if "return_T5" in t]
+trades_with_t5 = [t for t in valid_trades if "return_T5" in t and t.get("return_T5") is not None]
 base_win_rate = round(len([t for t in trades_with_t5 if float(t["return_T5"]) > 0]) / len(trades_with_t5) * 100, 1) if trades_with_t5 else 50.0
 
 factor_analysis_rows = []
@@ -1646,37 +1669,37 @@ for f_key, f_name in target_factors:
             
         factor_analysis_rows.append({
             "key": f_key, "name": f_name, "count": act_count,
-            "activeWinRate": act_rate, "inactiveWinRate": inact_rate,
-            "contribution": contrib, "evaluation": eval_badge, "actionAdvice": advice
+            "activeWinRate": clean_val(act_rate), "inactiveWinRate": clean_val(inact_rate),
+            "contribution": clean_val(contrib), "evaluation": eval_badge, "actionAdvice": advice
         })
     else:
         factor_analysis_rows.append({
             "key": f_key, "name": f_name, "count": 0,
-            "activeWinRate": 0.0, "inactiveWinRate": base_win_rate,
+            "activeWinRate": 0.0, "inactiveWinRate": clean_val(base_win_rate),
             "contribution": 0.0, "evaluation": "－ 蓄積中", "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
         })
 
 tracker_summary["factors"] = factor_analysis_rows
 
 with open(tracker_summary_json_path, "w", encoding="utf-8") as f:
-    json.dump(tracker_summary, f, ensure_ascii=False, indent=2)
+    json.dump(sanitize_for_json(tracker_summary), f, ensure_ascii=False, indent=2)
 
 print(f" -> スクリーナー実績追跡完了: 累積 {len(valid_trades)} 件を評価 (summary: {tracker_summary_json_path})")
 
-# データ出力（★危険なHTML上書き処理は完全削除し、データのみ純粋に出力）
+# ★【最重要】全出力データを完全サニタイズ（NaN・無限大の完全撲滅）して書き出し
 print("最新データを data/ フォルダに出力中...")
 
 with open(os.path.join(data_dir, "results.json"), "w", encoding="utf-8") as f:
-    json.dump(results_list, f, ensure_ascii=False)
+    json.dump(sanitize_for_json(results_list), f, ensure_ascii=False)
 
 with open(os.path.join(data_dir, "hot_sectors.json"), "w", encoding="utf-8") as f:
-    json.dump(hot_sectors, f, ensure_ascii=False)
+    json.dump(sanitize_for_json(hot_sectors), f, ensure_ascii=False)
 
 with open(os.path.join(data_dir, "prev_counts.json"), "w", encoding="utf-8") as f:
-    json.dump(prev_counts, f, ensure_ascii=False)
+    json.dump(sanitize_for_json(prev_counts), f, ensure_ascii=False)
 
 with open(os.path.join(data_dir, "portfolio.json"), "w", encoding="utf-8") as f:
-    json.dump(portfolio_records, f, ensure_ascii=False)
+    json.dump(sanitize_for_json(portfolio_records), f, ensure_ascii=False)
 
 meta_info = {
     "lastUpdate": current_time_str,
@@ -1695,7 +1718,7 @@ meta_info = {
     }
 }
 with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
-    json.dump(meta_info, f, ensure_ascii=False)
+    json.dump(sanitize_for_json(meta_info), f, ensure_ascii=False)
 
 print(f"\n--- データ更新およびファイル出力が完了しました ---")
 print(f"👉 出力フォルダ: {data_dir}/ (自動更新時刻：{current_time_str})")
