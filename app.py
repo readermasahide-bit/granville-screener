@@ -23,6 +23,7 @@ tse_margin_json_path = os.path.join(data_dir, "tse_margin.json")
 tse_history_json_path = os.path.join(data_dir, "tse_margin_history.json")
 shadow_trades_json_path = os.path.join(data_dir, "shadow_trades.json")
 tracker_summary_json_path = os.path.join(data_dir, "tracker_summary.json")
+trade_notes_json_path = os.path.join(data_dir, "trade_notes.json")  # ★新設：電子株ノート
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -753,7 +754,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     elif category == "SELL8":
         stop_loss_price = math.ceil(high_today * 1.02)
 
-    # 期待度スコア
     score = 5 
     score_reasons = []
     factor_keys = []
@@ -1386,20 +1386,76 @@ else:
     print(" -> portfolio.csv が存在しないため保有銘柄セクションは空で出力します")
 
 # ======================================================================
-# ★【課題③】実戦同期型『Shadow Tracker』自動追跡＆集計エンジン
+# ★【新設】電子株ノート（売買時期チャートの永久固定化スナップショット補完）
 # ======================================================================
-print("スクリーナーシグナルの実績追跡およびスコア精度検証エンジンを実行中...")
+print("電子株ノート（売買カルテ・永久固定チャート）の更新処理中...")
+trade_notes = []
+if os.path.exists(trade_notes_json_path):
+    try:
+        with open(trade_notes_json_path, "r", encoding="utf-8") as f:
+            trade_notes = json.load(f)
+    except Exception as e:
+        print(f"⚠️ trade_notes.json 読み込みスキップ: {e}")
+        trade_notes = []
 
+# カルテ内でチャートスナップショットが未生成の銘柄があれば、bulk_dataから自動生成して永久保存
+notes_updated = False
+for note in trade_notes:
+    if "chartSnapshot" not in note or not note["chartSnapshot"]:
+        n_code = note.get("code", "")
+        n_key = f"{n_code}.T"
+        if n_key in bulk_data and not bulk_data[n_key].empty:
+            df_n = bulk_data[n_key].copy()
+            df_n['ma5'] = df_n['Close'].rolling(window=5).mean().round(1)
+            df_n['ma25'] = df_n['Close'].rolling(window=25).mean().round(1)
+            df_n['ma75'] = df_n['Close'].rolling(window=75).mean().round(1)
+            
+            in_dt_str = note.get("inDate", "")
+            out_dt_str = note.get("outDate", today_str)
+            
+            try:
+                # エントリー日の約25営業日前からエグジット日までの日足スナップショットを生成
+                in_dt = pd.to_datetime(in_dt_str) if in_dt_str else df_n.index[-40]
+                out_dt = pd.to_datetime(out_dt_str) if out_dt_str else df_n.index[-1]
+                
+                # エントリー日以前のデータを25営業日分確保
+                df_before = df_n[df_n.index <= in_dt].tail(25)
+                df_during = df_n[(df_n.index > in_dt) & (df_n.index <= out_dt)]
+                df_slice = pd.concat([df_before, df_during])
+                
+                snapshot = []
+                for dt_idx, r_val in df_slice.iterrows():
+                    d_txt = dt_idx.strftime("%m/%d")
+                    snapshot.append([
+                        d_txt,
+                        float(r_val['Open']) if pd.notna(r_val['Open']) else None,
+                        float(r_val['High']) if pd.notna(r_val['High']) else None,
+                        float(r_val['Low']) if pd.notna(r_val['Low']) else None,
+                        float(r_val['Close']) if pd.notna(r_val['Close']) else None,
+                        float(r_val['ma5']) if pd.notna(r_val['ma5']) else None,
+                        float(r_val['ma25']) if pd.notna(r_val['ma25']) else None,
+                        float(r_val['ma75']) if pd.notna(r_val['ma75']) else None
+                    ])
+                note["chartSnapshot"] = snapshot
+                notes_updated = True
+            except Exception as e:
+                print(f"⚠️ {n_code} のチャートスナップショット生成スキップ: {e}")
+
+if notes_updated or not os.path.exists(trade_notes_json_path):
+    with open(trade_notes_json_path, "w", encoding="utf-8") as f:
+        json.dump(trade_notes, f, ensure_ascii=False, indent=2)
+print(f" -> 電子株ノート: 累計 {len(trade_notes)} 件のカルテを同期完了")
+
+# 実績検証 Shadow Tracker 処理
+print("スクリーナーシグナルの実績追跡およびスコア精度検証エンジンを実行中...")
 shadow_trades = []
 if os.path.exists(shadow_trades_json_path):
     try:
         with open(shadow_trades_json_path, "r", encoding="utf-8") as f:
             shadow_trades = json.load(f)
     except Exception as e:
-        print(f"⚠️ 既存の shadow_trades.json 読み込みスキップ: {e}")
         shadow_trades = []
 
-# 1. 過去の記録の追跡更新（bulk_dataの最新株価を照合）
 updated_trades = []
 for trade in shadow_trades:
     try:
@@ -1411,12 +1467,9 @@ for trade in shadow_trades:
 
         df_t = bulk_data[t_key]
         sig_date_str = trade.get("signalDate", "")
-        
-        # シグナル日以降の営業日データを抽出
         df_after = df_t[df_t.index > pd.to_datetime(sig_date_str)].copy()
         days_count = len(df_after)
 
-        # エントリー判定（翌営業日始値）
         if trade.get("entryStatus") == "PENDING_ENTRY" and days_count >= 1:
             first_day = df_after.iloc[0]
             entry_open = float(first_day['Open'])
@@ -1428,40 +1481,28 @@ for trade in shadow_trades:
             trade["gapRate"] = round(gap_rate, 2)
             trade["entryDate"] = df_after.index[0].strftime("%Y-%m-%d")
 
-            # 実戦スキップルールの適用
             if gap_rate > 2.0:
-                trade["entryStatus"] = "SKIPPED_GAP_HIGH"  # 飛びつき高値掴み見送り
+                trade["entryStatus"] = "SKIPPED_GAP_HIGH"
             elif entry_open < yesterday_low:
-                trade["entryStatus"] = "SKIPPED_GAP_LOW"   # 前日安値割れ前提崩壊見送り
+                trade["entryStatus"] = "SKIPPED_GAP_LOW"
             else:
-                trade["entryStatus"] = "ENTERED"           # 適正エントリー確定
+                trade["entryStatus"] = "ENTERED"
 
-        # エントリー確定銘柄のパフォーマンス追跡（最大10営業日）
         if trade.get("entryStatus") == "ENTERED" and days_count >= 1:
             entry_p = float(trade.get("entryOpen", 1.0))
-            sl_p = float(trade.get("stopLossPrice", entry_p * 0.95))
-            
-            # 最大10営業日分のみ評価
             df_eval = df_after.head(10)
             trade["daysHeld"] = len(df_eval)
+            trade["highestPrice"] = float(df_eval['High'].max())
+            trade["lowestPrice"] = float(df_eval['Low'].min())
 
-            # 期間中最高値・最安値
-            high_eval = float(df_eval['High'].max())
-            low_eval = float(df_eval['Low'].min())
-            trade["highestPrice"] = high_eval
-            trade["lowestPrice"] = low_eval
-
-            # T+3時点終値
             if len(df_eval) >= 3 and "return_T3" not in trade:
                 c3 = float(df_eval.iloc[2]['Close'])
                 trade["return_T3"] = round(((c3 - entry_p) / entry_p) * 100, 2)
 
-            # T+5時点終値
             if len(df_eval) >= 5 and "return_T5" not in trade:
                 c5 = float(df_eval.iloc[4]['Close'])
                 trade["return_T5"] = round(((c5 - entry_p) / entry_p) * 100, 2)
 
-            # T+10時点終値
             if len(df_eval) >= 10 and "return_T10" not in trade:
                 c10 = float(df_eval.iloc[9]['Close'])
                 trade["return_T10"] = round(((c10 - entry_p) / entry_p) * 100, 2)
@@ -1471,12 +1512,11 @@ for trade in shadow_trades:
     except Exception:
         updated_trades.append(trade)
 
-# 2. 本日新規シグナル銘柄の登録
 existing_ids = {t.get("id") for t in updated_trades}
 for item in results_list:
     sys_data = item.get(SYSTEM_TYPE, {})
     cat = sys_data.get("category", "NONE")
-    if cat != "NONE" and cat.startswith("BUY"):  # 買いシグナルを追跡対象
+    if cat != "NONE" and cat.startswith("BUY"):
         trade_id = f"{today_str}_{item['ticker']}"
         if trade_id not in existing_ids:
             new_trade = {
@@ -1496,14 +1536,11 @@ for item in results_list:
             }
             updated_trades.append(new_trade)
 
-# 最新300件程度に整理して保存
 updated_trades = updated_trades[-300:]
 with open(shadow_trades_json_path, "w", encoding="utf-8") as f:
     json.dump(updated_trades, f, ensure_ascii=False, indent=2)
 
-# 3. 多次元集計エンジン（軸1・軸2・軸3のクロス分析）
 def build_score_table(trades_pool, return_key):
-    """スコア別（10〜5以下）の統計テーブルを算出"""
     scores_def = [10, 9, 8, 7, 6, 5]
     table_rows = []
     
@@ -1531,7 +1568,6 @@ def build_score_table(trades_pool, return_key):
         avg_gain = round(pd.Series(wins).mean(), 1) if wins else 0.0
         avg_loss = round(pd.Series(losses).mean(), 1) if losses else 0.0
         
-        # 損益レシオ (Profit Factor)
         if abs(avg_loss) > 0:
             pf = round(avg_gain / abs(avg_loss), 2)
         else:
@@ -1545,10 +1581,8 @@ def build_score_table(trades_pool, return_key):
         })
     return table_rows
 
-# 有効エントリー済みのトレード群
 valid_trades = [t for t in updated_trades if t.get("entryStatus") == "ENTERED"]
 
-# 軸1 ＆ 軸2：全地合いおよび地合い別の集計（T+5 と T+10）
 tracker_summary = {
     "totalTracked": len(valid_trades),
     "regimes": {
@@ -1573,11 +1607,9 @@ tracker_summary = {
             "T10": build_score_table([t for t in valid_trades if t.get("regime") == "RISK_OFF"], "return_T10")
         }
     },
-    # 軸3：ファクター別・純粋寄与度分析 ＆ コード処方箋
     "factors": []
 }
 
-# 主要ファクターのキー一覧
 target_factors = [
     ("特級踏み上げ", "特級ショートスクイーズ"),
     ("アク抜け完了", "アク抜け完了(買残減少)"),
