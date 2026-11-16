@@ -23,7 +23,7 @@ tse_margin_json_path = os.path.join(data_dir, "tse_margin.json")
 tse_history_json_path = os.path.join(data_dir, "tse_margin_history.json")
 shadow_trades_json_path = os.path.join(data_dir, "shadow_trades.json")
 tracker_summary_json_path = os.path.join(data_dir, "tracker_summary.json")
-trade_notes_json_path = os.path.join(data_dir, "trade_notes.json")  # ★新設：電子株ノート
+trade_notes_json_path = os.path.join(data_dir, "trade_notes.json")
 # ==========================================
 
 JST = timezone(timedelta(hours=+9))
@@ -41,22 +41,68 @@ else:
     long_window = 75
     system_title = "中期（25日線/75日線）"
 
+
 def clean_val(val):
+    if val is None:
+        return None
     if isinstance(val, bytes):
         try:
             return val.decode('utf-8')
         except Exception:
             return str(val)
-    elif hasattr(val, 'item'):
-        return val.item()
-    elif pd.isna(val):
+    if hasattr(val, 'item'):
+        try:
+            val = val.item()
+        except Exception:
+            pass
+    try:
+        if pd.isna(val):
+            return None
+    except Exception:
+        pass
+    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
         return None
     return val
 
+
+def sanitize_for_json(obj):
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [sanitize_for_json(v) for v in obj]
+    return clean_val(obj)
+
+
+def safe_json_dump(data, filepath, ensure_ascii=False, indent=None, separators=None):
+    cleaned = sanitize_for_json(data)
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(
+            cleaned,
+            f,
+            ensure_ascii=ensure_ascii,
+            indent=indent,
+            separators=separators,
+            allow_nan=False
+        )
+
+
+def safe_float(val, default=0.0):
+    try:
+        if pd.isna(val):
+            return default
+        s = str(val).replace(',', '').strip()
+        if not s or s == '-':
+            return default
+        f = float(s)
+        return default if (math.isnan(f) or math.isinf(f)) else f
+    except Exception:
+        return default
+
+
 # --- 前日データの読み込み ---
 prev_counts = {
-    "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0},
-    "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0}
+    "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0, "TOTAL_ACTIVE": 0},
+    "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0, "TOTAL_ACTIVE": 0}
 }
 prev_results_by_ticker = {}
 
@@ -65,7 +111,7 @@ if os.path.exists(results_json_path):
     try:
         with open(results_json_path, "r", encoding="utf-8") as f:
             prev_results = json.load(f)
-            
+
         for item in prev_results:
             for sys_key in ["short", "mid"]:
                 cat = item.get(sys_key, {}).get("category", "NONE")
@@ -74,7 +120,7 @@ if os.path.exists(results_json_path):
             ticker_key = item.get("ticker")
             if ticker_key:
                 prev_results_by_ticker[ticker_key] = item
-                    
+
         for sys_key in ["short", "mid"]:
             prev_counts[sys_key]["TOTAL"] = len(prev_results)
             total_active = sum(prev_counts[sys_key].get(cat, 0) for cat in [
@@ -127,12 +173,12 @@ print("JPXから銘柄一覧をダウンロード中...")
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 }
-response = requests.get(jpx_url, headers=headers)
+response = requests.get(jpx_url, headers=headers, timeout=30)
 response.raise_for_status()
 
 df_jpx = pd.read_excel(io.BytesIO(response.content))
 df_tse = df_jpx[df_jpx["市場・商品区分"].str.contains("プライム|スタンダード|グロース", na=False)].copy()
-df_tse["コード"] = df_tse["コード"].astype(str).str.strip().str.zfill(4)
+df_tse["コード"] = df_tse["コード"].astype(str).str.strip().str.upper().str.zfill(4)
 df_tse["ticker"] = df_tse["コード"] + ".T"
 
 ticker_to_name = dict(zip(df_tse['ticker'], df_tse['銘柄名']))
@@ -154,7 +200,7 @@ try:
         if match:
             link = match.group(1)
             kessan_excel_url = link if link.startswith('http') else requests.compat.urljoin(kessan_page_url, link)
-            
+
     if kessan_excel_url:
         res_kexcel = requests.get(kessan_excel_url, headers=headers, timeout=15)
         if res_kexcel.status_code == 200:
@@ -164,7 +210,7 @@ try:
             if code_col and date_col:
                 c_col, d_col = code_col[0], date_col[0]
                 for _, row in df_kessan.dropna(subset=[c_col, d_col]).iterrows():
-                    c_str = str(row[c_col]).strip().zfill(4)
+                    c_str = str(row[c_col]).strip().upper().zfill(4)
                     try:
                         d_val = pd.to_datetime(row[d_col]).date()
                         earnings_dates[f"{c_str}.T"] = d_val
@@ -197,19 +243,19 @@ try:
             df_margin = pd.read_csv(io.BytesIO(res_csv.content), encoding='cp932')
         except Exception:
             df_margin = pd.read_csv(io.BytesIO(res_csv.content), encoding='utf-8', errors='ignore')
-            
+
         code_col = [c for c in df_margin.columns if 'コード' in str(c) or 'Code' in str(c)]
         type_col = [c for c in df_margin.columns if '貸借' in str(c) or '区分' in str(c)]
-        
+
         if code_col and type_col:
             shortable_df = df_margin[df_margin[type_col[0]].astype(str).str.contains('1')]
             for code in shortable_df[code_col[0]]:
-                code_str = str(code).strip().zfill(4)
+                code_str = str(code).strip().upper().zfill(4)
                 margin_shortable_tickers.add(f"{code_str}.T")
         else:
             shortable_df = df_margin[df_margin.iloc[:, 3].astype(str).str.contains('1')]
             for code in shortable_df.iloc[:, 1]:
-                code_str = str(code).strip().zfill(4)
+                code_str = str(code).strip().upper().zfill(4)
                 margin_shortable_tickers.add(f"{code_str}.T")
 except Exception as e:
     print(f"⚠️ 日証金データ取得の通信警告: {e}")
@@ -222,12 +268,12 @@ try:
             df_zan = pd.read_csv(io.BytesIO(res_zan.content), encoding='cp932')
         except Exception:
             df_zan = pd.read_csv(io.BytesIO(res_zan.content), encoding='utf-8', errors='ignore')
-            
+
         c_cols = [c for c in df_zan.columns if 'コード' in str(c)]
         r_cols = [c for c in df_zan.columns if '倍率' in str(c)]
         b_cols = [c for c in df_zan.columns if '融資' in str(c) and '残' in str(c)]
         s_cols = [c for c in df_zan.columns if '貸株' in str(c) and '残' in str(c)]
-        
+
         c_col = c_cols[0] if c_cols else df_zan.columns[1]
         r_col = r_cols[0] if r_cols else None
         b_col = b_cols[0] if b_cols else None
@@ -235,11 +281,11 @@ try:
 
         for _, row in df_zan.iterrows():
             try:
-                c_str = str(row[c_col]).strip().zfill(4)
+                c_str = str(row[c_col]).strip().upper().zfill(4)
                 t_key = f"{c_str}.T"
-                ratio_val = float(row[r_col]) if r_col and pd.notna(row[r_col]) else 1.0
-                buy_val = float(row[b_col]) if b_col and pd.notna(row[b_col]) else 0.0
-                short_val = float(row[s_col]) if s_col and pd.notna(row[s_col]) else 0.0
+                ratio_val = safe_float(row[r_col], 1.0) if r_col else 1.0
+                buy_val = safe_float(row[b_col], 0.0) if b_col else 0.0
+                short_val = safe_float(row[s_col], 0.0) if s_col else 0.0
                 margin_balance_dict[t_key] = {
                     'ratio': ratio_val,
                     'buy_balance': buy_val,
@@ -257,20 +303,50 @@ if len(margin_shortable_tickers) == 0:
 else:
     print(f" -> 貸借銘柄（空売り可能）: {len(margin_shortable_tickers)} 銘柄を正常登録完了")
 
-# 2. クレンジング関数
+
+# 2. クレンジング関数（NaN全除外）
 def clean_stock_df(df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty:
         return None
-    if 'Close' not in df.columns:
+    required_cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+    if not all(c in df.columns for c in required_cols):
         return None
-    df = df.dropna(subset=['Close']).copy()
+    df = df.dropna(subset=required_cols).copy()
+    df = df[df['Close'] > 0].copy()
     if df.empty:
         return None
     if isinstance(df.index, pd.DatetimeIndex) and df.index.tz is not None:
         df.index = df.index.tz_convert('Asia/Tokyo').tz_localize(None)
     return df
 
-# 3. 2段階ダウンロードパイプライン
+
+def extract_chunk_to_bulk(data, chunk_list, target_dict):
+    if data is None or data.empty:
+        return
+    for ticker in chunk_list:
+        ticker_bare = ticker.replace(".T", "")
+        df_single = None
+        if isinstance(data.columns, pd.MultiIndex):
+            l0 = data.columns.get_level_values(0)
+            l1 = data.columns.get_level_values(1)
+            if ticker in l0:
+                df_single = data[ticker].copy()
+            elif ticker_bare in l0:
+                df_single = data[ticker_bare].copy()
+            elif ticker in l1:
+                df_single = data.xs(ticker, axis=1, level=1).copy()
+            elif ticker_bare in l1:
+                df_single = data.xs(ticker_bare, axis=1, level=1).copy()
+        else:
+            if len(chunk_list) == 1:
+                df_single = data.copy()
+
+        cleaned = clean_stock_df(df_single)
+        if cleaned is not None:
+            target_dict[ticker] = cleaned
+
+
+# 3. 2段階ダウンロードパイプライン（レートリミット対策強化版）
 bulk_data = {}
 chunk_size = 100
 
@@ -291,41 +367,46 @@ for i in range(0, len(tickers), chunk_size):
             progress=False,
             threads=True
         )
-        if data is not None and not data.empty:
-            for ticker in chunk:
-                ticker_bare = ticker.replace(".T", "")
-                df_single = None
-                if isinstance(data.columns, pd.MultiIndex):
-                    l0 = data.columns.get_level_values(0)
-                    l1 = data.columns.get_level_values(1)
-                    if ticker in l0:
-                        df_single = data[ticker].copy()
-                    elif ticker_bare in l0:
-                        df_single = data[ticker_bare].copy()
-                    elif ticker in l1:
-                        df_single = data.xs(ticker, axis=1, level=1).copy()
-                    elif ticker_bare in l1:
-                        df_single = data.xs(ticker_bare, axis=1, level=1).copy()
-                else:
-                    if len(chunk) == 1:
-                        df_single = data.copy()
-
-                cleaned = clean_stock_df(df_single)
-                if cleaned is not None:
-                    bulk_data[ticker] = cleaned
+        extract_chunk_to_bulk(data, chunk, bulk_data)
     except Exception:
         pass
 
     missing_in_chunk = [t for t in chunk if t not in bulk_data]
-    if missing_in_chunk:
+    # 大半が抜けた場合は一時的エラーとみなし、1度だけチャンク再ダウンロードを試行
+    if len(missing_in_chunk) > 30:
+        time.sleep(2.0)
+        try:
+            retry_data = yf.download(
+                missing_in_chunk,
+                period="2y",
+                interval="1d",
+                group_by="ticker",
+                auto_adjust=False,
+                progress=False,
+                threads=False
+            )
+            extract_chunk_to_bulk(retry_data, missing_in_chunk, bulk_data)
+        except Exception:
+            pass
+        missing_in_chunk = [t for t in chunk if t not in bulk_data]
+
+    # 残った少数銘柄のみ、sleep付きかつ連続失敗制限付きで個別救済
+    if missing_in_chunk and len(missing_in_chunk) <= 25:
+        consecutive_fails = 0
         for ticker in missing_in_chunk:
+            if consecutive_fails >= 5:
+                break
             try:
                 df_single = yf.Ticker(ticker).history(period="2y", interval="1d", auto_adjust=False)
                 cleaned = clean_stock_df(df_single)
                 if cleaned is not None:
                     bulk_data[ticker] = cleaned
+                    consecutive_fails = 0
+                else:
+                    consecutive_fails += 1
             except Exception:
-                pass
+                consecutive_fails += 1
+            time.sleep(0.25)
 
     time.sleep(0.5)
 
@@ -349,18 +430,21 @@ for ticker, df_st in bulk_data.items():
             c_prev = float(df_st['Close'].iloc[-2])
             if c_prev > 0:
                 pct = ((c_today - c_prev) / c_prev) * 100
-                all_market_changes.append(pct)
-                if pct > 0:
-                    advance_count += 1
-                elif pct < 0:
-                    decline_count += 1
-                else:
-                    unchanged_count += 1
+                if not (math.isnan(pct) or math.isinf(pct)):
+                    all_market_changes.append(pct)
+                    if pct > 0:
+                        advance_count += 1
+                    elif pct < 0:
+                        decline_count += 1
+                    else:
+                        unchanged_count += 1
         except Exception:
             pass
 
 total_valid_stocks = len(all_market_changes)
 all_market_median = float(pd.Series(all_market_changes).median()) if all_market_changes else 0.0
+if math.isnan(all_market_median) or math.isinf(all_market_median):
+    all_market_median = 0.0
 advance_ratio = (advance_count / total_valid_stocks * 100) if total_valid_stocks > 0 else 50.0
 
 if advance_ratio >= 60.0 and all_market_median >= 0.3:
@@ -388,6 +472,7 @@ print(f" -> 東証完全集計(母集団: {total_valid_stocks}銘柄): 値上が
 print(f" -> 東証全銘柄の真の騰落率中央値: {all_market_median:+.2f}%")
 print(f" -> 本日の相場レジーム: {regime_label}")
 
+
 def calculate_rsi(series, period=14):
     delta = series.diff()
     gain = delta.clip(lower=0)
@@ -396,7 +481,8 @@ def calculate_rsi(series, period=14):
     avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
     rs = avg_gain / avg_loss.replace(0, 1e-10)
     rsi = 100 - (100 / (1 + rs))
-    return rsi
+    return rsi.fillna(50.0)
+
 
 def find_swing_lows(series, window=25):
     n = len(series)
@@ -405,22 +491,28 @@ def find_swing_lows(series, window=25):
     end_idx = n - 2
     for i in range(start_idx, end_idx):
         val = series.iloc[i]
-        if (val < series.iloc[i-1] and val < series.iloc[i-2] and 
-            val < series.iloc[i+1] and val < series.iloc[i+2]):
+        if (val < series.iloc[i-1] and val < series.iloc[i-2] and
+                val < series.iloc[i+1] and val < series.iloc[i+2]):
             low_indices.append(i)
     return low_indices
+
+
+def make_stars(score_val):
+    s = max(1, min(10, int(score_val)))
+    return "★" * min(5, s) + "☆" * max(0, 5 - min(5, s))
+
 
 # 判定および採点ロジック関数
 def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None, tse_ticker_hist=None):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
-        
+
     df_temp['rsi'] = calculate_rsi(df_temp['Close'], 14)
     df_temp['short_ma'] = df_temp['Close'].rolling(window=short_window).mean()
     df_temp['long_ma'] = df_temp['Close'].rolling(window=long_window).mean()
     df_temp = df_temp.dropna(subset=['short_ma', 'long_ma']).reset_index(drop=True)
-    
+
     min_len = 45 if long_window <= 25 else 130
     if len(df_temp) < min_len:
         return {
@@ -432,38 +524,45 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False,
             "score_reasons": [], "factor_keys": []
         }
-        
+
     today = df_temp.iloc[-1]
     yesterday = df_temp.iloc[-2]
-    
+
     price_today = float(today['Close'])
     price_yesterday = float(yesterday['Close'])
     open_today = float(today['Open'])
     high_today = float(today['High'])
     low_today = float(today['Low'])
     volume_today = float(today['Volume'])
-    
+
     short_ma_today = float(today['short_ma'])
     short_ma_yesterday = float(yesterday['short_ma'])
     long_ma_today = float(today['long_ma'])
     long_ma_yesterday = float(yesterday['long_ma'])
-    
+
+    if long_ma_today <= 0 or short_ma_today <= 0 or long_ma_yesterday <= 0:
+        return {
+            "category": "NONE", "categoryName": "異常値除外",
+            "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
+            "diffRate": 0.0, "reason": "移動平均値が無効です。",
+            "ma_short": 0.0, "ma_long": 0.0, "score": 1,
+            "stars": "★☆☆☆☆", "stop_loss_price": 0,
+            "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False,
+            "score_reasons": [], "factor_keys": []
+        }
+
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
 
-    long_ma_slope_5d = long_ma_today - df_temp.iloc[-6]['long_ma']
-    long_ma_slope_10d = long_ma_today - df_temp.iloc[-11]['long_ma']
-    long_ma_slope_15d = long_ma_today - df_temp.iloc[-16]['long_ma']
-    
     is_yang_candle = price_today > open_today
     is_yin_candle = price_today < open_today
     is_price_up = price_today > price_yesterday
     is_price_down = price_today < price_yesterday
-    
+
     rsi_series = df_temp['rsi']
     price_low_series = df_temp['Low']
     rsi_today = float(rsi_series.iloc[-1])
     rsi_yesterday = float(rsi_series.iloc[-2])
-    
+
     is_rsi_sell_warning = False
     if rsi_today >= 70:
         is_rsi_sell_warning = True
@@ -503,7 +602,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     min_price_40d = df_recent_40d['Close'].min()
     price_surge_ratio = max_price_40d / min_price_40d if min_price_40d > 0 else 1.0
     is_surged_stock = price_surge_ratio >= 1.50
-    
+
     warning_suffix = ""
     if market_type == "東Ｐ":
         if is_surged_stock:
@@ -522,16 +621,16 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     else:
         oversold_threshold = -10.0 if long_window <= 25 else -15.0
         overbought_threshold = 15.0 if long_window <= 25 else 20.0
-    
+
     recent_volumes = df_temp['Volume'].iloc[-26:-1]
     vol_ma25 = recent_volumes.mean() if len(recent_volumes) > 0 else 0
     vol_ratio = today['Volume'] / vol_ma25 if vol_ma25 > 0 else 1.0
-    
-    ma_change_series = df_temp['long_ma'].pct_change()
+
+    ma_change_series = df_temp['long_ma'].pct_change().fillna(0.0)
     ma_change_today = ma_change_series.iloc[-1]
     baseline_change_120d = ma_change_series.abs().tail(120).mean()
     is_slope_strong_relative = (ma_change_today > 0) and (ma_change_today > baseline_change_120d)
-    
+
     candle_body_pct = ((price_today - open_today) / open_today) * 100 if open_today > 0 else 0.0
     max_body = max(price_today, open_today)
     upper_shadow = high_today - max_body
@@ -542,10 +641,10 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     category_name = "条件外"
     badge_class = "bg-slate-800 text-slate-500 border border-slate-700"
     reason = f"シグナル条件からは外れています(長期線乖離: {diff_rate:.1f}%)。"
-    
+
     long_ma_3d_ago = df_temp.iloc[-4]['long_ma']
-    long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100
-    
+    long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100 if long_ma_3d_ago > 0 else 0.0
+
     is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
     is_long_ma_rising = (long_ma_today > long_ma_yesterday) and (long_ma_slope_3d > 0.0)
     is_long_ma_flat_or_falling = (long_ma_today < long_ma_yesterday) or (long_ma_slope_3d <= 0.2)
@@ -561,7 +660,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     if len(df_temp) >= lookback_period + offset + 1:
         price_below_count_past = (df_temp.iloc[-lookback_period-offset-1:-offset-1]['Close'] < df_temp.iloc[-lookback_period-offset-1:-offset-1]['long_ma']).sum()
         is_long_bottoming_past = (price_below_count_past >= lookback_period * 0.8)
-        
+
         price_above_count_past = (df_temp.iloc[-lookback_period-offset-1:-offset-1]['Close'] > df_temp.iloc[-lookback_period-offset-1:-offset-1]['long_ma']).sum()
         is_long_topping_past = (price_above_count_past >= lookback_period * 0.8)
     else:
@@ -581,7 +680,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     past_max_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).max()
     is_not_range_bound = past_max_diff < 5.0
     short_long_diff = ((short_ma_today - long_ma_today) / long_ma_today) * 100
-    is_trend_reversing = short_long_diff >= -2.0 
+    is_trend_reversing = short_long_diff >= -2.0
     is_resting_under_ma_1 = -1.5 <= diff_rate < 0.0
     is_pre_rebound = is_yang_candle or is_price_up
 
@@ -597,7 +696,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             category_name = "買い1-Pre：突破前夜仕込み"
             badge_class = "bg-emerald-600/10 text-emerald-400 border border-emerald-500/20"
             reason = f"底練りを経て、長期線({long_window}日線)の直下まで肉薄。本日下げ止まりを見せており上抜け直前の仕込み状態です。"
-        
+
     # 買い2：再突き抜け ＆ 買い2-Pre
     below_count_15d = (df_temp.iloc[-16:-1]['Close'] < df_temp.iloc[-16:-1]['long_ma']).sum()
     is_temp_dip = 1 <= below_count_15d <= 3
@@ -659,7 +758,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             category_name = "買い3-Pre：初押し(待ち伏せ)"
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
-            
+
     # 信用売りシグナル判定
     if category == "NONE" and is_margin_tradable:
         if diff_rate >= overbought_threshold and is_long_ma_rising and (is_yin_candle or is_price_down):
@@ -734,30 +833,30 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
 
     stop_loss_price = 0
     if category in ["BUY1", "BUY1_PRE"]:
-        low_20d = df_temp['Low'].tail(20).min()
+        low_20d = float(df_temp['Low'].tail(20).min())
         stop_loss_price = math.floor(low_20d * 0.98)
     elif category in ["BUY2", "BUY2_PRE"]:
-        low_5d = df_temp['Low'].tail(5).min()
+        low_5d = float(df_temp['Low'].tail(5).min())
         stop_loss_price = math.floor(low_5d * 0.98)
     elif category in ["BUY3", "BUY3_PRE"]:
         stop_loss_price = math.floor(long_ma_today * 0.98)
     elif category == "BUY4":
         stop_loss_price = math.floor(low_today * 0.98)
     elif category == "SELL5":
-        high_20d = df_temp['High'].tail(20).max()
+        high_20d = float(df_temp['High'].tail(20).max())
         stop_loss_price = math.ceil(high_20d * 1.02)
     elif category == "SELL6":
-        high_5d = df_temp['High'].tail(5).max()
+        high_5d = float(df_temp['High'].tail(5).max())
         stop_loss_price = math.ceil(high_5d * 1.02)
     elif category in ["SELL7", "SELL7_PRE"]:
         stop_loss_price = math.ceil(long_ma_today * 1.02)
     elif category == "SELL8":
         stop_loss_price = math.ceil(high_today * 1.02)
 
-    score = 5 
+    score = 5
     score_reasons = []
     factor_keys = []
-    
+
     if category != "NONE":
         if ticker in earnings_dates:
             e_date = earnings_dates[ticker]
@@ -768,7 +867,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 factor_keys.append("決算直前")
 
         tse_buy_balance = tse_info.get("buy_balance", 0) if tse_info else 0
-        tse_sell_balance = tse_info.get("sell_balance", 0) if tse_info else 0
         diff_buy = tse_info.get("diff_buy", 0) if tse_info else 0
         diff_sell = tse_info.get("diff_sell", 0) if tse_info else 0
         tse_ratio = tse_info.get("ratio", 999.0) if tse_info else 999.0
@@ -779,8 +877,8 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         if tse_ticker_hist and len(tse_ticker_hist) >= 2:
             recent_diff_buys = [h.get("diff_buy", 0) for h in tse_ticker_hist[:3]]
             recent_diff_sells = [h.get("diff_sell", 0) for h in tse_ticker_hist[:3]]
-            is_multi_day_buy_decrease = all(d < 0 for d in recent_diff_buys if d != 0)
-            is_multi_day_sell_increase = all(d > 0 for d in recent_diff_sells if d != 0)
+            is_multi_day_buy_decrease = any(d != 0 for d in recent_diff_buys) and all(d < 0 for d in recent_diff_buys if d != 0)
+            is_multi_day_sell_increase = any(d != 0 for d in recent_diff_sells) and all(d > 0 for d in recent_diff_sells if d != 0)
 
         m_info = margin_balance_dict.get(ticker, {'ratio': 1.0, 'buy_balance': 0, 'short_balance': 0})
         jsf_short_days = (m_info['short_balance'] / vol_ma25) if vol_ma25 > 0 else 0
@@ -806,7 +904,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 factor_keys.append("ナンピン地獄")
 
             has_short_squeeze_fuel = (diff_sell > (vol_ma25 * 0.03)) or (is_margin_tradable and jsf_ratio <= 0.7 and jsf_short_days >= 0.5) or is_multi_day_sell_increase
-            
+
             if has_short_squeeze_fuel and is_yang_candle and is_price_up:
                 if tse_ratio <= 2.0:
                     score += 2
@@ -849,7 +947,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score -= 1
                 score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
                 factor_keys.append("流動性極低")
-                
+
             if vol_ratio >= 1.5:
                 if is_yang_candle:
                     score += 1
@@ -864,8 +962,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score -= 1
                 score_reasons.append("🕯️ 上髭超過: -1")
                 factor_keys.append("上髭超過")
-                
-            short_diff_rate = ((price_today - short_ma_today) / short_ma_today) * 100
+
             if category in ["BUY1", "BUY2"] and short_diff_rate >= 5.0:
                 score -= 1
                 score_reasons.append("🚀 短期的な飛びすぎ警戒: -1")
@@ -928,29 +1025,29 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score += 1
                 score_reasons.append("📏 抵抗線極近の絶好戻り売り: +1")
                 factor_keys.append("抵抗線極近")
-                
+
     score = max(1, min(10, score))
-    stars_str = "★" * min(5, score) + "☆" * max(0, 5 - min(5, score))
 
     return {
         "category": clean_val(category),
         "categoryName": clean_val(category_name),
         "badgeClass": clean_val(badge_class),
-        "diffRate": clean_val(diff_rate),
+        "diffRate": clean_val(round(diff_rate, 2)),
         "reason": clean_val(reason),
         "ma_short": clean_val(round(short_ma_today, 1)),
         "ma_long": clean_val(round(long_ma_today, 1)),
         "score": clean_val(int(score)),
-        "stars": clean_val(stars_str),
+        "stars": clean_val(make_stars(score)),
         "stop_loss_price": clean_val(int(stop_loss_price)),
         "rsi": clean_val(round(rsi_today, 1)),
-        "rsi_sell_warning": is_rsi_sell_warning,
-        "rsi_buy_reversal": is_rsi_buy_reversal,
-        "rsi_double_bottom": is_rsi_double_bottom,
-        "rsi_divergence": is_rsi_divergence,
+        "rsi_sell_warning": bool(is_rsi_sell_warning),
+        "rsi_buy_reversal": bool(is_rsi_buy_reversal),
+        "rsi_double_bottom": bool(is_rsi_double_bottom),
+        "rsi_divergence": bool(is_rsi_divergence),
         "score_reasons": score_reasons,
         "factor_keys": factor_keys
     }
+
 
 # 4. 全データの判定実行
 results_list = []
@@ -966,19 +1063,19 @@ for ticker, df_stock in bulk_data.items():
     try:
         if df_stock.empty or len(df_stock) < MIN_REQUIRED_DAYS:
             continue
-            
+
         today = df_stock.iloc[-1]
         yesterday = df_stock.iloc[-2]
-        
+
         price_today = float(today['Close'])
         price_yesterday = float(yesterday['Close'])
         change = price_today - price_yesterday
         change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
-        
+
         volume_today = float(today['Volume'])
         is_low_volume = volume_today <= 10000
         yesterday_low = float(yesterday['Low'])
-        
+
         market_raw = ticker_to_market.get(ticker, "")
         if "プライム" in market_raw:
             market_short = "東Ｐ"
@@ -988,11 +1085,11 @@ for ticker, df_stock in bulk_data.items():
             market_short = "東Ｇ"
         else:
             market_short = "他"
-            
+
         is_shortable = ticker in margin_shortable_tickers
         ticker_clean = ticker.replace(".T", "")
         yesterday_data = prev_results_by_ticker.get(ticker_clean)
-        
+
         tse_info = tse_margin_dict.get(ticker_clean)
         tse_ticker_hist = []
         for d_str in sorted_hist_dates:
@@ -1002,10 +1099,10 @@ for ticker, df_stock in bulk_data.items():
 
         yes_cat_short = yesterday_data.get("short", {}).get("category", "NONE") if yesterday_data else "NONE"
         yes_cat_mid = yesterday_data.get("mid", {}).get("category", "NONE") if yesterday_data else "NONE"
-            
+
         short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable, yes_cat_short, tse_info, tse_ticker_hist)
         mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable, yes_cat_mid, tse_info, tse_ticker_hist)
-        
+
         if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
             continue
 
@@ -1035,20 +1132,20 @@ for ticker, df_stock in bulk_data.items():
             else:
                 sys_res["consecutiveDays"] = 0
                 sys_res["prevCategory"] = None
-        
+
         stock_info = {
             "ticker": clean_val(ticker_clean),
             "name": clean_val(ticker_to_name.get(ticker, "不明な銘柄")),
             "market": market_short,
             "sector": clean_val(ticker_to_sector.get(ticker, "不明")),
             "price": clean_val(price_today),
-            "change": clean_val(change),
+            "change": clean_val(round(change, 2)),
             "changeRate": clean_val(round(change_rate, 2)),
             "volume": clean_val(volume_today),
-            "isLowVolume": clean_val(is_low_volume),
+            "isLowVolume": bool(is_low_volume),
             "isStrongRelative": False,
-            "isMarginTradable": is_shortable,
-            "yesterdayLow": yesterday_low,
+            "isMarginTradable": bool(is_shortable),
+            "yesterdayLow": clean_val(yesterday_low),
             "short": short_res,
             "mid": mid_res
         }
@@ -1058,6 +1155,7 @@ for ticker, df_stock in bulk_data.items():
         print(f"⚠️ {ticker} の判定中にエラーが発生しスキップしました: {e}", flush=True)
 
 print(f" -> 判定完了: 買い銘柄検知 {buy_count_debug} 件 / 売り銘柄検知 {sell_count_debug} 件 (総検出: {len(results_list)} 件)")
+
 
 def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
     sector_data = {}
@@ -1094,11 +1192,10 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
         return [], {}
 
     for item in results_list:
-        ticker = item["ticker"] + ".T"
         sector = item["sector"]
         if sector in sector_data:
-            today_price = item["price"]
-            today_vol = item["volume"]
+            today_price = item["price"] or 0.0
+            today_vol = item["volume"] or 0.0
             sector_data[sector]["signal_value"] += (today_price * today_vol)
 
     scored_sectors = []
@@ -1123,6 +1220,7 @@ def calculate_hot_sectors(bulk_data, results_list, ticker_to_sector):
     hot_sectors = [s for s in scored_sectors if s["score"] >= 55.0][:5]
     return hot_sectors, sector_data
 
+
 hot_sectors, all_sector_stats = calculate_hot_sectors(bulk_data, results_list, ticker_to_sector)
 hot_sector_names = [s["sector"] for s in hot_sectors]
 
@@ -1136,6 +1234,7 @@ for item in results_list:
             if sys_data["category"] != "NONE":
                 new_score = min(10, sys_data["score"] + 1)
                 sys_data["score"] = new_score
+                sys_data["stars"] = make_stars(new_score)
                 if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
                     sys_data["score_reasons"] = []
                 sys_data["score_reasons"].append(f"🔥 追い風業種 ({sector}・プラス引け): +1")
@@ -1147,7 +1246,7 @@ for item in results_list:
     is_strong_relative = False
     if all_market_median <= -0.5:
         is_strong_relative = item["changeRate"] >= (all_market_median + 1.5)
-        
+
     if is_strong_relative:
         item["isStrongRelative"] = True
         for sys_key in ["short", "mid"]:
@@ -1155,6 +1254,7 @@ for item in results_list:
             if sys_data["category"] != "NONE":
                 new_score = min(10, sys_data["score"] + 1)
                 sys_data["score"] = new_score
+                sys_data["stars"] = make_stars(new_score)
                 if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
                     sys_data["score_reasons"] = []
                 sys_data["score_reasons"].append("🛡️ 地合い強気(逆行高): +1")
@@ -1171,36 +1271,36 @@ shards = {f"{i:02d}": {} for i in range(100)}
 for ticker, df in bulk_data.items():
     if df.empty:
         continue
-    ticker_num = ''.join(filter(str.isdigit, ticker))
-    if len(ticker_num) < 2:
+    code_clean = ticker.replace(".T", "").strip().upper()
+    ticker_digits = ''.join(filter(str.isdigit, code_clean))
+    if len(ticker_digits) < 2:
         continue
-    shard_key = ticker_num[-2:]
-    
+    shard_key = ticker_digits[-2:].zfill(2)
+
     df_calc = df.copy()
     df_calc['ma_short'] = df_calc['Close'].rolling(window=5).mean().round(1)
     df_calc['ma_mid'] = df_calc['Close'].rolling(window=25).mean().round(1)
     df_calc['ma_long'] = df_calc['Close'].rolling(window=75).mean().round(1)
     df_calc['rsi'] = calculate_rsi(df_calc['Close'], 14).round(1)
-    
+
     df_recent = df_calc.tail(120)
     records = []
     for date, row in df_recent.iterrows():
         dt_str = date.strftime("%m/%d")
-        c = round(float(row['Close']), 1) if pd.notna(row['Close']) else None
-        m5 = float(row['ma_short']) if pd.notna(row['ma_short']) else None
-        m25 = float(row['ma_mid']) if pd.notna(row['ma_mid']) else None
-        m75 = float(row['ma_long']) if pd.notna(row['ma_long']) else None
-        rsi = float(row['rsi']) if pd.notna(row['rsi']) else None
-        diff = round(((c - m25) / m25) * 100, 1) if c and m25 else None
+        c = clean_val(round(float(row['Close']), 1))
+        m5 = clean_val(float(row['ma_short']))
+        m25 = clean_val(float(row['ma_mid']))
+        m75 = clean_val(float(row['ma_long']))
+        rsi = clean_val(float(row['rsi']))
+        diff = clean_val(round(((c - m25) / m25) * 100, 1)) if c and m25 and m25 > 0 else None
         records.append([dt_str, c, m5, m25, m75, diff, rsi])
-        
-    shards[shard_key][ticker.replace(".T", "")] = records
+
+    shards[shard_key][code_clean] = records
 
 for shard_key, data_dict in shards.items():
     if data_dict:
         file_path = os.path.join(history_dir, f"data_{shard_key}.json")
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(data_dict, f, separators=(',', ':'))
+        safe_json_dump(data_dict, file_path, ensure_ascii=True, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
 
 # 保有銘柄ポートフォリオ判定
@@ -1213,51 +1313,57 @@ if os.path.exists(portfolio_path):
         p_cols = [c for c in df_port.columns if 'price' in str(c).lower() or '買値' in str(c) or '単価' in str(c)]
         s_cols = [c for c in df_port.columns if 'share' in str(c).lower() or '株数' in str(c) or '数量' in str(c)]
         sl_cols = [c for c in df_port.columns if 'sl' in str(c).lower() or '損切' in str(c) or 'stop' in str(c)]
-        
+
         sl_c = sl_cols[0] if sl_cols else None
-        
+
         if c_cols and p_cols and s_cols:
             c_c, p_c, s_c = c_cols[0], p_cols[0], s_cols[0]
             for _, row in df_port.dropna(subset=[c_c, p_c, s_c]).iterrows():
+                c_str = ""
                 try:
-                    raw_code = str(row[c_c]).strip().replace('.T', '')
+                    raw_code = str(row[c_c]).strip().upper().replace('.T', '')
                     if '.' in raw_code:
                         raw_code = raw_code.split('.')[0]
                     c_str = raw_code.zfill(4)
                     t_key = f"{c_str}.T"
-                    
-                    buy_price = float(row[p_c])
-                    shares = int(float(row[s_c]))
-                    
+
+                    buy_price = safe_float(row[p_c], 0.0)
+                    shares = int(safe_float(row[s_c], 0.0))
+                    if buy_price <= 0 or shares <= 0:
+                        continue
+
                     manual_sl = None
                     if sl_c and pd.notna(row[sl_c]):
-                        try:
-                            manual_sl = float(row[sl_c])
-                        except ValueError:
-                            manual_sl = None
-                    
-                    if t_key in bulk_data and not bulk_data[t_key].empty:
+                        m_sl_val = safe_float(row[sl_c], 0.0)
+                        if m_sl_val > 0:
+                            manual_sl = m_sl_val
+
+                    if t_key in bulk_data and not bulk_data[t_key].empty and len(bulk_data[t_key]) >= 2:
                         df_p = bulk_data[t_key]
                         today_r = df_p.iloc[-1]
                         yesterday_r = df_p.iloc[-2]
-                        
+
                         current_price = float(today_r['Close'])
                         yesterday_price = float(yesterday_r['Close'])
                         open_p = float(today_r['Open'])
-                        
+
                         pl_amount = round((current_price - buy_price) * shares)
                         pl_rate = round(((current_price - buy_price) / buy_price) * 100, 2)
-                        
+
                         ma_short_today = float(df_p['Close'].tail(short_window).mean())
+                        ma_short_yesterday = float(df_p['Close'].iloc[-short_window-1:-1].mean()) if len(df_p) >= short_window + 1 else ma_short_today
                         ma_long_today = float(df_p['Close'].tail(long_window).mean()) if len(df_p) >= long_window else ma_short_today
                         ma_long_yesterday = float(df_p['Close'].iloc[-long_window-1:-1].mean()) if len(df_p) >= long_window + 1 else ma_long_today
-                        
-                        diff_ma_long = ((current_price - ma_long_today) / ma_long_today) * 100
-                        
+
+                        rsi_series_p = calculate_rsi(df_p['Close'], 14)
+                        rsi_today_p = round(float(rsi_series_p.iloc[-1]), 1)
+
+                        diff_ma_long = ((current_price - ma_long_today) / ma_long_today) * 100 if ma_long_today > 0 else 0.0
+
                         recent_low20 = float(df_p['Low'].tail(20).min())
                         recent_low10 = float(df_p['Low'].tail(10).min())
                         recent_low5 = float(df_p['Low'].tail(5).min())
-                        
+
                         prev_info = prev_portfolio_by_code.get(c_str, {})
                         prev_sl = prev_info.get("stopLossPrice", 0)
                         was_stop_loss_triggered = "損切り" in prev_info.get("statusLabel", "")
@@ -1288,7 +1394,7 @@ if os.path.exists(portfolio_path):
 
                         current_sell_cat = active_sys_res.get("category", "NONE") if active_sys_res else "NONE"
                         is_system_sell = current_sell_cat.startswith("SELL")
-                        
+
                         is_crossed_below_long_ma = (yesterday_price >= ma_long_yesterday) and (current_price < ma_long_today)
                         is_yin = current_price < open_p
 
@@ -1332,7 +1438,7 @@ if os.path.exists(portfolio_path):
                             badge_class = "bg-purple-950/80 text-purple-300 border border-purple-500 font-bold"
 
                         elif pl_rate >= 8.0:
-                            if current_price < ma_short_today and yesterday_price >= ma_short_today:
+                            if current_price < ma_short_today and yesterday_price >= ma_short_yesterday:
                                 status_label = "✨ 先行利確"
                                 action_label = "【短期線割れ成行決済】"
                                 badge_class = "bg-indigo-950/80 text-indigo-300 border border-indigo-500 font-bold"
@@ -1368,11 +1474,15 @@ if os.path.exists(portfolio_path):
                             "code": c_str,
                             "name": clean_val(ticker_to_name.get(t_key, "不明")),
                             "shares": shares,
-                            "buyPrice": buy_price,
-                            "currentPrice": current_price,
-                            "plAmount": pl_amount,
-                            "plRate": pl_rate,
-                            "stopLossPrice": active_sl,
+                            "buyPrice": clean_val(buy_price),
+                            "currentPrice": clean_val(current_price),
+                            "plAmount": clean_val(pl_amount),
+                            "plRate": clean_val(pl_rate),
+                            "stopLossPrice": clean_val(active_sl),
+                            "maShort": clean_val(round(ma_short_today, 1)),
+                            "maLong": clean_val(round(ma_long_today, 1)),
+                            "diffRate": clean_val(round(diff_ma_long, 2)),
+                            "rsi": clean_val(rsi_today_p),
                             "statusLabel": status_label,
                             "actionLabel": action_label,
                             "badgeClass": badge_class
@@ -1386,7 +1496,7 @@ else:
     print(" -> portfolio.csv が存在しないため保有銘柄セクションは空で出力します")
 
 # ======================================================================
-# ★【新設】電子株ノート（売買時期チャートの永久固定化スナップショット補完）
+# 電子株ノート（売買時期チャートの永久固定化スナップショット補完）
 # ======================================================================
 print("電子株ノート（売買カルテ・永久固定チャート）の更新処理中...")
 trade_notes = []
@@ -1398,43 +1508,44 @@ if os.path.exists(trade_notes_json_path):
         print(f"⚠️ trade_notes.json 読み込みスキップ: {e}")
         trade_notes = []
 
-# カルテ内でチャートスナップショットが未生成の銘柄があれば、bulk_dataから自動生成して永久保存
 notes_updated = False
 for note in trade_notes:
     if "chartSnapshot" not in note or not note["chartSnapshot"]:
-        n_code = note.get("code", "")
+        n_code = str(note.get("code", "")).strip().upper()
         n_key = f"{n_code}.T"
         if n_key in bulk_data and not bulk_data[n_key].empty:
             df_n = bulk_data[n_key].copy()
             df_n['ma5'] = df_n['Close'].rolling(window=5).mean().round(1)
             df_n['ma25'] = df_n['Close'].rolling(window=25).mean().round(1)
             df_n['ma75'] = df_n['Close'].rolling(window=75).mean().round(1)
-            
+
             in_dt_str = note.get("inDate", "")
             out_dt_str = note.get("outDate", today_str)
-            
+
             try:
-                # エントリー日の約25営業日前からエグジット日までの日足スナップショットを生成
-                in_dt = pd.to_datetime(in_dt_str) if in_dt_str else df_n.index[-40]
+                in_dt = pd.to_datetime(in_dt_str) if in_dt_str else df_n.index[-min(40, len(df_n))]
                 out_dt = pd.to_datetime(out_dt_str) if out_dt_str else df_n.index[-1]
-                
-                # エントリー日以前のデータを25営業日分確保
+                if out_dt < in_dt:
+                    out_dt = in_dt
+
                 df_before = df_n[df_n.index <= in_dt].tail(25)
                 df_during = df_n[(df_n.index > in_dt) & (df_n.index <= out_dt)]
                 df_slice = pd.concat([df_before, df_during])
-                
+                if len(df_slice) < 5:
+                    df_slice = df_n.tail(30)
+
                 snapshot = []
                 for dt_idx, r_val in df_slice.iterrows():
                     d_txt = dt_idx.strftime("%m/%d")
                     snapshot.append([
                         d_txt,
-                        float(r_val['Open']) if pd.notna(r_val['Open']) else None,
-                        float(r_val['High']) if pd.notna(r_val['High']) else None,
-                        float(r_val['Low']) if pd.notna(r_val['Low']) else None,
-                        float(r_val['Close']) if pd.notna(r_val['Close']) else None,
-                        float(r_val['ma5']) if pd.notna(r_val['ma5']) else None,
-                        float(r_val['ma25']) if pd.notna(r_val['ma25']) else None,
-                        float(r_val['ma75']) if pd.notna(r_val['ma75']) else None
+                        clean_val(float(r_val['Open'])),
+                        clean_val(float(r_val['High'])),
+                        clean_val(float(r_val['Low'])),
+                        clean_val(float(r_val['Close'])),
+                        clean_val(float(r_val['ma5'])) if pd.notna(r_val['ma5']) else None,
+                        clean_val(float(r_val['ma25'])) if pd.notna(r_val['ma25']) else None,
+                        clean_val(float(r_val['ma75'])) if pd.notna(r_val['ma75']) else None
                     ])
                 note["chartSnapshot"] = snapshot
                 notes_updated = True
@@ -1442,8 +1553,7 @@ for note in trade_notes:
                 print(f"⚠️ {n_code} のチャートスナップショット生成スキップ: {e}")
 
 if notes_updated or not os.path.exists(trade_notes_json_path):
-    with open(trade_notes_json_path, "w", encoding="utf-8") as f:
-        json.dump(trade_notes, f, ensure_ascii=False, indent=2)
+    safe_json_dump(trade_notes, trade_notes_json_path, ensure_ascii=False, indent=2)
 print(f" -> 電子株ノート: 累計 {len(trade_notes)} 件のカルテを同期完了")
 
 # 実績検証 Shadow Tracker 処理
@@ -1453,12 +1563,17 @@ if os.path.exists(shadow_trades_json_path):
     try:
         with open(shadow_trades_json_path, "r", encoding="utf-8") as f:
             shadow_trades = json.load(f)
-    except Exception as e:
+    except Exception:
         shadow_trades = []
 
+cutoff_date_str = (today_date - timedelta(days=60)).strftime("%Y-%m-%d")
 updated_trades = []
 for trade in shadow_trades:
     try:
+        sig_date_str = trade.get("signalDate", "")
+        if sig_date_str and sig_date_str < cutoff_date_str:
+            continue
+
         t_code = trade.get("ticker", "")
         t_key = f"{t_code}.T"
         if t_key not in bulk_data or bulk_data[t_key].empty:
@@ -1466,7 +1581,6 @@ for trade in shadow_trades:
             continue
 
         df_t = bulk_data[t_key]
-        sig_date_str = trade.get("signalDate", "")
         df_after = df_t[df_t.index > pd.to_datetime(sig_date_str)].copy()
         days_count = len(df_after)
 
@@ -1474,8 +1588,8 @@ for trade in shadow_trades:
             first_day = df_after.iloc[0]
             entry_open = float(first_day['Open'])
             sig_close = float(trade.get("signalClose", entry_open))
-            yesterday_low = float(trade.get("yesterdayLow", entry_open * 0.98))
-            
+            yesterday_low = float(trade.get("yesterdayLow") or (entry_open * 0.98))
+
             gap_rate = ((entry_open - sig_close) / sig_close) * 100 if sig_close > 0 else 0.0
             trade["entryOpen"] = entry_open
             trade["gapRate"] = round(gap_rate, 2)
@@ -1489,24 +1603,29 @@ for trade in shadow_trades:
                 trade["entryStatus"] = "ENTERED"
 
         if trade.get("entryStatus") == "ENTERED" and days_count >= 1:
-            entry_p = float(trade.get("entryOpen", 1.0))
-            df_eval = df_after.head(10)
-            trade["daysHeld"] = len(df_eval)
-            trade["highestPrice"] = float(df_eval['High'].max())
-            trade["lowestPrice"] = float(df_eval['Low'].min())
+            entry_p = float(trade.get("entryOpen") or 1.0)
+            if entry_p > 0:
+                df_eval = df_after.head(10)
+                trade["daysHeld"] = len(df_eval)
+                trade["highestPrice"] = float(df_eval['High'].max())
+                trade["lowestPrice"] = float(df_eval['Low'].min())
 
-            if len(df_eval) >= 3 and "return_T3" not in trade:
-                c3 = float(df_eval.iloc[2]['Close'])
-                trade["return_T3"] = round(((c3 - entry_p) / entry_p) * 100, 2)
+                if len(df_eval) >= 3 and "return_T3" not in trade:
+                    c3 = float(df_eval.iloc[2]['Close'])
+                    trade["return_T3"] = round(((c3 - entry_p) / entry_p) * 100, 2)
 
-            if len(df_eval) >= 5 and "return_T5" not in trade:
-                c5 = float(df_eval.iloc[4]['Close'])
-                trade["return_T5"] = round(((c5 - entry_p) / entry_p) * 100, 2)
+                if len(df_eval) >= 5 and "return_T5" not in trade:
+                    c5 = float(df_eval.iloc[4]['Close'])
+                    trade["return_T5"] = round(((c5 - entry_p) / entry_p) * 100, 2)
 
-            if len(df_eval) >= 10 and "return_T10" not in trade:
-                c10 = float(df_eval.iloc[9]['Close'])
-                trade["return_T10"] = round(((c10 - entry_p) / entry_p) * 100, 2)
-                trade["isCompleted"] = True
+                if len(df_eval) >= 10 and "return_T10" not in trade:
+                    c10 = float(df_eval.iloc[9]['Close'])
+                    trade["return_T10"] = round(((c10 - entry_p) / entry_p) * 100, 2)
+                    trade["isCompleted"] = True
+
+        # スキップ済みログは7日でパージして肥大化防止
+        if str(trade.get("entryStatus", "")).startswith("SKIPPED_") and days_count > 7:
+            continue
 
         updated_trades.append(trade)
     except Exception:
@@ -1519,6 +1638,9 @@ for item in results_list:
     if cat != "NONE" and cat.startswith("BUY"):
         trade_id = f"{today_str}_{item['ticker']}"
         if trade_id not in existing_ids:
+            p_val = float(item["price"])
+            y_low = item.get("yesterdayLow")
+            sl_val = sys_data.get("stop_loss_price")
             new_trade = {
                 "id": trade_id,
                 "signalDate": today_str,
@@ -1527,23 +1649,23 @@ for item in results_list:
                 "system": SYSTEM_TYPE,
                 "category": cat,
                 "score": int(sys_data.get("score", 5)),
-                "signalClose": float(item["price"]),
-                "yesterdayLow": float(item.get("yesterdayLow", item["price"] * 0.98)),
-                "stopLossPrice": float(sys_data.get("stop_loss_price", item["price"] * 0.95)),
+                "signalClose": p_val,
+                "yesterdayLow": float(y_low) if y_low is not None else round(p_val * 0.98, 2),
+                "stopLossPrice": float(sl_val) if sl_val else round(p_val * 0.95, 2),
                 "regime": regime_status,
                 "factor_keys": sys_data.get("factor_keys", []),
                 "entryStatus": "PENDING_ENTRY"
             }
             updated_trades.append(new_trade)
 
-updated_trades = updated_trades[-300:]
-with open(shadow_trades_json_path, "w", encoding="utf-8") as f:
-    json.dump(updated_trades, f, ensure_ascii=False, indent=2)
+updated_trades = updated_trades[-5000:]
+safe_json_dump(updated_trades, shadow_trades_json_path, ensure_ascii=False, indent=2)
+
 
 def build_score_table(trades_pool, return_key):
     scores_def = [10, 9, 8, 7, 6, 5]
     table_rows = []
-    
+
     for sc in scores_def:
         if sc == 5:
             matched = [t for t in trades_pool if t.get("score", 5) <= 5 and return_key in t]
@@ -1551,7 +1673,7 @@ def build_score_table(trades_pool, return_key):
         else:
             matched = [t for t in trades_pool if t.get("score") == sc and return_key in t]
             label = f"★{sc}"
-            
+
         count = len(matched)
         if count == 0:
             table_rows.append({
@@ -1563,23 +1685,24 @@ def build_score_table(trades_pool, return_key):
         returns = [float(t[return_key]) for t in matched]
         wins = [r for r in returns if r > 0]
         losses = [r for r in returns if r <= 0]
-        
+
         win_rate = round((len(wins) / count) * 100, 1)
-        avg_gain = round(pd.Series(wins).mean(), 1) if wins else 0.0
-        avg_loss = round(pd.Series(losses).mean(), 1) if losses else 0.0
-        
+        avg_gain = round(float(pd.Series(wins).mean()), 1) if wins else 0.0
+        avg_loss = round(float(pd.Series(losses).mean()), 1) if losses else 0.0
+
         if abs(avg_loss) > 0:
             pf = round(avg_gain / abs(avg_loss), 2)
         else:
             pf = 99.0 if avg_gain > 0 else 0.0
-            
-        expected_val = round(pd.Series(returns).mean(), 1)
-        
+
+        expected_val = round(float(pd.Series(returns).mean()), 1)
+
         table_rows.append({
             "score": sc, "label": label, "count": count, "winRate": win_rate,
             "avgGain": avg_gain, "avgLoss": avg_loss, "profitFactor": pf, "expectedValue": expected_val
         })
     return table_rows
+
 
 valid_trades = [t for t in updated_trades if t.get("entryStatus") == "ENTERED"]
 
@@ -1600,6 +1723,11 @@ tracker_summary = {
             "label": "🟡 選別時",
             "T5": build_score_table([t for t in valid_trades if t.get("regime") == "SELECTIVE"], "return_T5"),
             "T10": build_score_table([t for t in valid_trades if t.get("regime") == "SELECTIVE"], "return_T10")
+        },
+        "DIVERGENT": {
+            "label": "⚡ 局地戦",
+            "T5": build_score_table([t for t in valid_trades if t.get("regime") == "DIVERGENT"], "return_T5"),
+            "T10": build_score_table([t for t in valid_trades if t.get("regime") == "DIVERGENT"], "return_T10")
         },
         "RISK_OFF": {
             "label": "🛑 買い控え時",
@@ -1628,17 +1756,17 @@ factor_analysis_rows = []
 for f_key, f_name in target_factors:
     active_pool = [t for t in trades_with_t5 if f_key in t.get("factor_keys", [])]
     inactive_pool = [t for t in trades_with_t5 if f_key not in t.get("factor_keys", [])]
-    
+
     act_count = len(active_pool)
     if act_count >= 1:
         act_wins = len([t for t in active_pool if float(t["return_T5"]) > 0])
         act_rate = round((act_wins / act_count) * 100, 1)
-        
+
         inact_wins = len([t for t in inactive_pool if float(t["return_T5"]) > 0])
         inact_rate = round((inact_wins / len(inactive_pool)) * 100, 1) if inactive_pool else base_win_rate
-        
+
         contrib = round(act_rate - inact_rate, 1)
-        
+
         if contrib >= 15.0:
             eval_badge = "◎ 極めて優秀"
             advice = f"勝率寄与 +{contrib}% と極めて強力です。現在の配点を維持、または増点を推奨します。"
@@ -1651,7 +1779,7 @@ for f_key, f_name in target_factors:
         else:
             eval_badge = "✕ 悪化要因"
             advice = f"勝率寄与 {contrib:+}% と全体平均を下回っています。app.py の加点をコメントアウトして無効化を推奨します。"
-            
+
         factor_analysis_rows.append({
             "key": f_key, "name": f_name, "count": act_count,
             "activeWinRate": act_rate, "inactiveWinRate": inact_rate,
@@ -1666,25 +1794,16 @@ for f_key, f_name in target_factors:
 
 tracker_summary["factors"] = factor_analysis_rows
 
-with open(tracker_summary_json_path, "w", encoding="utf-8") as f:
-    json.dump(tracker_summary, f, ensure_ascii=False, indent=2)
-
+safe_json_dump(tracker_summary, tracker_summary_json_path, ensure_ascii=False, indent=2)
 print(f" -> スクリーナー実績追跡完了: 累積 {len(valid_trades)} 件を評価 (summary: {tracker_summary_json_path})")
 
 # データ出力
 print("最新データを data/ フォルダに出力中...")
 
-with open(os.path.join(data_dir, "results.json"), "w", encoding="utf-8") as f:
-    json.dump(results_list, f, ensure_ascii=False)
-
-with open(os.path.join(data_dir, "hot_sectors.json"), "w", encoding="utf-8") as f:
-    json.dump(hot_sectors, f, ensure_ascii=False)
-
-with open(os.path.join(data_dir, "prev_counts.json"), "w", encoding="utf-8") as f:
-    json.dump(prev_counts, f, ensure_ascii=False)
-
-with open(os.path.join(data_dir, "portfolio.json"), "w", encoding="utf-8") as f:
-    json.dump(portfolio_records, f, ensure_ascii=False)
+safe_json_dump(results_list, results_json_path, ensure_ascii=False)
+safe_json_dump(hot_sectors, os.path.join(data_dir, "hot_sectors.json"), ensure_ascii=False)
+safe_json_dump(prev_counts, os.path.join(data_dir, "prev_counts.json"), ensure_ascii=False)
+safe_json_dump(portfolio_records, portfolio_json_path, ensure_ascii=False)
 
 meta_info = {
     "lastUpdate": current_time_str,
@@ -1702,8 +1821,7 @@ meta_info = {
         "medianChange": round(all_market_median, 2)
     }
 }
-with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
-    json.dump(meta_info, f, ensure_ascii=False)
+safe_json_dump(meta_info, os.path.join(data_dir, "meta.json"), ensure_ascii=False)
 
 template_path = "template.html"
 if os.path.exists(template_path):
