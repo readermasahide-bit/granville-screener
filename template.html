@@ -130,32 +130,35 @@
       </section>
 
       <!-- 市場環境・相場レジーム概況バー ＆ ★7以上切り替えボタン -->
-      <section id="marketRegimeBanner" class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div class="flex items-center gap-3 flex-wrap">
-          <div class="flex items-center gap-2">
-            <span class="text-slate-400 font-bold text-[11px] uppercase tracking-wider">市場環境:</span>
-            <span id="marketRegimeBadge" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 cursor-help" title="市場動向の解析中...">
-              解析中...
-            </span>
+      <section id="marketRegimeBanner" class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-xl space-y-2.5 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400 font-bold text-[11px] uppercase tracking-wider">市場環境:</span>
+              <span id="marketRegimeBadge" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 cursor-help" title="市場動向の解析中...">
+                解析中...
+              </span>
+            </div>
+            <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
+            <div id="marketBreadthInfo" class="flex items-center gap-2.5 font-mono text-[11px] text-slate-300 flex-wrap">
+              <span id="statAdvanceCount" class="text-emerald-400 font-bold">▲ 値上: -</span>
+              <span class="text-slate-700">|</span>
+              <span id="statDeclineCount" class="text-rose-400 font-bold">▼ 値下: -</span>
+              <span class="text-slate-700">|</span>
+              <span id="statMedianChange" class="text-slate-300">中央値: -</span>
+            </div>
           </div>
-          <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
-          <div id="marketBreadthInfo" class="flex items-center gap-2.5 font-mono text-[11px] text-slate-300 flex-wrap">
-            <span id="statAdvanceCount" class="text-emerald-400 font-bold">▲ 値上: -</span>
-            <span class="text-slate-700">|</span>
-            <span id="statDeclineCount" class="text-rose-400 font-bold">▼ 値下: -</span>
-            <span class="text-slate-700">|</span>
-            <span id="statMedianChange" class="text-slate-300">中央値: -</span>
-          </div>
-        </div>
 
-        <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs shrink-0">
-          <button id="btnFilterScore7" class="px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer">
-            🔥 ★7以上のみ (厳選)
-          </button>
-          <button id="btnFilterScoreAll" class="px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
-            📋 すべて表示
-          </button>
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs shrink-0">
+            <button id="btnFilterScore7" class="px-3 py-1 rounded-lg font-bold transition duration-200 bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow cursor-pointer">
+              🔥 ★7以上のみ (厳選)
+            </button>
+            <button id="btnFilterScoreAll" class="px-3 py-1 rounded-lg font-bold transition duration-200 text-slate-400 hover:text-slate-200 border border-transparent cursor-pointer">
+              📋 すべて表示
+            </button>
+          </div>
         </div>
+        <div id="hotSectorsBar" class="hidden pt-2 border-t border-slate-800/70 flex items-center gap-2 flex-wrap text-[11px]"></div>
       </section>
       
       <!-- 8大分類＋全シグナル窓タブ -->
@@ -212,7 +215,7 @@
             <button data-market="東Ｇ" class="market-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-100 cursor-pointer">東Ｇ</button>
           </div>
           <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap justify-end">
-            <input type="text" id="aiExtractInput" placeholder="銘柄コード (例: 7974)" class="w-full sm:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest">
+            <input type="text" id="aiExtractInput" placeholder="銘柄コード (例: 7974)" class="w-full sm:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition font-mono tracking-widest uppercase">
             <button id="btnAiExtract" class="bg-indigo-900/50 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-700/50 hover:border-indigo-500 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shrink-0" title="AI相談用時系列データをコピー">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
               AI抽出
@@ -225,21 +228,21 @@
         </div>
 
         <div id="performanceWarning" class="mt-4 hidden bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[11px] p-2.5 rounded-xl">
-          ⚠️ 該当数が多いため最初の150件のみ表示しています。
+          ⚠️ 該当数が多いため最初の150件のみ表示しています。市場フィルターや期待度ソートで絞り込んでください。
         </div>
 
         <div class="mt-4 overflow-x-auto">
           <table class="w-full text-left">
            <thead>
               <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
-                <th class="p-3 w-28 whitespace-nowrap">判定</th>
+                <th class="p-3 w-32 whitespace-nowrap">判定</th>
                 <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-center w-16 whitespace-nowrap transition duration-200" id="thScore" title="クリックで期待度順に並び替え">
                   <div class="flex items-center justify-center gap-1.5">
                     <span>期待度</span>
                     <span id="sortScoreIcon" class="text-cyan-400 font-mono text-[11px] w-3 text-center">▼</span>
                   </div>
                 </th>
-                <th class="p-3 w-28">コード</th>
+                <th class="p-3 w-24">コード</th>
                 <th class="p-3 min-w-[180px]">銘柄名 / 業種</th>
                 <th class="p-3 cursor-pointer select-none hover:text-cyan-400 text-right w-28 transition duration-200 whitespace-nowrap" id="thPrice" title="クリックで昇順/降順並び替え">
                   <div class="flex items-center justify-end gap-1.5">
@@ -250,7 +253,7 @@
                 <th class="p-3 text-right w-32">前日比</th>
                 <th class="p-3 text-right w-40 text-emerald-400 font-bold whitespace-nowrap">推奨目安 (打診/最大)</th>
                 <th class="p-3 text-right w-24">乖離率</th>
-                <th class="p-3 text-center w-24">市場 / 信用</th>
+                <th class="p-3 text-center w-28">市場 / 信用</th>
                 <th class="p-3 text-center w-20">AI相談</th>
               </tr>
             </thead>
@@ -294,6 +297,7 @@
           <button data-regime="ALL" class="tracker-regime-btn px-3 py-1 rounded-lg font-bold bg-slate-800 text-white cursor-pointer">🌐 全地合い通算</button>
           <button data-regime="BUY_AGGRESSIVE" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🟢 買い向かい時</button>
           <button data-regime="SELECTIVE" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🟡 選別時</button>
+          <button data-regime="DIVERGENT" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">⚡ 局地戦</button>
           <button data-regime="RISK_OFF" class="tracker-regime-btn px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200 cursor-pointer">🛑 買い控え時</button>
         </div>
 
@@ -347,7 +351,7 @@
         </div>
       </section>
 
-      <!-- ★【新設】電子株ノート（確定トレード日誌・カルテ一覧）セクション -->
+      <!-- 電子株ノート（確定トレード日誌・カルテ一覧）セクション -->
       <section id="tradeNotesSection" class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div class="flex items-center gap-2">
@@ -455,7 +459,7 @@
         <form id="portfolioEntryForm" class="space-y-4 text-xs" onsubmit="handlePortfolioSubmit(event)">
           <div>
             <label class="block text-slate-300 font-medium mb-1">銘柄コード <span class="text-rose-400">*</span></label>
-            <input type="text" id="portInputCode" placeholder="例: 7974" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono tracking-widest focus:outline-none focus:border-indigo-500 transition">
+            <input type="text" id="portInputCode" placeholder="例: 7974 / 130A" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono tracking-widest uppercase focus:outline-none focus:border-indigo-500 transition">
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
@@ -493,7 +497,7 @@
         </form>
       </dialog>
 
-      <!-- ★【新設】売却・トレードカルテ記録モーダル -->
+      <!-- 売却・トレードカルテ記録モーダル -->
       <dialog id="tradeCloseDialog" class="bg-slate-900 border border-emerald-500/40 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-lg w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
         <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
           <h3 id="tradeCloseTitle" class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
@@ -513,9 +517,15 @@
             <div><span class="text-slate-400 text-[10px]">推奨SL:</span> <strong id="closeDisplaySL" class="text-amber-400"></strong></div>
           </div>
 
-          <div>
-            <label class="block text-slate-300 font-medium mb-1">売却約定単価 [円] <span class="text-rose-400">*</span></label>
-            <input type="number" id="closeInputSellPrice" step="0.5" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">買付日 (任意)</label>
+              <input type="date" id="closeInputInDate" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">売却約定単価 [円] <span class="text-rose-400">*</span></label>
+              <input type="number" id="closeInputSellPrice" step="0.5" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition">
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
@@ -556,7 +566,7 @@
         </form>
       </dialog>
 
-      <!-- ★【新設】電子株ノート詳細モーダル（売買当時のチャート永久固定描画） -->
+      <!-- 電子株ノート詳細モーダル（売買当時のチャート永久固定描画） -->
       <dialog id="tradeNoteDetailDialog" class="bg-slate-900 border border-emerald-500/40 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-2xl w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
         <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
           <h3 id="noteDetailTitle" class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
@@ -566,7 +576,6 @@
         </div>
         
         <div id="noteDetailContent" class="space-y-4 text-xs">
-          <!-- チャート固定描画キャンバスエリア -->
           <div class="space-y-1">
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <span>📈</span> 売買当時のチャートスナップショット（永久固定）
@@ -577,7 +586,6 @@
             </div>
           </div>
 
-          <!-- 手書きノート完全再現カルテ内容 -->
           <div id="noteDetailBody" class="space-y-3">
           </div>
         </div>
@@ -590,16 +598,16 @@
         results: [],
         prevCounts: { short: {}, mid: {} },
         portfolio: [],
+        hotSectors: [],
         marketMedian: 0.0,
         marketRegime: null,
         trackerSummary: null,
         trackerRegime: 'ALL',
         trackerHorizon: 'T5',
-        tradeNotes: [], // ★新設：電子株ノート一覧
+        tradeNotes: [],
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
-        searchQuery: '',
         sortOrder: 'none',
         sortScoreOrder: 'desc',
         minScoreFilter: 7
@@ -614,31 +622,69 @@
         unitShare: 100
       };
 
-      document.addEventListener('DOMContentLoaded', async () => {
+      // 英数字混合コード(130A等)対応の銘柄コード正規化
+      function normalizeTickerCode(raw) {
+        return String(raw || '').trim().toUpperCase().replace(/\.T$/i, '').replace(/[^0-9A-Z]/g, '');
+      }
+
+      // シャーディングキー取得 (数字末尾2桁)
+      function getShardKey(codeClean) {
+        const digits = String(codeClean || '').replace(/[^0-9]/g, '');
+        if (digits.length < 2) return null;
+        return digits.slice(-2).padStart(2, '0');
+      }
+
+      // 日本時間(JST) YYYY-MM-DD
+      function getTodayJST() {
+        const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        return jstNow.toISOString().slice(0, 10);
+      }
+
+      // XSS/HTML崩れ防止エスケープ
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      async function safeFetchJson(url, fallback) {
         try {
-          const [resResults, resPrev, resPort, resMeta, resTracker, resNotes] = await Promise.all([
-            fetch('./data/results.json').then(r => r.json()),
-            fetch('./data/prev_counts.json').then(r => r.json()),
-            fetch('./data/portfolio.json').then(r => r.json()),
-            fetch('./data/meta.json').then(r => r.json()),
-            fetch('./data/tracker_summary.json').then(r => r.json()).catch(() => null),
-            fetch('./data/trade_notes.json').then(r => r.json()).catch(() => [])
-          ]);
-
-          state.results = resResults;
-          state.prevCounts = resPrev;
-          state.portfolio = resPort;
-          state.marketMedian = resMeta.marketMedian || 0.0;
-          state.marketRegime = resMeta.marketRegime || null;
-          state.trackerSummary = resTracker;
-          state.tradeNotes = resNotes || [];
-
-          const timeEl = document.getElementById('lastUpdateTime');
-          if (timeEl && resMeta.lastUpdate) {
-            timeEl.textContent = resMeta.lastUpdate;
-          }
+          const res = await fetch(url);
+          if (!res.ok) return fallback;
+          return await res.json();
         } catch (err) {
-          console.error("データの読み込みに失敗しました:", err);
+          console.warn(`データ読込スキップ (${url}):`, err);
+          return fallback;
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const ts = Date.now();
+        const [resResults, resPrev, resPort, resMeta, resTracker, resNotes, resHotSectors] = await Promise.all([
+          safeFetchJson(`./data/results.json?t=${ts}`, []),
+          safeFetchJson(`./data/prev_counts.json?t=${ts}`, { short: {}, mid: {} }),
+          safeFetchJson(`./data/portfolio.json?t=${ts}`, []),
+          safeFetchJson(`./data/meta.json?t=${ts}`, {}),
+          safeFetchJson(`./data/tracker_summary.json?t=${ts}`, null),
+          safeFetchJson(`./data/trade_notes.json?t=${ts}`, []),
+          safeFetchJson(`./data/hot_sectors.json?t=${ts}`, [])
+        ]);
+
+        state.results = Array.isArray(resResults) ? resResults : [];
+        state.prevCounts = resPrev || { short: {}, mid: {} };
+        state.portfolio = Array.isArray(resPort) ? resPort : [];
+        state.marketMedian = (resMeta && resMeta.marketMedian) || 0.0;
+        state.marketRegime = (resMeta && resMeta.marketRegime) || null;
+        state.trackerSummary = resTracker;
+        state.tradeNotes = Array.isArray(resNotes) ? resNotes : [];
+        state.hotSectors = Array.isArray(resHotSectors) ? resHotSectors : [];
+
+        const timeEl = document.getElementById('lastUpdateTime');
+        if (timeEl) {
+          timeEl.textContent = (resMeta && resMeta.lastUpdate) ? resMeta.lastUpdate : 'データ未取得';
         }
 
         loadPosConfig();
@@ -646,7 +692,7 @@
         renderPortfolioSection();
         renderMarketRegimeBanner();
         renderTrackerDashboard();
-        renderTradeNotesSection(); // ★電子株ノート描画
+        renderTradeNotesSection();
 
         document.getElementById('btnOpenAddPortfolio').addEventListener('click', openPortfolioEntryDialog);
         document.getElementById('btnTriggerActions').addEventListener('click', handleTriggerActions);
@@ -683,11 +729,11 @@
         });
 
         document.getElementById('btnAiExtract').addEventListener('click', () => {
-          const input = document.getElementById('aiExtractInput').value.trim();
-          if (!input) return;
-          const item = state.results.find(r => r.ticker === input);
+          const code = normalizeTickerCode(document.getElementById('aiExtractInput').value);
+          if (!code) return;
+          const item = state.results.find(r => r.ticker === code);
           const name = item ? item.name : "";
-          copyAiData(input, name);
+          copyAiData(code, name);
         });
 
         document.getElementById('btnCalcShares').addEventListener('click', handleCalcIndividualShares);
@@ -742,27 +788,44 @@
         switchSystem('mid');
       });
 
-      // 市場環境バー描画
+      // 市場環境バー＆追い風HOT業種描画
       function renderMarketRegimeBanner() {
         const badge = document.getElementById('marketRegimeBadge');
         const advEl = document.getElementById('statAdvanceCount');
         const decEl = document.getElementById('statDeclineCount');
         const medEl = document.getElementById('statMedianChange');
+        const hotBar = document.getElementById('hotSectorsBar');
         if (!badge) return;
 
         const regime = state.marketRegime;
-        if (!regime) { badge.textContent = "解析中..."; return; }
+        if (regime) {
+          badge.textContent = regime.label;
+          badge.className = `px-2.5 py-1 rounded-xl text-xs font-bold ${regime.badgeClass} cursor-help`;
+          badge.title = regime.advice;
 
-        badge.textContent = regime.label;
-        badge.className = `px-2.5 py-1 rounded-xl text-xs font-bold ${regime.badgeClass} cursor-help`;
-        badge.title = regime.advice;
+          if (advEl) advEl.textContent = `▲ 値上: ${regime.advanceCount.toLocaleString()} (${regime.advanceRatio}%)`;
+          if (decEl) decEl.textContent = `▼ 値下: ${regime.declineCount.toLocaleString()}`;
+          if (medEl) {
+            const sign = regime.medianChange > 0 ? '+' : '';
+            medEl.textContent = `中央値: ${sign}${regime.medianChange}%`;
+            medEl.className = regime.medianChange > 0 ? 'text-emerald-400 font-bold' : regime.medianChange < 0 ? 'text-rose-400 font-bold' : 'text-slate-400';
+          }
+        } else {
+          badge.textContent = "解析中...";
+        }
 
-        if (advEl) advEl.textContent = `▲ 値上: ${regime.advanceCount.toLocaleString()} (${regime.advanceRatio}%)`;
-        if (decEl) decEl.textContent = `▼ 値下: ${regime.declineCount.toLocaleString()}`;
-        if (medEl) {
-          const sign = regime.medianChange > 0 ? '+' : '';
-          medEl.textContent = `中央値: ${sign}${regime.medianChange}%`;
-          medEl.className = regime.medianChange > 0 ? 'text-emerald-400 font-bold' : regime.medianChange < 0 ? 'text-rose-400 font-bold' : 'text-slate-400';
+        if (hotBar) {
+          const hots = state.hotSectors || [];
+          if (hots.length > 0) {
+            hotBar.classList.remove('hidden');
+            hotBar.innerHTML = `<span class="text-slate-400 font-bold uppercase tracking-wider text-[10px]">🔥 追い風HOT業種:</span>` +
+              hots.map(s => {
+                const sign = s.changeRate >= 0 ? '+' : '';
+                return `<span class="px-2 py-0.5 rounded-lg bg-orange-950/60 text-orange-300 border border-orange-500/30 font-mono text-[10px]">${escapeHtml(s.sector)} (${sign}${s.changeRate}%)</span>`;
+              }).join('');
+          } else {
+            hotBar.classList.add('hidden');
+          }
         }
       }
 
@@ -812,10 +875,10 @@
         const currentRegimeKey = state.trackerRegime || 'ALL';
         const currentHorizonKey = state.trackerHorizon || 'T5';
         const regimeData = summary.regimes[currentRegimeKey] || summary.regimes['ALL'];
-        const scoreRows = regimeData[currentHorizonKey] || [];
+        const scoreRows = (regimeData && regimeData[currentHorizonKey]) || [];
 
         const horizonLabel = currentHorizonKey === 'T5' ? 'T+5基準(1週間)' : 'T+10基準(2週間)';
-        activeLabelEl.textContent = `（${regimeData.label} / ${horizonLabel}）`;
+        activeLabelEl.textContent = `（${regimeData ? regimeData.label : currentRegimeKey} / ${horizonLabel}）`;
 
         scoreRows.forEach(row => {
           const tr = document.createElement('tr');
@@ -827,7 +890,7 @@
           const expColor = isExpPlus ? 'text-emerald-400' : 'text-rose-400';
 
           tr.innerHTML = `
-            <td class="p-2.5 font-bold text-white">${row.label}</td>
+            <td class="p-2.5 font-bold text-white">${escapeHtml(row.label)}</td>
             <td class="p-2.5 text-right text-slate-400">${row.count} 件</td>
             <td class="p-2.5 text-right font-bold ${row.winRate >= 60 ? 'text-emerald-400' : row.winRate <= 45 ? 'text-rose-400' : 'text-slate-200'}">${row.count > 0 ? row.winRate.toFixed(1) + '%' : '-'}</td>
             <td class="p-2.5 text-right text-emerald-400 font-bold">${row.count > 0 ? '+' + row.avgGain.toFixed(1) + '%' : '-'}</td>
@@ -853,19 +916,19 @@
           else if (f.evaluation.includes('悪化')) evalClass = "bg-rose-950/80 text-rose-300 border border-rose-500/40 font-bold";
 
           tr.innerHTML = `
-            <td class="p-2.5 font-bold text-slate-200">${f.name}</td>
+            <td class="p-2.5 font-bold text-slate-200">${escapeHtml(f.name)}</td>
             <td class="p-2.5 text-right font-mono text-slate-400">${f.count} 件</td>
             <td class="p-2.5 text-right font-mono font-bold text-slate-200">${f.count > 0 ? f.activeWinRate.toFixed(1) + '%' : '-'}</td>
             <td class="p-2.5 text-right font-mono text-slate-400">${f.count > 0 ? f.inactiveWinRate.toFixed(1) + '%' : '-'}</td>
             <td class="p-2.5 text-right font-mono font-bold ${contribColor}">${f.count > 0 ? contribSign + f.contribution.toFixed(1) + '%' : '-'}</td>
-            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] ${evalClass}">${f.evaluation}</span></td>
-            <td class="p-2.5 text-slate-300 leading-relaxed font-sans text-[11px]">${f.actionAdvice}</td>
+            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] ${evalClass}">${escapeHtml(f.evaluation)}</span></td>
+            <td class="p-2.5 text-slate-300 leading-relaxed font-sans text-[11px]">${escapeHtml(f.actionAdvice)}</td>
           `;
           factorTbody.appendChild(tr);
         });
       }
 
-      // ★新設：電子株ノート一覧の描画
+      // 電子株ノート一覧の描画
       function renderTradeNotesSection() {
         const tbody = document.getElementById('tradeNotesTableBody');
         const countLabel = document.getElementById('tradeNotesCountLabel');
@@ -892,21 +955,21 @@
           const isPlus = (n.plAmount || 0) >= 0;
           const sign = isPlus ? '+' : '';
           const colorClass = isPlus ? 'text-emerald-400' : 'text-rose-400';
-          const rStr = n.rMultiple ? `${isPlus ? '+' : ''}${n.rMultiple.toFixed(2)}R` : '-';
+          const rStr = (n.rMultiple !== undefined && n.rMultiple !== null) ? `${n.rMultiple >= 0 ? '+' : ''}${Number(n.rMultiple).toFixed(2)}R` : '-';
 
           tr.innerHTML = `
-            <td class="p-2.5 font-bold text-white">${n.code}</td>
-            <td class="p-2.5 font-bold text-slate-100 hover:text-cyan-400 transition">${n.name}</td>
-            <td class="p-2.5 text-center text-slate-400 text-[11px]">${n.inDate?.slice(5) || '-'} ➔ ${n.outDate?.slice(5) || '-'}</td>
+            <td class="p-2.5 font-bold text-white">${escapeHtml(n.code)}</td>
+            <td class="p-2.5 font-bold text-slate-100 hover:text-cyan-400 transition">${escapeHtml(n.name)}</td>
+            <td class="p-2.5 text-center text-slate-400 text-[11px]">${escapeHtml(n.inDate?.slice(5) || '-')} ➔ ${escapeHtml(n.outDate?.slice(5) || '-')}</td>
             <td class="p-2.5 text-right font-bold ${colorClass}">${sign}${(n.plAmount || 0).toLocaleString()} 円</td>
             <td class="p-2.5 text-right font-bold ${colorClass}">${sign}${(n.plRate || 0).toFixed(2)}%</td>
             <td class="p-2.5 text-right font-bold text-amber-300">${rStr}</td>
             <td class="p-2.5 text-center">
-              <span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300">IN: ${n.evalEntry || '-'}</span>
-              <span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 ml-1">OUT: ${n.evalExit || '-'}</span>
+              <span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300">IN: ${escapeHtml(n.evalEntry || '-')}</span>
+              <span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-slate-300 ml-1">OUT: ${escapeHtml(n.evalExit || '-')}</span>
             </td>
             <td class="p-2.5 text-center">
-              <button onclick="openTradeNoteDetailDialog('${n.id}')" class="px-2 py-0.5 rounded bg-emerald-950/80 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-800/50 text-[10px] font-bold transition">
+              <button onclick="openTradeNoteDetailDialog('${escapeHtml(n.id)}')" class="px-2 py-0.5 rounded bg-emerald-950/80 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-800/50 text-[10px] font-bold transition">
                 📋 カルテ
               </button>
             </td>
@@ -925,6 +988,11 @@
           document.getElementById('portTotalCount').textContent = "0";
           document.getElementById('portTotalInvest').textContent = "0";
           document.getElementById('portTotalPL').textContent = "0 円";
+          document.getElementById('portTotalPL').className = "font-bold text-slate-300";
+          document.getElementById('badgeActionTP').textContent = `🏆 利確: 0件`;
+          document.getElementById('badgeActionSL').textContent = `🛑 損切: 0件`;
+          document.getElementById('badgeActionTrail').textContent = `🛡️ 逆指値変更: 0件`;
+          document.getElementById('badgeActionHold').textContent = `🟢 ホールド: 0件`;
           return;
         }
 
@@ -954,8 +1022,8 @@
           });
 
           tr.innerHTML = `
-            <td class="p-2.5 font-mono font-bold text-white">${item.code}</td>
-            <td class="p-2.5 font-bold text-slate-100 hover:text-cyan-400 transition">${item.name}</td>
+            <td class="p-2.5 font-mono font-bold text-white">${escapeHtml(item.code)}</td>
+            <td class="p-2.5 font-bold text-slate-100 hover:text-cyan-400 transition">${escapeHtml(item.name)}</td>
             <td class="p-2.5 text-right font-mono text-slate-300">${item.shares.toLocaleString()} 株</td>
             <td class="p-2.5 text-right font-mono text-slate-400">${item.buyPrice.toLocaleString()} 円</td>
             <td class="p-2.5 text-right font-mono font-bold text-white">${item.currentPrice.toLocaleString()} 円</td>
@@ -963,12 +1031,12 @@
             <td class="p-2.5 text-right font-mono font-bold ${colorClass}">${sign}${item.plRate.toFixed(2)}%</td>
             <td class="p-2.5 text-left">
               <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="px-2 py-0.5 rounded text-[10px] ${item.badgeClass}">${item.statusLabel}</span>
-                <span class="text-[11px] font-bold text-slate-200 font-mono">${item.actionLabel}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] ${item.badgeClass}">${escapeHtml(item.statusLabel)}</span>
+                <span class="text-[11px] font-bold text-slate-200 font-mono">${escapeHtml(item.actionLabel)}</span>
               </div>
             </td>
             <td class="p-2.5 text-center">
-              <button onclick="openTradeCloseDialog('${item.code}')" class="px-2 py-1 rounded bg-amber-950/80 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-800/50 text-[10px] font-bold transition cursor-pointer" title="決済して電子株ノートに記録">
+              <button onclick="openTradeCloseDialog('${escapeHtml(item.code)}', ${item.buyPrice}, ${item.shares})" class="px-2 py-1 rounded bg-amber-950/80 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-800/50 text-[10px] font-bold transition cursor-pointer" title="決済して電子株ノートに記録">
                 💰 決済
               </button>
             </td>
@@ -992,7 +1060,7 @@
         document.getElementById('badgeActionHold').textContent = `🟢 ホールド: ${countHold}件`;
       }
 
-function loadGitHubConfig() {
+      function loadGitHubConfig() {
         const owner = localStorage.getItem('gh_owner') || '';
         const repo = localStorage.getItem('gh_repo') || '';
         const token = localStorage.getItem('gh_token') || '';
@@ -1017,21 +1085,28 @@ function loadGitHubConfig() {
         document.getElementById('portfolioEntryDialog').close();
       }
 
-      // ★決済・カルテ記録モーダルを開く
-      function openTradeCloseDialog(code) {
-        const item = (state.portfolio || []).find(p => p.code === code);
+      // 決済・カルテ記録モーダルを開く
+      function openTradeCloseDialog(code, buyPriceArg, sharesArg) {
+        const item = (state.portfolio || []).find(p =>
+          p.code === code &&
+          (buyPriceArg === undefined || p.buyPrice === buyPriceArg) &&
+          (sharesArg === undefined || p.shares === sharesArg)
+        ) || (state.portfolio || []).find(p => p.code === code);
         if (!item) return;
 
         document.getElementById('closeInputCode').value = item.code;
         document.getElementById('closeInputBuyPrice').value = item.buyPrice;
         document.getElementById('closeInputShares').value = item.shares;
-        document.getElementById('closeInputSL').value = item.stopLossPrice || item.buyPrice * 0.95;
+        document.getElementById('closeInputSL').value = item.stopLossPrice || Math.floor(item.buyPrice * 0.95);
 
-        document.getElementById('tradeCloseTitle').innerHTML = `<span>💰</span> 決済＆カルテ記録: <span class="font-mono text-amber-300">[${item.code}] ${item.name}</span>`;
+        document.getElementById('tradeCloseTitle').innerHTML = `<span>💰</span> 決済＆カルテ記録: <span class="font-mono text-amber-300">[${escapeHtml(item.code)}] ${escapeHtml(item.name)}</span>`;
         document.getElementById('closeDisplayBuy').textContent = `${item.buyPrice.toLocaleString()} 円`;
         document.getElementById('closeDisplayShares').textContent = `${item.shares.toLocaleString()} 株`;
         document.getElementById('closeDisplaySL').textContent = `${Math.floor(item.stopLossPrice || item.buyPrice * 0.95).toLocaleString()} 円`;
+        document.getElementById('closeInputInDate').value = getTodayJST();
         document.getElementById('closeInputSellPrice').value = item.currentPrice;
+        document.getElementById('closeMemoExit').value = '';
+        document.getElementById('closeNotesLog').value = '';
 
         document.getElementById('tradeCloseDialog').showModal();
       }
@@ -1040,14 +1115,15 @@ function loadGitHubConfig() {
         document.getElementById('tradeCloseDialog').close();
       }
 
-      // ★決済＆カルテ保存処理（GitHub APIでportfolio.csv削除 ＆ trade_notes.json追記）
+      // 決済＆カルテ保存処理（GitHub APIでportfolio.csv削除 ＆ trade_notes.json追記）
       async function handleTradeCloseSubmit(e) {
         e.preventDefault();
-        const code = document.getElementById('closeInputCode').value;
+        const code = normalizeTickerCode(document.getElementById('closeInputCode').value);
         const buyPrice = parseFloat(document.getElementById('closeInputBuyPrice').value);
         const shares = parseInt(document.getElementById('closeInputShares').value, 10);
         const slPrice = parseFloat(document.getElementById('closeInputSL').value);
         const sellPrice = parseFloat(document.getElementById('closeInputSellPrice').value);
+        const inDateInput = document.getElementById('closeInputInDate').value;
 
         const evalEntry = document.getElementById('closeEvalEntry').value;
         const evalExit = document.getElementById('closeEvalExit').value;
@@ -1068,20 +1144,23 @@ function loadGitHubConfig() {
         btn.innerHTML = `<span>⏳</span> 保存中...`;
 
         try {
-          const item = (state.portfolio || []).find(p => p.code === code) || {};
+          const item = (state.portfolio || []).find(p => p.code === code && p.buyPrice === buyPrice && p.shares === shares)
+            || (state.portfolio || []).find(p => p.code === code) || {};
           const plAmount = Math.round((sellPrice - buyPrice) * shares);
-          const plRate = ((sellPrice - buyPrice) / buyPrice) * 100;
+          const plRate = buyPrice > 0 ? ((sellPrice - buyPrice) / buyPrice) * 100 : 0;
           const riskPerShare = Math.max(1.0, buyPrice - slPrice);
           const rMultiple = (sellPrice - buyPrice) / riskPerShare;
 
-          const nowStr = new Date().toISOString().slice(0, 10);
-          const tradeId = `${code}_${nowStr.replace(/-/g, '')}`;
+          const nowStr = getTodayJST();
+          const inDateStr = inDateInput || nowStr;
+          const uniqueSuffix = Date.now().toString().slice(-5);
+          const tradeId = `${code}_${nowStr.replace(/-/g, '')}_${uniqueSuffix}`;
 
           const newNote = {
             id: tradeId,
             code: code,
             name: item.name || "不明",
-            inDate: nowStr,
+            inDate: inDateStr,
             outDate: nowStr,
             regimeLabel: state.marketRegime ? state.marketRegime.label : "中立",
             marginBuy: 0,
@@ -1101,12 +1180,12 @@ function loadGitHubConfig() {
             evalExit: evalExit,
             memoExit: memoExit || "利確執行",
             notesLog: notesLogText ? [{ date: nowStr.slice(5), text: notesLogText }] : [],
-            chartSnapshot: [] // 次回app.py実行時に自動生成
+            chartSnapshot: []
           };
 
           // 1. data/trade_notes.json を取得して追記
           const noteApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/data/trade_notes.json`;
-          const getNoteRes = await fetch(noteApiUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+          const getNoteRes = await fetch(noteApiUrl, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' } });
           let noteSha = null;
           let currentNotes = [];
           if (getNoteRes.ok) {
@@ -1116,38 +1195,89 @@ function loadGitHubConfig() {
           }
           currentNotes.unshift(newNote);
 
-          await fetch(noteApiUrl, {
+          const putNoteRes = await fetch(noteApiUrl, {
             method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message: `Update trade_notes.json: Record ${code}`,
               content: btoa(unescape(encodeURIComponent(JSON.stringify(currentNotes, null, 2)))),
               sha: noteSha || undefined
             })
           });
+          if (!putNoteRes.ok) {
+            const errTxt = await putNoteRes.text();
+            throw new Error(`trade_notes.json更新失敗 (${putNoteRes.status}): ${errTxt}`);
+          }
 
-          // 2. portfolio.csv から該当コードを削除
+          // 2. portfolio.csv から該当行を削除（買付単価・株数一致優先で1行のみ削除）
           const portApiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/portfolio.csv`;
-          const getPortRes = await fetch(portApiUrl, { headers: { 'Authorization': `Bearer ${token}` } });
+          const getPortRes = await fetch(portApiUrl, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' } });
           if (getPortRes.ok) {
             const pData = await getPortRes.json();
             const pSha = pData.sha;
             const pText = decodeURIComponent(escape(atob(pData.content.replace(/\s/g, ''))));
-            const newLines = pText.trim().split(/\r?\n/).filter((l, idx) => idx === 0 || l.split(',')[0].replace(/[^0-9]/g, '') !== code);
-            await fetch(portApiUrl, {
+            let removed = false;
+            const newLines = pText.trim().split(/\r?\n/).filter((l, idx) => {
+              if (idx === 0 && l.toLowerCase().includes('code')) return true;
+              const cols = l.split(',');
+              const rowCode = normalizeTickerCode(cols[0]).padStart(4, '0');
+              const rowPrice = parseFloat(cols[1]);
+              const rowShares = parseInt(cols[2], 10);
+              if (!removed && rowCode === code.padStart(4, '0') && rowPrice === buyPrice && rowShares === shares) {
+                removed = true;
+                return false;
+              }
+              return true;
+            });
+            // 完全一致がなければコード一致の最初の1行を削除
+            const finalLines = removed ? newLines : pText.trim().split(/\r?\n/).filter((l, idx) => {
+              if (idx === 0 && l.toLowerCase().includes('code')) return true;
+              const rowCode = normalizeTickerCode(l.split(',')[0]).padStart(4, '0');
+              if (!removed && rowCode === code.padStart(4, '0')) {
+                removed = true;
+                return false;
+              }
+              return true;
+            });
+
+            const putPortRes = await fetch(portApiUrl, {
               method: 'PUT',
-              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 message: `Update portfolio.csv: Close ${code}`,
-                content: btoa(unescape(encodeURIComponent(newLines.join('\n') + '\n'))),
+                content: btoa(unescape(encodeURIComponent(finalLines.join('\n') + '\n'))),
                 sha: pSha
               })
+            });
+            if (!putPortRes.ok) {
+              const errTxt = await putPortRes.text();
+              throw new Error(`portfolio.csv更新失敗 (${putPortRes.status}): ${errTxt}`);
+            }
+          }
+
+          // 画面上の保有リストからも即時除外して再描画
+          let removedLocal = false;
+          state.portfolio = (state.portfolio || []).filter(p => {
+            if (!removedLocal && p.code === code && p.buyPrice === buyPrice && p.shares === shares) {
+              removedLocal = true;
+              return false;
+            }
+            return true;
+          });
+          if (!removedLocal) {
+            state.portfolio = (state.portfolio || []).filter(p => {
+              if (!removedLocal && p.code === code) {
+                removedLocal = true;
+                return false;
+              }
+              return true;
             });
           }
 
           alert(`🎉 [${code}] の決済と電子株ノートへの記録が完了しました！\n\nGitHubにカルテが永久保存されました。次回の全体更新時に売買時期のチャート図が自動補完されます。`);
           closeTradeCloseDialog();
           state.tradeNotes = currentNotes;
+          renderPortfolioSection();
           renderTradeNotesSection();
 
         } catch(err) {
@@ -1163,24 +1293,22 @@ function loadGitHubConfig() {
         return Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
       }
 
-      // ★電子株ノート詳細モーダルを開き、当時のチャートを描画
+      // 電子株ノート詳細モーダルを開き、当時のチャートを描画
       function openTradeNoteDetailDialog(noteId) {
         const note = (state.tradeNotes || []).find(n => n.id === noteId);
         if (!note) return;
 
-        document.getElementById('noteDetailTitle').innerHTML = `<span>📘</span> トレードカルテ: <span class="font-mono text-emerald-400">[${note.code}] ${note.name}</span>`;
+        document.getElementById('noteDetailTitle').innerHTML = `<span>📘</span> トレードカルテ: <span class="font-mono text-emerald-400">[${escapeHtml(note.code)}] ${escapeHtml(note.name)}</span>`;
 
-        // 1. チャートCanvasの描画
         drawTradeNoteCanvas(note);
 
-        // 2. カルテ詳細本文の展開（手書きノート完全再現）
         const isPlus = (note.plAmount || 0) >= 0;
         const sign = isPlus ? '+' : '';
         const colorClass = isPlus ? 'text-emerald-400' : 'text-rose-400';
 
         let logsHtml = '';
         if (note.notesLog && note.notesLog.length > 0) {
-          logsHtml = note.notesLog.map(l => `<li class="py-0.5"><strong class="text-amber-400 font-mono">[${l.date}]</strong> <span class="text-slate-200">${l.text}</span></li>`).join('');
+          logsHtml = note.notesLog.map(l => `<li class="py-0.5"><strong class="text-amber-400 font-mono">[${escapeHtml(l.date)}]</strong> <span class="text-slate-200">${escapeHtml(l.text)}</span></li>`).join('');
         } else {
           logsHtml = '<li class="text-slate-500">※教訓ログなし</li>';
         }
@@ -1197,25 +1325,25 @@ function loadGitHubConfig() {
           <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5 text-[11px]">
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">①〜③ 事前計画＆環境認識</span>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <div><span class="text-slate-400">市場環境:</span> <span class="text-white">${note.regimeLabel || '-'}</span></div>
+              <div><span class="text-slate-400">市場環境:</span> <span class="text-white">${escapeHtml(note.regimeLabel || '-')}</span></div>
               <div><span class="text-slate-400">買付上限:</span> <span class="text-white font-mono">${(note.planBuyMax||0).toLocaleString()} 円</span></div>
               <div><span class="text-slate-400">初期損切:</span> <span class="text-rose-400 font-mono">${(note.planStopLoss||0).toLocaleString()} 円</span></div>
               <div><span class="text-slate-400">目標利確:</span> <span class="text-emerald-400 font-mono">${(note.planTarget||0).toLocaleString()} 円</span></div>
-              <div><span class="text-slate-400">計画株数:</span> <span class="text-white font-mono">${note.planShares || '-'}</span></div>
-              <div><span class="text-slate-400">売買期間:</span> <span class="text-white font-mono">${note.inDate} ➔ ${note.outDate}</span></div>
+              <div><span class="text-slate-400">計画株数:</span> <span class="text-white font-mono">${escapeHtml(note.planShares || '-')}</span></div>
+              <div><span class="text-slate-400">売買期間:</span> <span class="text-white font-mono">${escapeHtml(note.inDate)} ➔ ${escapeHtml(note.outDate)}</span></div>
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
             <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">⑥ エントリー自己評価</span>
-              <div><span class="text-slate-400">評価:</span> <strong class="text-white font-bold ml-1">${note.evalEntry || '-'}</strong></div>
-              <p class="text-slate-300 text-[11px] leading-relaxed">${note.memoEntry || '記録なし'}</p>
+              <div><span class="text-slate-400">評価:</span> <strong class="text-white font-bold ml-1">${escapeHtml(note.evalEntry || '-')}</strong></div>
+              <p class="text-slate-300 text-[11px] leading-relaxed">${escapeHtml(note.memoEntry || '記録なし')}</p>
             </div>
             <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-800 pb-1">⑧ エグジット自己評価</span>
-              <div><span class="text-slate-400">評価:</span> <strong class="text-white font-bold ml-1">${note.evalExit || '-'}</strong></div>
-              <p class="text-slate-300 text-[11px] leading-relaxed">${note.memoExit || '記録なし'}</p>
+              <div><span class="text-slate-400">評価:</span> <strong class="text-white font-bold ml-1">${escapeHtml(note.evalExit || '-')}</strong></div>
+              <p class="text-slate-300 text-[11px] leading-relaxed">${escapeHtml(note.memoExit || '記録なし')}</p>
             </div>
           </div>
 
@@ -1234,7 +1362,7 @@ function loadGitHubConfig() {
         document.getElementById('tradeNoteDetailDialog').close();
       }
 
-      // ★売買時期のチャートをCanvasに静的描画（永久固定エンジン）
+      // 売買時期のチャートをCanvasに静的描画（永久固定エンジン）
       function drawTradeNoteCanvas(note) {
         const canvas = document.getElementById('tradeNoteCanvas');
         if (!canvas) return;
@@ -1267,7 +1395,6 @@ function loadGitHubConfig() {
           });
         });
 
-        // 買値・売値・損切値も描画範囲に含める
         [note.buyPrice, note.sellPrice, note.planStopLoss].forEach(p => {
           if (p && p > 0) {
             if (p < minPrice) minPrice = p;
@@ -1286,7 +1413,6 @@ function loadGitHubConfig() {
         const getY = (p) => padT + plotH - ((p - minPrice) / (maxPrice - minPrice)) * plotH;
         const getX = (idx) => padL + (idx / (snapshot.length - 1)) * plotW;
 
-        // 格子線
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 1;
         for (let i = 0; i <= 4; i++) {
@@ -1303,7 +1429,6 @@ function loadGitHubConfig() {
           ctx.fillText(Math.round(pVal), W - padR + 5, y + 3);
         }
 
-        // 移動平均線描画 (75日:紫, 25日:黄, 5日:青)
         const drawLine = (colIdx, color) => {
           ctx.strokeStyle = color;
           ctx.lineWidth = 1.2;
@@ -1325,7 +1450,6 @@ function loadGitHubConfig() {
         drawLine(6, '#f59e0b'); // 25日線
         drawLine(5, '#38bdf8'); // 5日線
 
-        // ローソク足描画
         const barW = Math.max(3, (plotW / snapshot.length) * 0.65);
         snapshot.forEach((r, idx) => {
           const [dStr, o, h, l, c] = r;
@@ -1348,7 +1472,6 @@ function loadGitHubConfig() {
           const height = Math.max(2, Math.abs(yO - yC));
           ctx.fillRect(x - barW / 2, top, barW, height);
 
-          // 日付目盛り
           if (idx % 6 === 0 || idx === snapshot.length - 1) {
             ctx.fillStyle = '#64748b';
             ctx.font = '9px monospace';
@@ -1357,7 +1480,6 @@ function loadGitHubConfig() {
           }
         });
 
-        // 水平ライン描画関数（買値、売値、損切値）
         const drawHLine = (price, color, label) => {
           if (!price || price <= 0) return;
           const y = getY(price);
@@ -1383,7 +1505,7 @@ function loadGitHubConfig() {
 
       async function handlePortfolioSubmit(e) {
         e.preventDefault();
-        const code = document.getElementById('portInputCode').value.trim().replace(/[^0-9]/g, '');
+        const code = normalizeTickerCode(document.getElementById('portInputCode').value).padStart(4, '0');
         const price = parseFloat(document.getElementById('portInputPrice').value);
         const shares = parseInt(document.getElementById('portInputShares').value, 10);
 
@@ -1433,9 +1555,12 @@ function loadGitHubConfig() {
             body: JSON.stringify({ message: `Update portfolio.csv: Add ${code}`, content: encodedContent, sha: sha || undefined })
           });
 
-          if (!putRes.ok) throw new Error("GitHub APIの更新に失敗しました。");
+          if (!putRes.ok) {
+            const errTxt = await putRes.text();
+            throw new Error(`GitHub API更新失敗 (${putRes.status}): ${errTxt}`);
+          }
 
-          alert(`✅ [${code}] の登録が完了しました！`);
+          alert(`✅ [${code}] の登録が完了しました！\n反映には「🔄 スクリーナー更新」を実行してください。`);
           document.getElementById('portInputCode').value = '';
           document.getElementById('portInputPrice').value = '';
           document.getElementById('portInputCode').focus();
@@ -1472,7 +1597,10 @@ function loadGitHubConfig() {
             body: JSON.stringify({ ref: 'main' })
           });
 
-          if (!res.ok) throw new Error("更新起動に失敗しました。");
+          if (!res.ok) {
+            const errTxt = await res.text();
+            throw new Error(`更新起動に失敗しました (${res.status}): ${errTxt}`);
+          }
           alert("🚀 スクリーナーの全体更新を開始しました！約5分後にリロードしてください。");
           btn.innerHTML = `<span>⏳</span> クラウド実行中(約5分)`;
 
@@ -1523,6 +1651,10 @@ function loadGitHubConfig() {
         }
 
         const riskPerShare = isSell ? (stopLossPrice - price) : (price - stopLossPrice);
+        if (riskPerShare <= 0) {
+          return { status: "REJECTED", rejectReason: "損切り価格が現在値と同値または逆転しています", maxShares: 0, initialShares: 0, initialBuyAmount: 0, maxBuyAmount: 0, riskPerShare: 0, appliedRule: "なし", isTightStop: false, maxBuyPrice: price };
+        }
+
         const maxRiskAmount = posConfig.totalAssets * (posConfig.riskToleranceRate / 100);
         const sharesByRisk = Math.floor(maxRiskAmount / riskPerShare / unit) * unit;
         const maxAmountLimit = posConfig.totalAssets * (posConfig.maxPositionRate / 100);
@@ -1574,15 +1706,16 @@ function loadGitHubConfig() {
         sec.classList.toggle('hidden');
       }
 
+      // 株数計算：results.json → portfolio.json → history_data から実株価を取得（見つからない場合はダミー計算を禁止）
       async function handleCalcIndividualShares() {
         const inputRaw = document.getElementById('aiExtractInput').value.trim();
-        if (!inputRaw) { alert("銘柄コードを入力してください。（例: 7974）"); return; }
+        if (!inputRaw) { alert("銘柄コードを入力してください。（例: 7974 / 130A）"); return; }
 
-        const tickerNum = inputRaw.replace(/[^0-9]/g, '');
+        const tickerClean = normalizeTickerCode(inputRaw).padStart(4, '0');
         const sys = state.currentSystem;
-        let price = 0, stopLossPrice = 0, name = "", volume = 0, category = "NONE", categoryName = "条件外";
+        let price = 0, stopLossPrice = 0, name = "", volume = 0, category = "NONE", categoryName = "条件外", isFallbackStop = false;
 
-        const matchItem = state.results.find(r => r.ticker === tickerNum || r.ticker === inputRaw);
+        const matchItem = state.results.find(r => r.ticker === tickerClean);
         if (matchItem) {
           price = matchItem.price;
           name = matchItem.name;
@@ -1595,22 +1728,59 @@ function loadGitHubConfig() {
           }
         }
 
-        if (!price || !stopLossPrice) {
-          price = price || 1000;
-          stopLossPrice = stopLossPrice || Math.floor(price * 0.95);
+        // results.json に無い（またはシグナル外）場合、portfolio または history_data から最新終値を取得
+        if (!price) {
+          const portMatch = (state.portfolio || []).find(p => p.code === tickerClean);
+          if (portMatch && portMatch.currentPrice > 0) {
+            price = portMatch.currentPrice;
+            name = portMatch.name || "";
+            stopLossPrice = portMatch.stopLossPrice || Math.floor(price * 0.95);
+            categoryName = "保有中 (標準5%目安)";
+            isFallbackStop = !portMatch.stopLossPrice;
+          }
+        }
+
+        if (!price) {
+          const shardKey = getShardKey(tickerClean);
+          if (shardKey) {
+            try {
+              const histData = await safeFetchJson(`history_data/data_${shardKey}.json?t=${Date.now()}`, {});
+              const hist = histData[tickerClean];
+              if (hist && hist.length > 0) {
+                const lastRow = hist[hist.length - 1];
+                price = Number(lastRow[1] || 0);
+                // 20日安値の代替として直近20日終値の最小値×0.98または現在値×0.95の厳しい方を仮損切とする
+                const recentCloses = hist.slice(-20).map(r => Number(r[1])).filter(v => v > 0);
+                const minClose20 = recentCloses.length > 0 ? Math.min(...recentCloses) : price * 0.95;
+                stopLossPrice = Math.floor(Math.max(minClose20 * 0.98, price * 0.925));
+                categoryName = "シグナル条件外 (直近安値基準)";
+                isFallbackStop = true;
+              }
+            } catch (e) {}
+          }
+        }
+
+        if (!price || price <= 0) {
+          alert(`銘柄コード [${tickerClean}] の株価データが見つかりませんでした。\n正しい東証コード（4桁）を入力してください。`);
+          return;
+        }
+
+        if (!stopLossPrice || stopLossPrice <= 0) {
+          stopLossPrice = Math.floor(price * 0.95);
+          isFallbackStop = true;
         }
 
         const pos = calculatePositionSizing(price, stopLossPrice, category);
-        showIndividualSharesModal(tickerNum, name, price, stopLossPrice, volume, categoryName, pos, category);
+        showIndividualSharesModal(tickerClean, name, price, stopLossPrice, volume, categoryName, pos, category, isFallbackStop);
       }
 
-      function showIndividualSharesModal(ticker, name, price, stopLossPrice, volume, categoryName, pos, category) {
+      function showIndividualSharesModal(ticker, name, price, stopLossPrice, volume, categoryName, pos, category, isFallbackStop) {
         const dialog = document.getElementById('diagnosticDialog');
         const title = document.getElementById('dialogTitle');
         const content = document.getElementById('dialogContent');
         const isSell = category && category.startsWith('SELL');
 
-        title.innerHTML = `📊 ポジション計算: <span class="font-mono text-emerald-400 font-bold ml-1.5">[${ticker}] ${name || ""}</span>`;
+        title.innerHTML = `📊 ポジション計算: <span class="font-mono text-emerald-400 font-bold ml-1.5">[${escapeHtml(ticker)}] ${escapeHtml(name)}</span>`;
 
         let resultHtml = "";
         if (pos.status === "OK") {
@@ -1631,22 +1801,27 @@ function loadGitHubConfig() {
                 <strong class="text-white text-sm font-mono">${pos.maxShares} 株 (約 ${maxAmountMan} 万円)</strong>
               </div>
               <div class="flex justify-between items-center text-[10px] text-slate-400">
-                <span>損切り時想定損失</span>
+                <span>損切り時想定損失 (${escapeHtml(pos.appliedRule)})</span>
                 <span class="text-rose-400 font-mono font-bold">- ${riskAmount.toLocaleString()} 円</span>
               </div>
             </div>
           `;
         } else {
-          resultHtml = `<div class="bg-rose-950/40 p-3 rounded-xl border border-rose-800/40 text-rose-300 font-bold">🚫 注文不可: ${pos.rejectReason}</div>`;
+          resultHtml = `<div class="bg-rose-950/40 p-3 rounded-xl border border-rose-800/40 text-rose-300 font-bold">🚫 注文不可: ${escapeHtml(pos.rejectReason)}</div>`;
         }
 
         const maxBuyPrice = pos.maxBuyPrice || price;
-        const maxBuyPct = (((maxBuyPrice - price) / price) * 100).toFixed(1);
+        const maxBuyPct = price > 0 ? (((maxBuyPrice - price) / price) * 100).toFixed(1) : '0.0';
+        const pctSign = Number(maxBuyPct) >= 0 ? '+' : '';
 
         content.innerHTML = `
+          <div class="text-[10px] text-slate-400 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800 flex justify-between">
+            <span>適用判定: <strong class="text-cyan-300">${escapeHtml(categoryName)}</strong></span>
+            <span>想定SL: <strong class="text-rose-400 font-mono">${stopLossPrice.toLocaleString()} 円</strong>${isFallbackStop ? ' (仮)' : ''}</span>
+          </div>
           <div class="grid grid-cols-2 gap-3 border-b border-slate-800 pb-3">
-            <div><span class="text-slate-400 text-[10px] block">想定株価</span><strong class="text-white text-sm font-mono">${price.toLocaleString()} 円</strong></div>
-            <div><span class="text-slate-400 text-[10px] block">買付上限</span><strong class="text-amber-300 text-sm font-mono">${maxBuyPrice.toLocaleString()} 円 (+${maxBuyPct}%)</strong></div>
+            <div><span class="text-slate-400 text-[10px] block">最新株価</span><strong class="text-white text-sm font-mono">${price.toLocaleString()} 円</strong></div>
+            <div><span class="text-slate-400 text-[10px] block">${isSell ? '売付下限' : '買付上限'}</span><strong class="text-amber-300 text-sm font-mono">${maxBuyPrice.toLocaleString()} 円 (${pctSign}${maxBuyPct}%)</strong></div>
           </div>
           <div class="space-y-1.5">${resultHtml}</div>
         `;
@@ -1655,25 +1830,29 @@ function loadGitHubConfig() {
 
       async function copyAiData(ticker, name) {
         if (!ticker) return;
-        const tickerNum = ticker.replace(/[^0-9]/g, '');
-        const shardKey = tickerNum.slice(-2);
-        const url = `history_data/data_${shardKey}.json`;
+        const tickerClean = normalizeTickerCode(ticker).padStart(4, '0');
+        const shardKey = getShardKey(tickerClean);
+        if (!shardKey) {
+          alert(`銘柄コード [${tickerClean}] の形式が不正です。`);
+          return;
+        }
+        const url = `history_data/data_${shardKey}.json?t=${Date.now()}`;
 
         try {
           const response = await fetch(url);
           if (!response.ok) throw new Error("データの取得に失敗しました。");
           const data = await response.json();
-          const history = data[tickerNum] || data[ticker];
+          const history = data[tickerClean] || data[ticker];
           if (!history || history.length === 0) { alert("履歴データがありません。"); return; }
 
-          let md = `【対象銘柄: ${tickerNum} ${name || ""}】\n\n| 日付 | 終値 | 5日線 | 25日線 | 75日線 | 25日線乖離率 | RSI(14) |\n|---|---|---|---|---|---|---|\n`;
+          let md = `【対象銘柄: ${tickerClean} ${name || ""}】\n\n| 日付 | 終値 | 5日線 | 25日線 | 75日線 | 25日線乖離率 | RSI(14) |\n|---|---|---|---|---|---|---|\n`;
           history.forEach(row => {
             const [dt, close, ma5, ma25, ma75, diff, rsi] = row;
-            md += `| ${dt} | ${close || '-'} | ${ma5 || '-'} | ${ma25 || '-'} | ${ma75 || '-'} | ${diff ? diff + '%' : '-'} | ${rsi || '-'} |\n`;
+            md += `| ${dt} | ${close ?? '-'} | ${ma5 ?? '-'} | ${ma25 ?? '-'} | ${ma75 ?? '-'} | ${diff !== null && diff !== undefined ? diff + '%' : '-'} | ${rsi ?? '-'} |\n`;
           });
 
           await navigator.clipboard.writeText(md);
-          alert(`✅ [${tickerNum}] のAI相談用データをコピーしました！`);
+          alert(`✅ [${tickerClean}] のAI相談用データをコピーしました！`);
         } catch (err) {
           alert(`エラー: ${err.message}`);
         }
@@ -1689,29 +1868,32 @@ function loadGitHubConfig() {
       function togglePriceSort() {
         state.sortScoreOrder = 'none';
         state.sortOrder = state.sortOrder === 'none' ? 'asc' : state.sortOrder === 'asc' ? 'desc' : 'none';
+        document.getElementById('sortScoreIcon').textContent = '↕';
         const sortIcon = document.getElementById('sortIcon');
         sortIcon.textContent = state.sortOrder === 'asc' ? '▲' : state.sortOrder === 'desc' ? '▼' : '↕';
         renderTable();
       }
 
-function toggleScoreSort() {
+      function toggleScoreSort() {
         state.sortOrder = 'none';
         state.sortScoreOrder = state.sortScoreOrder === 'none' ? 'desc' : state.sortScoreOrder === 'desc' ? 'asc' : 'none';
+        document.getElementById('sortIcon').textContent = '↕';
         const sortScoreIcon = document.getElementById('sortScoreIcon');
-        // 誤: state.sortScoreIcon → 正: state.sortScoreOrder
         sortScoreIcon.textContent = state.sortScoreOrder === 'asc' ? '▲' : state.sortScoreOrder === 'desc' ? '▼' : '↕';
         renderTable();
       }
 
       function exportCSV() {
         const sys = state.currentSystem;
-        let filtered = state.results.filter(r => r[sys].category !== "NONE");
+        let filtered = state.results.filter(r => r[sys] && r[sys].category !== "NONE");
         if (state.minScoreFilter > 1) filtered = filtered.filter(r => r[sys].score >= state.minScoreFilter);
+        if (state.activeMarket !== 'ALL') filtered = filtered.filter(r => r.market === state.activeMarket);
 
-        let csvContent = "\uFEFFカテゴリ,期待度,コード,銘柄名,株価,前日比,前日比率,市場,業種\r\n";
+        let csvContent = "\uFEFFカテゴリ,期待度,コード,銘柄名,株価,前日比,前日比率,市場,信用,業種\r\n";
         filtered.forEach(item => {
           const sysData = item[sys];
-          csvContent += `"${sysData.categoryName}","${sysData.score}","${item.ticker}","${item.name}","${item.price}","${item.change}","${item.changeRate}%","${item.market}","${item.sector}"\r\n`;
+          const creditLabel = item.isMarginTradable ? "貸借" : "信用";
+          csvContent += `"${sysData.categoryName}","${sysData.score}","${item.ticker}","${item.name}","${item.price}","${item.change}","${item.changeRate}%","${item.market}","${creditLabel}","${item.sector}"\r\n`;
         });
         const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
         const link = document.createElement("a");
@@ -1744,48 +1926,54 @@ function toggleScoreSort() {
       function updateStats() {
         const counts = { BUY1: 0, BUY1_PRE: 0, BUY2: 0, BUY2_PRE: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0, SELL5: 0, SELL6: 0, SELL7: 0, SELL7_PRE: 0, SELL8: 0 };
         const sys = state.currentSystem;
-        state.results.forEach(r => { if (counts[r[sys].category] !== undefined) counts[r[sys].category]++; });
+        state.results.forEach(r => { if (r[sys] && counts[r[sys].category] !== undefined) counts[r[sys].category]++; });
 
+        const prevSys = (state.prevCounts && state.prevCounts[sys]) || {};
         const updateEl = (id, count, prev) => {
           const el = document.getElementById(id);
           if (el) el.innerHTML = `<span class="text-base font-bold">${count}</span>${getDiffBadge(count, prev || 0)}`;
         };
 
-        updateEl('statBuy1', counts.BUY1 + counts.BUY1_PRE, (state.prevCounts[sys].BUY1||0) + (state.prevCounts[sys].BUY1_PRE||0));
-        updateEl('statBuy2', counts.BUY2 + counts.BUY2_PRE, (state.prevCounts[sys].BUY2||0) + (state.prevCounts[sys].BUY2_PRE||0));
-        updateEl('statBuy3', counts.BUY3 + counts.BUY3_PRE, (state.prevCounts[sys].BUY3||0) + (state.prevCounts[sys].BUY3_PRE||0));
-        updateEl('statBuy4', counts.BUY4, state.prevCounts[sys].BUY4);
-        updateEl('statSell5', counts.SELL5, state.prevCounts[sys].SELL5);
-        updateEl('statSell6', counts.SELL6, state.prevCounts[sys].SELL6);
-        updateEl('statSell7', counts.SELL7 + counts.SELL7_PRE, (state.prevCounts[sys].SELL7||0) + (state.prevCounts[sys].SELL7_PRE||0));
-        updateEl('statSell8', counts.SELL8, state.prevCounts[sys].SELL8);
+        updateEl('statBuy1', counts.BUY1 + counts.BUY1_PRE, (prevSys.BUY1||0) + (prevSys.BUY1_PRE||0));
+        updateEl('statBuy2', counts.BUY2 + counts.BUY2_PRE, (prevSys.BUY2||0) + (prevSys.BUY2_PRE||0));
+        updateEl('statBuy3', counts.BUY3 + counts.BUY3_PRE, (prevSys.BUY3||0) + (prevSys.BUY3_PRE||0));
+        updateEl('statBuy4', counts.BUY4, prevSys.BUY4);
+        updateEl('statSell5', counts.SELL5, prevSys.SELL5);
+        updateEl('statSell6', counts.SELL6, prevSys.SELL6);
+        updateEl('statSell7', counts.SELL7 + counts.SELL7_PRE, (prevSys.SELL7||0) + (prevSys.SELL7_PRE||0));
+        updateEl('statSell8', counts.SELL8, prevSys.SELL8);
 
-        const totalToday = state.results.filter(r => r[sys].category !== "NONE").length;
+        const totalToday = state.results.filter(r => r[sys] && r[sys].category !== "NONE").length;
         document.getElementById('statTotal').textContent = totalToday.toLocaleString();
+        const totalDiffEl = document.getElementById('statTotalDiff');
+        if (totalDiffEl) {
+          totalDiffEl.innerHTML = getDiffBadge(totalToday, prevSys.TOTAL_ACTIVE || 0);
+        }
       }
 
       function renderTable() {
         const tbody = document.getElementById('resultTableBody');
+        const warnEl = document.getElementById('performanceWarning');
         tbody.innerHTML = '';
         const sys = state.currentSystem;
-        let filtered = state.results.filter(r => r[sys].category !== "NONE");
-
-        if (state.minScoreFilter > 1) {
-          filtered = filtered.filter(r => r[sys].score >= state.minScoreFilter);
-        }
+        let allCategoryItems = state.results.filter(r => r[sys] && r[sys].category !== "NONE");
 
         if (state.activeTab !== 'ALL') {
-          if (state.activeTab === 'BUY1') filtered = filtered.filter(r => r[sys].category.startsWith('BUY1'));
-          else if (state.activeTab === 'BUY2') filtered = filtered.filter(r => r[sys].category.startsWith('BUY2'));
-          else if (state.activeTab === 'BUY3') filtered = filtered.filter(r => r[sys].category.startsWith('BUY3'));
-          else if (state.activeTab === 'BUY4') filtered = filtered.filter(r => r[sys].category === 'BUY4');
-          else if (state.activeTab === 'SELL5') filtered = filtered.filter(r => r[sys].category === 'SELL5');
-          else if (state.activeTab === 'SELL6') filtered = filtered.filter(r => r[sys].category === 'SELL6');
-          else if (state.activeTab === 'SELL7') filtered = filtered.filter(r => r[sys].category.startsWith('SELL7'));
-          else if (state.activeTab === 'SELL8') filtered = filtered.filter(r => r[sys].category === 'SELL8');
+          if (state.activeTab === 'BUY1') allCategoryItems = allCategoryItems.filter(r => r[sys].category.startsWith('BUY1'));
+          else if (state.activeTab === 'BUY2') allCategoryItems = allCategoryItems.filter(r => r[sys].category.startsWith('BUY2'));
+          else if (state.activeTab === 'BUY3') allCategoryItems = allCategoryItems.filter(r => r[sys].category.startsWith('BUY3'));
+          else if (state.activeTab === 'BUY4') allCategoryItems = allCategoryItems.filter(r => r[sys].category === 'BUY4');
+          else if (state.activeTab === 'SELL5') allCategoryItems = allCategoryItems.filter(r => r[sys].category === 'SELL5');
+          else if (state.activeTab === 'SELL6') allCategoryItems = allCategoryItems.filter(r => r[sys].category === 'SELL6');
+          else if (state.activeTab === 'SELL7') allCategoryItems = allCategoryItems.filter(r => r[sys].category.startsWith('SELL7'));
+          else if (state.activeTab === 'SELL8') allCategoryItems = allCategoryItems.filter(r => r[sys].category === 'SELL8');
         }
 
-        if (state.activeMarket !== 'ALL') filtered = filtered.filter(r => r.market === state.activeMarket);
+        if (state.activeMarket !== 'ALL') allCategoryItems = allCategoryItems.filter(r => r.market === state.activeMarket);
+
+        let filtered = state.minScoreFilter > 1
+          ? allCategoryItems.filter(r => r[sys].score >= state.minScoreFilter)
+          : [...allCategoryItems];
 
         if (state.sortOrder === 'asc') filtered.sort((a, b) => a.price - b.price);
         else if (state.sortOrder === 'desc') filtered.sort((a, b) => b.price - a.price);
@@ -1793,11 +1981,20 @@ function toggleScoreSort() {
         else filtered.sort((a, b) => b[sys].score - a[sys].score);
 
         const totalFilteredCount = filtered.length;
+        if (warnEl) {
+          if (totalFilteredCount > MAX_RENDER_ROWS) warnEl.classList.remove('hidden');
+          else warnEl.classList.add('hidden');
+        }
+
         const scoreLabel = state.minScoreFilter >= 7 ? '【🔥 ★7以上厳選】' : '';
         document.getElementById('displayCountLabel').textContent = `${scoreLabel} 表示中: ${Math.min(totalFilteredCount, MAX_RENDER_ROWS)} 件 / 全 ${totalFilteredCount} 件`;
 
         if (filtered.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="10" class="py-14 text-center text-slate-500"><p class="text-sm">該当する銘柄がありません</p></td></tr>`;
+          const hiddenCount = allCategoryItems.length;
+          const hintHtml = (state.minScoreFilter >= 7 && hiddenCount > 0)
+            ? `<p class="text-[11px] text-amber-400 mt-1.5">※ ★6以下のシグナルが ${hiddenCount} 件あります。「📋 すべて表示」を押すと確認できます。</p>`
+            : '';
+          tbody.innerHTML = `<tr><td colspan="10" class="py-14 text-center text-slate-500"><p class="text-sm">該当する銘柄がありません</p>${hintHtml}</td></tr>`;
           return;
         }
         
@@ -1815,40 +2012,101 @@ function toggleScoreSort() {
           const pos = calculatePositionSizing(item.price, sysData.stop_loss_price, sysData.category);
           let posDisplayHtml = pos.status === "OK" 
             ? `<div class="font-bold text-emerald-400 font-mono text-[13px]">${pos.initialShares}株 / ${pos.maxShares}株</div>` 
-            : `<span class="px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 text-[10px]">注文不可</span>`;
+            : `<span class="px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 text-[10px]">${escapeHtml(pos.rejectReason)}</span>`;
+
+          const consecBadge = (sysData.consecutiveDays && sysData.consecutiveDays >= 2)
+            ? `<span class="block text-[9px] text-slate-400 mt-0.5 font-mono">${sysData.consecutiveDays}日連続</span>`
+            : '';
+          const hotBadge = item.isHotSector ? `<span title="追い風HOT業種" class="ml-1">🔥</span>` : '';
+          const marginBadge = item.isMarginTradable
+            ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-500/30">貸借</span>`
+            : `<span class="px-1.5 py-0.5 rounded text-[9px] text-slate-500 bg-slate-950 border border-slate-800">現/信</span>`;
 
           tr.innerHTML = `
-            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${sysData.categoryName.split('：')[0]}</span></td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${escapeHtml(sysData.categoryName.split('：')[0])}</span>${consecBadge}</td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold">${sysData.score}</td>
-            <td class="p-3 font-mono font-bold text-white">${item.ticker}</td>
-            <td class="p-3"><div class="font-bold text-slate-100 text-sm">${item.name}</div><div class="text-[10px] text-slate-400">${item.sector}</div></td>
+            <td class="p-3 font-mono font-bold text-white">${escapeHtml(item.ticker)}</td>
+            <td class="p-3"><div class="font-bold text-slate-100 text-sm">${escapeHtml(item.name)}${hotBadge}</div><div class="text-[10px] text-slate-400">${escapeHtml(item.sector)}</div></td>
             <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
             <td class="p-3 text-right font-mono ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${item.change.toLocaleString()} (${isPlus ? '+' : ''}${item.changeRate}%)</td>
             <td class="p-3 text-right font-mono">${posDisplayHtml}</td>
             <td class="p-3 text-right font-mono text-cyan-400 font-bold">${sysData.diffRate >= 0 ? '+' : ''}${sysData.diffRate.toFixed(1)}%</td>
-            <td class="p-3 text-center whitespace-nowrap"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">${item.market}</span></td>
+            <td class="p-3 text-center whitespace-nowrap space-x-1"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">${escapeHtml(item.market)}</span>${marginBadge}</td>
             <td class="p-3 text-center whitespace-nowrap">
-              <button onclick="copyAiData('${item.ticker}', '${item.name}')" class="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded text-[10px] font-bold transition">AI抽出</button>
+              <button onclick="copyAiData('${escapeHtml(item.ticker)}', '${escapeHtml(item.name)}')" class="px-2 py-1 bg-indigo-950/80 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded text-[10px] font-bold transition cursor-pointer">AI抽出</button>
             </td>
           `;
           tbody.appendChild(tr);
         });        
       }
 
+      // 診断カルテ：スクリーナー銘柄だけでなく、条件外の保有銘柄でも診断カルテを展開する
       function openDiagnosticDialog(ticker, sys) {
-        const item = state.results.find(r => r.ticker === ticker);
-        if (!item) return;
-        const sysData = item[sys];
         const dialog = document.getElementById('diagnosticDialog');
-        document.getElementById('dialogTitle').innerHTML = `📋 診断カルテ: <span class="font-mono text-cyan-400">[${item.ticker}] ${item.name}</span>`;
-        document.getElementById('dialogContent').innerHTML = `
-          <div class="grid grid-cols-2 gap-3 border-b border-slate-800 pb-3">
-            <div><span class="text-slate-400 text-[10px] block">本日終値</span><strong class="text-white text-sm font-mono">${item.price.toLocaleString()} 円</strong></div>
-            <div><span class="text-slate-400 text-[10px] block">推奨損切価格</span><strong class="text-rose-400 text-sm font-mono">${(sysData.stop_loss_price||0).toLocaleString()} 円</strong></div>
-          </div>
-          <div class="p-3 bg-slate-950 rounded-xl text-slate-300 text-[11px] leading-relaxed">${sysData.reason}</div>
-        `;
-        dialog.showModal();
+        const item = state.results.find(r => r.ticker === ticker);
+
+        if (item && item[sys] && item[sys].category !== "NONE") {
+          const sysData = item[sys];
+          const maxBuy = calculateMaxBuyPrice(item.price, sysData.stop_loss_price, sysData.category);
+          const reasonsHtml = (sysData.score_reasons && sysData.score_reasons.length > 0)
+            ? sysData.score_reasons.map(r => `<li class="text-slate-300">${escapeHtml(r)}</li>`).join('')
+            : `<li class="text-slate-500">基準スコア（特記事項なし）</li>`;
+
+          document.getElementById('dialogTitle').innerHTML = `📋 診断カルテ: <span class="font-mono text-cyan-400">[${escapeHtml(item.ticker)}] ${escapeHtml(item.name)}</span>`;
+          document.getElementById('dialogContent').innerHTML = `
+            <div class="flex items-center justify-between bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${escapeHtml(sysData.categoryName)}</span>
+              <span class="font-mono text-amber-400 font-bold">期待度 ★${sysData.score}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 border-b border-slate-800 pb-3">
+              <div><span class="text-slate-400 text-[10px] block">本日終値</span><strong class="text-white text-sm font-mono">${item.price.toLocaleString()} 円</strong></div>
+              <div><span class="text-slate-400 text-[10px] block">指値上限目安</span><strong class="text-amber-300 text-sm font-mono">${maxBuy.toLocaleString()} 円</strong></div>
+              <div><span class="text-slate-400 text-[10px] block">推奨損切価格</span><strong class="text-rose-400 text-sm font-mono">${(sysData.stop_loss_price||0).toLocaleString()} 円</strong></div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-[11px] font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <div><span class="text-slate-500 block text-[10px]">短期線</span><span class="text-slate-200">${(sysData.ma_short||0).toLocaleString()}</span></div>
+              <div><span class="text-slate-500 block text-[10px]">長期線</span><span class="text-slate-200">${(sysData.ma_long||0).toLocaleString()}</span></div>
+              <div><span class="text-slate-500 block text-[10px]">RSI(14)</span><span class="text-cyan-300">${sysData.rsi ?? '-'}</span></div>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-xl text-slate-300 text-[11px] leading-relaxed">${escapeHtml(sysData.reason)}</div>
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">★ スコア採点内訳</span>
+              <ul class="space-y-0.5 text-[11px] pl-1">${reasonsHtml}</ul>
+            </div>
+          `;
+          dialog.showModal();
+          return;
+        }
+
+        // スクリーナー条件外の保有銘柄をクリックした場合のエグジット診断カルテ
+        const portItem = (state.portfolio || []).find(p => p.code === ticker);
+        if (portItem) {
+          const isPlus = portItem.plAmount >= 0;
+          const sign = isPlus ? '+' : '';
+          document.getElementById('dialogTitle').innerHTML = `📋 保有銘柄カルテ: <span class="font-mono text-indigo-400">[${escapeHtml(portItem.code)}] ${escapeHtml(portItem.name)}</span>`;
+          document.getElementById('dialogContent').innerHTML = `
+            <div class="flex items-center justify-between bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+              <span class="px-2 py-0.5 rounded text-[10px] ${portItem.badgeClass}">${escapeHtml(portItem.statusLabel)}</span>
+              <span class="font-mono text-xs font-bold text-slate-200">${escapeHtml(portItem.actionLabel)}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 border-b border-slate-800 pb-3">
+              <div><span class="text-slate-400 text-[10px] block">買付単価</span><strong class="text-slate-300 text-sm font-mono">${portItem.buyPrice.toLocaleString()} 円</strong></div>
+              <div><span class="text-slate-400 text-[10px] block">本日終値</span><strong class="text-white text-sm font-mono">${portItem.currentPrice.toLocaleString()} 円</strong></div>
+              <div><span class="text-slate-400 text-[10px] block">推奨逆指値</span><strong class="text-rose-400 text-sm font-mono">${(portItem.stopLossPrice||0).toLocaleString()} 円</strong></div>
+            </div>
+            <div class="grid grid-cols-4 gap-2 text-[11px] font-mono bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+              <div><span class="text-slate-500 block text-[10px]">短期線</span><span class="text-slate-200">${portItem.maShort ?? '-'}</span></div>
+              <div><span class="text-slate-500 block text-[10px]">長期線</span><span class="text-slate-200">${portItem.maLong ?? '-'}</span></div>
+              <div><span class="text-slate-500 block text-[10px]">長期乖離</span><span class="text-cyan-300">${portItem.diffRate !== undefined ? portItem.diffRate + '%' : '-'}</span></div>
+              <div><span class="text-slate-500 block text-[10px]">RSI(14)</span><span class="text-cyan-300">${portItem.rsi ?? '-'}</span></div>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center text-xs font-mono">
+              <span class="text-slate-400">含み損益 (${portItem.shares.toLocaleString()}株):</span>
+              <strong class="${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${sign}${portItem.plAmount.toLocaleString()} 円 (${sign}${portItem.plRate.toFixed(2)}%)</strong>
+            </div>
+          `;
+          dialog.showModal();
+        }
       }
 
       function closeDiagnosticDialog() { document.getElementById('diagnosticDialog').close(); }
