@@ -649,8 +649,28 @@
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
     },
     {
+      "key": "通常踏み上げ",
+      "name": "ショートスクイーズ初動",
+      "count": 0,
+      "activeWinRate": 0.0,
+      "inactiveWinRate": 50.0,
+      "contribution": 0.0,
+      "evaluation": "－ 蓄積中",
+      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+    },
+    {
       "key": "アク抜け完了",
       "name": "アク抜け完了(買残減少)",
+      "count": 0,
+      "activeWinRate": 0.0,
+      "inactiveWinRate": 50.0,
+      "contribution": 0.0,
+      "evaluation": "－ 蓄積中",
+      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+    },
+    {
+      "key": "機関アキュムレーション",
+      "name": "機関アキュムレーション",
       "count": 0,
       "activeWinRate": 0.0,
       "inactiveWinRate": 50.0,
@@ -709,8 +729,38 @@
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
     },
     {
+      "key": "長期線加速",
+      "name": "長期線トレンド加速",
+      "count": 0,
+      "activeWinRate": 0.0,
+      "inactiveWinRate": 50.0,
+      "contribution": 0.0,
+      "evaluation": "－ 蓄積中",
+      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+    },
+    {
+      "key": "大陽線反発",
+      "name": "大陽線反発",
+      "count": 0,
+      "activeWinRate": 0.0,
+      "inactiveWinRate": 50.0,
+      "contribution": 0.0,
+      "evaluation": "－ 蓄積中",
+      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+    },
+    {
       "key": "追い風業種",
       "name": "追い風HOT業種",
+      "count": 0,
+      "activeWinRate": 0.0,
+      "inactiveWinRate": 50.0,
+      "contribution": 0.0,
+      "evaluation": "－ 蓄積中",
+      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+    },
+    {
+      "key": "地合い強気",
+      "name": "地合い強気(逆行高)",
       "count": 0,
       "activeWinRate": 0.0,
       "inactiveWinRate": 50.0,
