@@ -13,7 +13,6 @@ from datetime import datetime, timedelta, timezone
 # ★ 設定パラメータ
 # ==========================================
 SYSTEM_TYPE = "mid"
-html_output_path = "index.html"
 portfolio_path = "portfolio.csv"
 data_dir = "data"
 os.makedirs(data_dir, exist_ok=True)
@@ -1837,13 +1836,6 @@ meta_info = {
 }
 safe_json_dump(meta_info, os.path.join(data_dir, "meta.json"), ensure_ascii=False)
 
-template_path = "template.html"
-if os.path.exists(template_path):
-    with open(template_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
-    with open(html_output_path, "w", encoding="utf-8") as f:
-        f.write(html_content)
-    print(f"👉 画面ファイル配置完了: {html_output_path}")
 
 print(f"\n--- データ更新およびファイル出力が完了しました ---")
 print(f"👉 出力フォルダ: {data_dir}/ (自動更新時刻：{current_time_str})")
