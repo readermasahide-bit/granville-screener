@@ -372,7 +372,6 @@ for i in range(0, len(tickers), chunk_size):
         pass
 
     missing_in_chunk = [t for t in chunk if t not in bulk_data]
-    # 大半が抜けた場合は一時的エラーとみなし、1度だけチャンク再ダウンロードを試行
     if len(missing_in_chunk) > 30:
         time.sleep(2.0)
         try:
@@ -390,7 +389,6 @@ for i in range(0, len(tickers), chunk_size):
             pass
         missing_in_chunk = [t for t in chunk if t not in bulk_data]
 
-    # 残った少数銘柄のみ、sleep付きかつ連続失敗制限付きで個別救済
     if missing_in_chunk and len(missing_in_chunk) <= 25:
         consecutive_fails = 0
         for ticker in missing_in_chunk:
@@ -1228,10 +1226,11 @@ for item in results_list:
     sector = item["sector"]
     is_hot = sector in hot_sector_names
     item["isHotSector"] = is_hot
+    # 追い風業種加点は BUY シグナルのみに適用
     if is_hot and (item.get("changeRate", 0) > 0):
         for sys_key in ["short", "mid"]:
             sys_data = item[sys_key]
-            if sys_data["category"] != "NONE":
+            if sys_data["category"].startswith("BUY"):
                 new_score = min(10, sys_data["score"] + 1)
                 sys_data["score"] = new_score
                 sys_data["stars"] = make_stars(new_score)
@@ -1247,11 +1246,12 @@ for item in results_list:
     if all_market_median <= -0.5:
         is_strong_relative = item["changeRate"] >= (all_market_median + 1.5)
 
+    # 地合い強気（逆行高）加点も BUY シグナルのみに適用
     if is_strong_relative:
         item["isStrongRelative"] = True
         for sys_key in ["short", "mid"]:
             sys_data = item[sys_key]
-            if sys_data["category"] != "NONE":
+            if sys_data["category"].startswith("BUY"):
                 new_score = min(10, sys_data["score"] + 1)
                 sys_data["score"] = new_score
                 sys_data["stars"] = make_stars(new_score)
@@ -1366,13 +1366,22 @@ if os.path.exists(portfolio_path):
 
                         prev_info = prev_portfolio_by_code.get(c_str, {})
                         prev_sl = prev_info.get("stopLossPrice", 0)
+                        prev_initial_sl = prev_info.get("initialStopLoss", 0)
                         was_stop_loss_triggered = "損切り" in prev_info.get("statusLabel", "")
 
                         if manual_sl is not None and manual_sl > 0:
                             base_sl = math.floor(manual_sl)
+                            initial_sl = math.floor(manual_sl)
                         else:
                             auto_sl = math.floor(max(recent_low20 * 0.98, buy_price * 0.925))
                             base_sl = max(auto_sl, prev_sl) if prev_sl > 0 else auto_sl
+                            if prev_initial_sl and 0 < prev_initial_sl < buy_price:
+                                initial_sl = int(prev_initial_sl)
+                            else:
+                                initial_sl = auto_sl
+
+                        if initial_sl >= buy_price:
+                            initial_sl = math.floor(buy_price * 0.95)
 
                         earnings_badge = ""
                         is_earnings_urgent = False
@@ -1479,6 +1488,7 @@ if os.path.exists(portfolio_path):
                             "plAmount": clean_val(pl_amount),
                             "plRate": clean_val(pl_rate),
                             "stopLossPrice": clean_val(active_sl),
+                            "initialStopLoss": clean_val(initial_sl),
                             "maShort": clean_val(round(ma_short_today, 1)),
                             "maLong": clean_val(round(ma_long_today, 1)),
                             "diffRate": clean_val(round(diff_ma_long, 2)),
@@ -1623,7 +1633,6 @@ for trade in shadow_trades:
                     trade["return_T10"] = round(((c10 - entry_p) / entry_p) * 100, 2)
                     trade["isCompleted"] = True
 
-        # スキップ済みログは7日でパージして肥大化防止
         if str(trade.get("entryStatus", "")).startswith("SKIPPED_") and days_count > 7:
             continue
 
@@ -1740,13 +1749,18 @@ tracker_summary = {
 
 target_factors = [
     ("特級踏み上げ", "特級ショートスクイーズ"),
+    ("通常踏み上げ", "ショートスクイーズ初動"),
     ("アク抜け完了", "アク抜け完了(買残減少)"),
+    ("機関アキュムレーション", "機関アキュムレーション"),
     ("陽線出来高急増", "陽線で出来高急増(1.5倍)"),
     ("支持線極近", "支持線極近(1.0%実体反発)"),
     ("RSIゾーン反発", "RSIゾーン反発"),
     ("RSIダイバージェンス", "強気ダイバージェンス"),
     ("Pre本発射", "Preからの本発射"),
-    ("追い風業種", "追い風HOT業種")
+    ("長期線加速", "長期線トレンド加速"),
+    ("大陽線反発", "大陽線反発"),
+    ("追い風業種", "追い風HOT業種"),
+    ("地合い強気", "地合い強気(逆行高)")
 ]
 
 trades_with_t5 = [t for t in valid_trades if "return_T5" in t]
