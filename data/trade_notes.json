@@ -1,5 +1,36 @@
 [
   {
+    "id": "3405_20261119_94352",
+    "code": "3405",
+    "name": "クラレ",
+    "inDate": "2026-11-19",
+    "outDate": "2026-11-19",
+    "regimeLabel": "⚡ 局地戦 (需給偏重相場)",
+    "marginBuy": 0,
+    "marginRatio": 1,
+    "planBuyMax": 1831,
+    "planStopLoss": 1764,
+    "planTarget": 1860,
+    "planShares": "100 株",
+    "buyPrice": 1796,
+    "sellPrice": 1852,
+    "shares": 100,
+    "plAmount": 5600,
+    "plRate": 3.12,
+    "rMultiple": 1.75,
+    "evalEntry": "○",
+    "memoEntry": "手仕舞い時記録",
+    "evalExit": "○",
+    "memoExit": "75日線を下回ったためいったん利確",
+    "notesLog": [
+      {
+        "date": "11-19",
+        "text": "レンジでドレる可能性もあるので追跡"
+      }
+    ],
+    "chartSnapshot": []
+  },
+  {
     "id": "3397_20261119_68272",
     "code": "3397",
     "name": "トリドールホールディングス",
