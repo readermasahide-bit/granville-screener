@@ -1,1 +1,33 @@
-[]
+[
+  {
+    "id": "3397_20261119_68272",
+    "code": "3397",
+    "name": "トリドールホールディングス",
+    "inDate": "2026-11-19",
+    "outDate": "2026-11-19",
+    "regimeLabel": "⚡ 局地戦 (需給偏重相場)",
+    "marginBuy": 0,
+    "marginRatio": 1,
+    "planBuyMax": 4195,
+    "planStopLoss": 3907,
+    "planTarget": 4525,
+    "planShares": "100 株",
+    "buyPrice": 4113,
+    "sellPrice": 5546,
+    "shares": 100,
+    "plAmount": 143300,
+    "plRate": 34.84,
+    "rMultiple": 6.96,
+    "evalEntry": "○",
+    "memoEntry": "手仕舞い時記録",
+    "evalExit": "△",
+    "memoExit": "十分な利幅と2日連続陰線",
+    "notesLog": [
+      {
+        "date": "11-19",
+        "text": "ラッキーな面もあったが、この価格帯ではこういった利幅が取れる可能性があることを学べた。"
+      }
+    ],
+    "chartSnapshot": []
+  }
+]
