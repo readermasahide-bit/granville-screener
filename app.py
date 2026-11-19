@@ -1312,8 +1312,10 @@ if os.path.exists(portfolio_path):
         p_cols = [c for c in df_port.columns if 'price' in str(c).lower() or '買値' in str(c) or '単価' in str(c)]
         s_cols = [c for c in df_port.columns if 'share' in str(c).lower() or '株数' in str(c) or '数量' in str(c)]
         sl_cols = [c for c in df_port.columns if 'sl' in str(c).lower() or '損切' in str(c) or 'stop' in str(c)]
+        d_cols = [c for c in df_port.columns if 'date' in str(c).lower() or '買付日' in str(c) or '登録日' in str(c)]  # ★追加
 
         sl_c = sl_cols[0] if sl_cols else None
+        d_c = d_cols[0] if d_cols else None  # ★追加
 
         if c_cols and p_cols and s_cols:
             c_c, p_c, s_c = c_cols[0], p_cols[0], s_cols[0]
@@ -1336,6 +1338,15 @@ if os.path.exists(portfolio_path):
                         m_sl_val = safe_float(row[sl_c], 0.0)
                         if m_sl_val > 0:
                             manual_sl = m_sl_val
+                    
+                    buy_date_str = ""
+                    if d_c and pd.notna(row[d_c]):
+                        raw_d = str(row[d_c]).strip()
+                        if raw_d and raw_d.lower() != "nan":
+                            try:
+                                buy_date_str = pd.to_datetime(raw_d).strftime("%Y-%m-%d")
+                            except Exception:
+                                buy_date_str = raw_d
 
                     if t_key in bulk_data and not bulk_data[t_key].empty and len(bulk_data[t_key]) >= 2:
                         df_p = bulk_data[t_key]
@@ -1483,6 +1494,7 @@ if os.path.exists(portfolio_path):
                             "name": clean_val(ticker_to_name.get(t_key, "不明")),
                             "shares": shares,
                             "buyPrice": clean_val(buy_price),
+                            "buyDate": clean_val(buy_date_str),  # ★追加
                             "currentPrice": clean_val(current_price),
                             "plAmount": clean_val(pl_amount),
                             "plRate": clean_val(pl_rate),
