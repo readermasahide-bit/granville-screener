@@ -470,6 +470,10 @@
               <label class="block text-slate-300 font-medium mb-1">保有株数 [株] <span class="text-rose-400">*</span></label>
               <input type="number" id="portInputShares" placeholder="例: 100" step="100" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500 transition">
             </div>
+            <div>
+            <label class="block text-slate-300 font-medium mb-1">買付日（初期値：本日）</label>
+            <input type="date" id="portInputDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500 transition">
+          </div>
           </div>
           <div class="pt-3 border-t border-slate-800 space-y-2.5">
             <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">🔗 GitHub連携設定（自動保存・更新用）</span>
@@ -1119,6 +1123,7 @@
         document.getElementById('portInputCode').value = '';
         document.getElementById('portInputPrice').value = '';
         document.getElementById('portInputShares').value = '100';
+        document.getElementById('portInputDate').value = getTodayJST(); // ★追加
         document.getElementById('portfolioEntryDialog').showModal();
         document.getElementById('portInputCode').focus();
       }
@@ -1153,7 +1158,7 @@
         document.getElementById('closeDisplayBuy').textContent = `${item.buyPrice.toLocaleString()} 円`;
         document.getElementById('closeDisplayShares').textContent = `${item.shares.toLocaleString()} 株`;
         document.getElementById('closeDisplaySL').textContent = `${Math.floor(initialSL).toLocaleString()} 円`;
-        document.getElementById('closeInputInDate').value = getTodayJST();
+        document.getElementById('closeInputInDate').value = item.buyDate || getTodayJST();
         document.getElementById('closeInputSellPrice').value = item.currentPrice;
         document.getElementById('closeMemoExit').value = '';
         document.getElementById('closeNotesLog').value = '';
@@ -1581,6 +1586,7 @@
         const code = normalizeTickerCode(document.getElementById('portInputCode').value).padStart(4, '0');
         const price = parseFloat(document.getElementById('portInputPrice').value);
         const shares = parseInt(document.getElementById('portInputShares').value, 10);
+        const buyDate = document.getElementById('portInputDate').value || getTodayJST();
 
         const owner = document.getElementById('ghOwnerInput').value.trim();
         const repo = document.getElementById('ghRepoInput').value.trim();
@@ -1618,7 +1624,27 @@
           if (lines.length === 0 || !lines[0].toLowerCase().includes('code')) {
             lines.unshift("code,price,shares");
           }
-          lines.push(`${code},${price},${shares}`);
+          const headerCols = lines[0].split(',').map(c => c.trim());
+          let dateIdx = headerCols.findIndex(c => c.toLowerCase().includes('date') || c.includes('買付日') || c.includes('登録日'));
+          if (dateIdx === -1) {
+            headerCols.push('date');
+            dateIdx = headerCols.length - 1;
+            lines[0] = headerCols.join(',');
+          }
+          for (let i = 1; i < lines.length; i++) {
+            const rowCols = lines[i].split(',');
+            while (rowCols.length < headerCols.length) rowCols.push('');
+            lines[i] = rowCols.join(',');
+          }
+          const codeIdx = Math.max(0, headerCols.findIndex(c => c.toLowerCase().includes('code') || c.includes('コード')));
+          const priceIdx = Math.max(1, headerCols.findIndex(c => c.toLowerCase().includes('price') || c.includes('買値') || c.includes('単価')));
+          const sharesIdx = Math.max(2, headerCols.findIndex(c => c.toLowerCase().includes('share') || c.includes('株数') || c.includes('数量')));
+          const newRow = new Array(headerCols.length).fill('');
+          newRow[codeIdx] = code;
+          newRow[priceIdx] = price;
+          newRow[sharesIdx] = shares;
+          newRow[dateIdx] = buyDate;
+          lines.push(newRow.join(','));
           const newCsvText = lines.join('\n') + '\n';
           const encodedContent = btoa(unescape(encodeURIComponent(newCsvText)));
 
