@@ -490,23 +490,31 @@
             <label class="block text-slate-300 font-medium mb-1">買付日（初期値：本日）</label>
             <input type="date" id="portInputDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500 transition">
           </div>
-          <div class="pt-3 border-t border-slate-800 space-y-2.5">
-            <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">🔗 GitHub連携設定（自動保存・更新用）</span>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-slate-400 font-medium mb-1">ユーザー名 (Owner)</label>
-                <input type="text" id="ghOwnerInput" placeholder="例: your-name" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
+          <details id="ghConfigDetails" class="pt-3 border-t border-slate-800 group">
+            <summary class="cursor-pointer select-none flex items-center justify-between text-[10px] font-bold text-slate-400 hover:text-slate-200 uppercase tracking-wider list-none [&::-webkit-details-marker]:hidden">
+              <span>🔗 GitHub連携設定（自動保存・更新用）</span>
+              <span class="text-[10px] font-normal text-slate-500">
+                <span class="group-open:hidden">▸ 開く</span>
+                <span class="hidden group-open:inline">▾ 閉じる</span>
+              </span>
+            </summary>
+            <div class="mt-2.5 space-y-2.5">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1">ユーザー名 (Owner)</label>
+                  <input type="text" id="ghOwnerInput" placeholder="例: your-name" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1">リポジトリ名 (Repo)</label>
+                  <input type="text" id="ghRepoInput" placeholder="例: granville-screener" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
+                </div>
               </div>
               <div>
-                <label class="block text-slate-400 font-medium mb-1">リポジトリ名 (Repo)</label>
-                <input type="text" id="ghRepoInput" placeholder="例: granville-screener" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
+                <label class="block text-slate-400 font-medium mb-1">Personal Access Token</label>
+                <input type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxx" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
               </div>
             </div>
-            <div>
-              <label class="block text-slate-400 font-medium mb-1">Personal Access Token</label>
-              <input type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxx" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition">
-            </div>
-          </div>
+          </details>
           <div class="pt-2 flex justify-end gap-2">
             <button type="button" onclick="closePortfolioEntryDialog()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold cursor-pointer">閉じる</button>
             <button type="submit" id="btnSubmitPortfolio" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20 cursor-pointer flex items-center gap-1.5">
@@ -1216,6 +1224,10 @@
         if (ownerEl) ownerEl.value = owner;
         if (repoEl) repoEl.value = repo;
         if (tokenEl) tokenEl.value = token;
+        const detailsEl = document.getElementById('ghConfigDetails');
+        if (detailsEl) {
+          detailsEl.open = !(owner && repo && token);
+        }
       }
 
       function openPortfolioEntryDialog() {
