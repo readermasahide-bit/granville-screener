@@ -100,8 +100,8 @@ def safe_float(val, default=0.0):
 
 # --- 前日データの読み込み ---
 prev_counts = {
-    "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0, "TOTAL_ACTIVE": 0},
-    "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0, "TOTAL_ACTIVE": 0}
+    "short": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL5_PRE": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0, "TOTAL_ACTIVE": 0},
+    "mid": {"BUY1": 0, "BUY1_PRE": 0, "BUY2": 0, "BUY2_PRE": 0, "BUY3": 0, "BUY3_PRE": 0, "BUY4": 0, "SELL5": 0, "SELL5_PRE": 0, "SELL6": 0, "SELL7": 0, "SELL7_PRE": 0, "SELL8": 0, "TOTAL": 0, "TOTAL_ACTIVE": 0}
 }
 prev_results_by_ticker = {}
 
@@ -124,7 +124,7 @@ if os.path.exists(results_json_path):
             prev_counts[sys_key]["TOTAL"] = len(prev_results)
             total_active = sum(prev_counts[sys_key].get(cat, 0) for cat in [
                 "BUY1", "BUY1_PRE", "BUY2", "BUY2_PRE", "BUY3", "BUY3_PRE", "BUY4",
-                "SELL5", "SELL6", "SELL7", "SELL7_PRE", "SELL8"
+                "SELL5", "SELL5_PRE", "SELL6", "SELL7", "SELL7_PRE", "SELL8"
             ])
             prev_counts[sys_key]["TOTAL_ACTIVE"] = total_active
         print(f" -> 前日データの読み込みに成功しました。（対象: {len(prev_results_by_ticker)} 銘柄）")
@@ -345,7 +345,7 @@ def extract_chunk_to_bulk(data, chunk_list, target_dict):
             target_dict[ticker] = cleaned
 
 
-# 3. 2段階ダウンロードパイプライン（レートリミット対策強化版）
+# 3. 2段階ダウンロードパイプライン
 bulk_data = {}
 chunk_size = 100
 
@@ -413,12 +413,14 @@ print(f"ダウンロード完了: 所要時間 {elapsed_sec/60:.1f} 分 ({elapse
 print(f"対象銘柄数: {len(tickers)} / 正常取得銘柄数: {len(bulk_data)} ({len(bulk_data)/len(tickers)*100:.1f}%)")
 print(f"==========================================")
 
-# 東証市場全体の相場レジーム判定
-print("東証全上場銘柄の騰落動向および相場レジームを完全解析中...")
+# 東証市場全体の相場レジーム判定 ＆ 全市場RS（相対的強さ）ランキング算出
+print("東証全上場銘柄の騰落動向・RSランク・相場レジームを完全解析中...")
 all_market_changes = []
 advance_count = 0
 decline_count = 0
 unchanged_count = 0
+ret_20_raw = {}
+ret_60_raw = {}
 
 for ticker, df_st in bulk_data.items():
     if df_st is not None and len(df_st) >= 2:
@@ -435,8 +437,19 @@ for ticker, df_st in bulk_data.items():
                         decline_count += 1
                     else:
                         unchanged_count += 1
+            if len(df_st) >= 21:
+                c_20 = float(df_st['Close'].iloc[-21])
+                if c_20 > 0:
+                    ret_20_raw[ticker] = ((c_today - c_20) / c_20) * 100
+            if len(df_st) >= 61:
+                c_60 = float(df_st['Close'].iloc[-61])
+                if c_60 > 0:
+                    ret_60_raw[ticker] = ((c_today - c_60) / c_60) * 100
         except Exception:
             pass
+
+rs_20_rank = (pd.Series(ret_20_raw).rank(pct=True) * 100).round(1).to_dict() if ret_20_raw else {}
+rs_60_rank = (pd.Series(ret_60_raw).rank(pct=True) * 100).round(1).to_dict() if ret_60_raw else {}
 
 total_valid_stocks = len(all_market_changes)
 all_market_median = float(pd.Series(all_market_changes).median()) if all_market_changes else 0.0
@@ -453,12 +466,12 @@ elif advance_ratio < 40.0 and all_market_median <= -0.4:
     regime_status = "RISK_OFF"
     regime_label = "🛑 警戒・買い控え (全面安リスクオフ)"
     regime_badge = "bg-rose-950/80 text-rose-300 border border-rose-500/40"
-    regime_advice = "市場の6割以上が下落。個別株が全体地合いの急落に巻き込まれやすいため、新規買いは見送るか打診極小に留め、キャッシュを守る局面です。"
+    regime_advice = "市場の6割以上が下落。全面安に巻き込まれやすいため、新規買いは打診(30〜40万)スタートを徹底し、強い逆行銘柄に絞る局面です。"
 elif 40.0 <= advance_ratio <= 60.0:
     regime_status = "SELECTIVE"
     regime_label = "🟡 個別選別 (押し目狙い)"
     regime_badge = "bg-amber-950/80 text-amber-300 border border-amber-500/40"
-    regime_advice = "市場は強弱まちまち。地合い任せの買いは避け、★7以上の高需給銘柄や支持線反発（買い3）に絞った丁寧な指値エントリーが推奨される局面です。"
+    regime_advice = "市場は強弱まちまち。★7以上の高需給銘柄や支持線反発（買い3）に絞った丁寧な指値エントリーが推奨される局面です。"
 else:
     regime_status = "DIVERGENT"
     regime_label = "⚡ 局地戦 (需給偏重相場)"
@@ -500,10 +513,34 @@ def make_stars(score_val):
 
 
 # 判定および採点ロジック関数
-def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None, tse_ticker_hist=None):
+def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_margin_tradable=False, yesterday_cat="NONE", tse_info=None, tse_ticker_hist=None, rs_20=50.0, rs_60=50.0):
     df_temp = df_temp.copy()
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
+
+    # 週足トレンド（MTF）算出（リセット前のDatetimeIndex上で計算）
+    is_weekly_up = False
+    is_weekly_down = False
+    if isinstance(df_temp.index, pd.DatetimeIndex) and len(df_temp) >= 75:
+        try:
+            df_w = df_temp['Close'].resample('W-FRI').last().dropna()
+            if len(df_w) >= 15:
+                w13 = df_w.rolling(13).mean()
+                w13_now = float(w13.iloc[-1])
+                w13_prev = float(w13.iloc[-2])
+                c_now_w = float(df_w.iloc[-1])
+                if pd.notna(w13_now) and pd.notna(w13_prev):
+                    is_weekly_up = (w13_now > w13_prev) and (c_now_w > w13_now)
+                    is_weekly_down = (w13_now < w13_prev) and (c_now_w < w13_now)
+        except Exception:
+            pass
+
+    # ATR(14) 算出
+    high_low = df_temp['High'] - df_temp['Low']
+    high_close = (df_temp['High'] - df_temp['Close'].shift(1)).abs()
+    low_close = (df_temp['Low'] - df_temp['Close'].shift(1)).abs()
+    tr_series = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    df_temp['atr14'] = tr_series.rolling(14).mean()
 
     df_temp['rsi'] = calculate_rsi(df_temp['Close'], 14)
     df_temp['short_ma'] = df_temp['Close'].rolling(window=short_window).mean()
@@ -517,7 +554,8 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
             "diffRate": 0.0, "reason": "データが不足しています。",
             "ma_short": 0.0, "ma_long": 0.0, "score": 1,
-            "stars": "★☆☆☆☆", "stop_loss_price": 0,
+            "stars": "★☆☆☆☆", "stop_loss_price": 0, "atr_pct": 0.0, "atr_sl_buy": 0,
+            "vap_warning": False, "rs_20": 50.0, "rs_60": 50.0,
             "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False,
             "score_reasons": [], "factor_keys": []
         }
@@ -543,12 +581,30 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             "badgeClass": "bg-slate-800 text-slate-500 border border-slate-700",
             "diffRate": 0.0, "reason": "移動平均値が無効です。",
             "ma_short": 0.0, "ma_long": 0.0, "score": 1,
-            "stars": "★☆☆☆☆", "stop_loss_price": 0,
+            "stars": "★☆☆☆☆", "stop_loss_price": 0, "atr_pct": 0.0, "atr_sl_buy": 0,
+            "vap_warning": False, "rs_20": 50.0, "rs_60": 50.0,
             "rsi": 50.0, "rsi_buy_reversal": False, "rsi_double_bottom": False, "rsi_divergence": False, "rsi_sell_warning": False,
             "score_reasons": [], "factor_keys": []
         }
 
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
+
+    # ATR% & 売買代金 & 価格帯別出来高(VAP)
+    atr14_val = float(today['atr14']) if pd.notna(today['atr14']) else (price_today * 0.025)
+    atr_pct = round((atr14_val / price_today) * 100, 2) if price_today > 0 else 0.0
+    atr_sl_buy = math.floor(max(1.0, price_today - atr14_val * 1.5))
+
+    trading_val_series = df_temp['Close'] * df_temp['Volume']
+    val_ma25 = float(trading_val_series.iloc[-26:-1].mean()) if len(df_temp) >= 26 else float(trading_val_series.mean())
+
+    df_vap = df_temp.tail(120)
+    total_vap_vol = float(df_vap['Volume'].sum())
+    above_vap_vol = float(df_vap[df_vap['Close'] > price_today * 1.01]['Volume'].sum())
+    above_vap_ratio = (above_vap_vol / total_vap_vol * 100) if total_vap_vol > 0 else 50.0
+    wall_vap_vol = float(df_vap[(df_vap['Close'] > price_today * 1.01) & (df_vap['Close'] <= price_today * 1.12)]['Volume'].sum())
+    wall_vap_ratio = (wall_vap_vol / total_vap_vol * 100) if total_vap_vol > 0 else 0.0
+    has_vap_wall = wall_vap_ratio >= 35.0
+    is_vap_vacuum = above_vap_ratio < 25.0
 
     is_yang_candle = price_today > open_today
     is_yin_candle = price_today < open_today
@@ -600,24 +656,25 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     price_surge_ratio = max_price_40d / min_price_40d if min_price_40d > 0 else 1.0
     is_surged_stock = price_surge_ratio >= 1.50
 
+    # 過熱売り(SELL8)閾値も実戦的に適正化
     warning_suffix = ""
     if market_type == "東Ｐ":
         if is_surged_stock:
             oversold_threshold = -15.0 if long_window <= 25 else -20.0
-            overbought_threshold = 18.0 if long_window <= 25 else 22.0
+            overbought_threshold = 14.0 if long_window <= 25 else 17.0
             warning_suffix = " (⚠️直近急騰につき警戒基準を適用)"
         else:
             oversold_threshold = -8.0 if long_window <= 25 else -12.0
-            overbought_threshold = 12.0 if long_window <= 25 else 16.0
+            overbought_threshold = 10.0 if long_window <= 25 else 13.0
     elif market_type == "東Ｓ":
         oversold_threshold = -12.0 if long_window <= 25 else -18.0
-        overbought_threshold = 18.0 if long_window <= 25 else 22.0
+        overbought_threshold = 14.0 if long_window <= 25 else 17.0
     elif market_type == "東Ｇ":
         oversold_threshold = -15.0 if long_window <= 25 else -20.0
-        overbought_threshold = 20.0 if long_window <= 25 else 25.0
+        overbought_threshold = 16.0 if long_window <= 25 else 20.0
     else:
         oversold_threshold = -10.0 if long_window <= 25 else -15.0
-        overbought_threshold = 15.0 if long_window <= 25 else 20.0
+        overbought_threshold = 12.0 if long_window <= 25 else 16.0
 
     recent_volumes = df_temp['Volume'].iloc[-26:-1]
     vol_ma25 = recent_volumes.mean() if len(recent_volumes) > 0 else 0
@@ -642,10 +699,17 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     long_ma_3d_ago = df_temp.iloc[-4]['long_ma']
     long_ma_slope_3d = ((long_ma_today - long_ma_3d_ago) / long_ma_3d_ago) * 100 if long_ma_3d_ago > 0 else 0.0
 
+    long_ma_5d_ago = df_temp.iloc[-6]['long_ma']
+    long_ma_10d_ago = df_temp.iloc[-11]['long_ma']
+    long_ma_15d_ago = df_temp.iloc[-16]['long_ma']
+    slope_5d_curr = ((long_ma_today - long_ma_5d_ago) / long_ma_5d_ago) * 100 if long_ma_5d_ago > 0 else 0.0
+    slope_5d_prev = ((long_ma_10d_ago - long_ma_15d_ago) / long_ma_15d_ago) * 100 if long_ma_15d_ago > 0 else 0.0
+
     is_long_ma_flat_or_rising = (long_ma_today > long_ma_yesterday) or (long_ma_slope_3d >= -0.2)
     is_long_ma_rising = (long_ma_today > long_ma_yesterday) and (long_ma_slope_3d > 0.0)
     is_long_ma_flat_or_falling = (long_ma_today < long_ma_yesterday) or (long_ma_slope_3d <= 0.2)
     is_long_ma_falling = (long_ma_today < long_ma_yesterday) and (long_ma_slope_3d < 0.0)
+    is_long_ma_slowing_or_falling = is_long_ma_flat_or_falling or ((slope_5d_curr < slope_5d_prev) and (slope_5d_curr <= 0.5))
 
     price_crossed_above = (price_yesterday < long_ma_yesterday) and (price_today >= long_ma_today)
     gc_occurred = (short_ma_yesterday < long_ma_yesterday) and (short_ma_today >= long_ma_today)
@@ -659,7 +723,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         is_long_bottoming_past = (price_below_count_past >= lookback_period * 0.8)
 
         price_above_count_past = (df_temp.iloc[-lookback_period-offset-1:-offset-1]['Close'] > df_temp.iloc[-lookback_period-offset-1:-offset-1]['long_ma']).sum()
-        is_long_topping_past = (price_above_count_past >= lookback_period * 0.8)
+        is_long_topping_past = (price_above_count_past >= lookback_period * 0.75)
     else:
         is_long_bottoming_past = False
         is_long_topping_past = False
@@ -756,7 +820,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             badge_class = "bg-amber-600/10 text-amber-400 border border-amber-500/20"
             reason = f"長期の底練りから脱却後の最初の押し目で、長期線の支持線付近まで十分に引き付けた状態です。"
 
-    # 信用売りシグナル判定
+    # 信用売りシグナル判定（遅行縛り緩和＆SELL5_PRE追加）
     if category == "NONE" and is_margin_tradable:
         if diff_rate >= overbought_threshold and is_long_ma_rising and (is_yin_candle or is_price_down):
             category = "SELL8"
@@ -765,31 +829,37 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
             reason = f"上昇中の長期線から上方に異常なほど急騰乖離({diff_rate:.1f}%)。本日天井反落を確認しました。"
 
         price_above_count = (df_temp.iloc[-lookback_period-1:-1]['Close'] > df_temp.iloc[-lookback_period-1:-1]['long_ma']).sum()
-        is_long_topping = price_above_count >= (lookback_period * 0.7)
+        is_long_topping = price_above_count >= (lookback_period * 0.65)
         past_min_diff = ((df_temp.iloc[-lookback_period-1:-1]['Close'] - df_temp.iloc[-lookback_period-1:-1]['long_ma']) / df_temp.iloc[-lookback_period-1:-1]['long_ma'] * 100).min()
-        is_not_range_bound_sell = past_min_diff > -5.0
+        is_not_range_bound_sell = past_min_diff > -6.0
         short_long_diff_sell = ((short_ma_today - long_ma_today) / long_ma_today) * 100
-        is_trend_falling_entry = short_long_diff_sell <= 2.0
+        is_trend_falling_entry = short_long_diff_sell <= 6.0
+        is_resting_above_ma_sell = 0.0 < diff_rate <= 1.5
 
-        if category == "NONE" and is_long_ma_flat_or_falling and is_long_topping and is_not_range_bound_sell and is_trend_falling_entry:
-            if (price_crossed_below or dc_occurred) and (diff_rate >= -5.0):
+        if category == "NONE" and is_long_ma_slowing_or_falling and is_long_topping and is_not_range_bound_sell and is_trend_falling_entry:
+            if ((price_crossed_below and (is_yin_candle or is_price_down)) or dc_occurred) and (diff_rate >= -6.0):
                 category = "SELL5"
                 category_name = "売り5：新規売り"
                 badge_class = "bg-rose-500/15 text-rose-300 border border-rose-500/30"
-                cross_type_sell = "デッドクロス" if dc_occurred else "価格の割り込み"
-                reason = f"高値圏・上昇トレンドを経て、横這い〜下降傾向の長期線に対し本日{cross_type_sell}が発生。下落トレンド入りの初動です。"
+                cross_type_sell = "デッドクロス" if dc_occurred else "長期線の割り込み"
+                reason = f"高値圏を経て、勢い鈍化〜下降中の長期線に対し本日{cross_type_sell}が発生。下落トレンド入りの初動です。"
+            elif is_resting_above_ma_sell and (is_yin_candle or is_price_down):
+                category = "SELL5_PRE"
+                category_name = "売り5-Pre：割込前夜仕込み"
+                badge_class = "bg-rose-900/40 text-rose-300 border border-rose-500/20"
+                reason = f"高値圏を経て長期線直上まで失速。本日陰線・反落を見せており、下抜け直前の弱気仕込み状態です。"
 
         above_count_15d = (df_temp.iloc[-16:-1]['Close'] > df_temp.iloc[-16:-1]['long_ma']).sum()
-        is_temp_pump = 1 <= above_count_15d <= 3
+        is_temp_pump = 1 <= above_count_15d <= 5
         was_below_recently = (df_temp.iloc[-21:-1]['Close'] <= df_temp.iloc[-21:-1]['long_ma']).any()
         is_initial_pump_crossed = is_long_topping_past and was_below_recently and price_crossed_below
 
-        if category == "NONE" and (diff_rate >= -5.0):
-            if price_crossed_below and is_long_ma_falling and is_temp_pump:
+        if category == "NONE" and (diff_rate >= -6.0):
+            if price_crossed_below and is_long_ma_flat_or_falling and is_temp_pump:
                 category = "SELL6"
                 category_name = "売り6：再下抜け"
                 badge_class = "bg-orange-500/15 text-orange-300 border border-orange-500/30"
-                reason = f"下降トレンド中、長期線をわずか数日上抜けるダマシの上昇後、本日急激に割り込んで下落トレンドに復帰しました。"
+                reason = f"下降トレンド中、長期線を一時上抜けるダマシの上昇後、本日再び割り込んで下落トレンドに復帰しました。"
             elif is_long_ma_flat_or_falling and is_initial_pump_crossed:
                 category = "SELL6"
                 category_name = "売り6：初戻り(再下抜け)"
@@ -797,21 +867,21 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 reason = f"天井圏から脱却後、最初の戻りで長期線を一時上抜け、本日再び割り込んで下落トレンドを再開しました。"
 
         min_diff_15d = ((df_temp.iloc[-16:-1]['Close'] - df_temp.iloc[-16:-1]['long_ma']) / df_temp.iloc[-16:-1]['long_ma'] * 100).min()
-        has_dropped_deep = min_diff_15d <= -4.0
-        is_close_under_ma = -3.5 <= diff_rate < 0.0
+        has_dropped_deep = min_diff_15d <= -2.5
+        is_close_under_ma = -4.0 <= diff_rate <= 0.5
         is_rebound_fall = is_yin_candle and is_price_down
-        not_crossed_above_recent = (df_temp.iloc[-6:-1]['Close'] <= df_temp.iloc[-6:-1]['long_ma']).all()
-        is_resting_under_ma_sell = -1.5 <= diff_rate < 0.0
+        not_crossed_above_recent = (df_temp.iloc[-6:-1]['Close'] <= df_temp.iloc[-6:-1]['long_ma'] * 1.005).all()
+        is_resting_under_ma_sell = -2.0 <= diff_rate <= 0.0
 
         is_initial_pump_rebound = is_long_topping_past and was_below_recently and is_close_under_ma and is_rebound_fall and not_crossed_above_recent
         is_initial_pump_resting = is_long_topping_past and was_below_recently and is_resting_under_ma_sell and not_crossed_above_recent
 
-        if category == "NONE" and not_crossed_above_recent and is_long_ma_falling:
+        if category == "NONE" and not_crossed_above_recent and is_long_ma_flat_or_falling:
             if has_dropped_deep and is_close_under_ma and is_rebound_fall:
                 category = "SELL7"
                 category_name = "売り7：戻り売り"
                 badge_class = "bg-red-600/15 text-red-400 border border-red-500/30"
-                reason = f"下向き長期線に頭を押さえられて戻り天井を形成。教科書通りの綺麗な陰線反落を観測しました。"
+                reason = f"下向き〜横ばい長期線に頭を押さえられて戻り天井を形成。陰線反落を観測しました。"
             elif is_initial_pump_rebound:
                 category = "SELL7"
                 category_name = "売り7：初戻り(抵抗線反落)"
@@ -839,7 +909,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         stop_loss_price = math.floor(long_ma_today * 0.98)
     elif category == "BUY4":
         stop_loss_price = math.floor(low_today * 0.98)
-    elif category == "SELL5":
+    elif category in ["SELL5", "SELL5_PRE"]:
         high_20d = float(df_temp['High'].tail(20).max())
         stop_loss_price = math.ceil(high_20d * 1.02)
     elif category == "SELL6":
@@ -855,6 +925,23 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     factor_keys = []
 
     if category != "NONE":
+        # 検証用共通タグ（減点なし）
+        if atr_pct < 1.5:
+            factor_keys.append("ATR低(<1.5%)")
+        elif atr_pct <= 4.0:
+            factor_keys.append("ATR中(1.5-4.0%)")
+        else:
+            factor_keys.append("ATR高(>4.0%)")
+
+        if val_ma25 < 100_000_000:
+            factor_keys.append("代金1億未満")
+        elif val_ma25 < 500_000_000:
+            factor_keys.append("代金1-5億")
+        elif val_ma25 < 3_000_000_000:
+            factor_keys.append("代金5-30億")
+        else:
+            factor_keys.append("代金30億以上")
+
         if ticker in earnings_dates:
             e_date = earnings_dates[ticker]
             delta_days = (e_date - today_date).days
@@ -882,6 +969,25 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         jsf_ratio = m_info['ratio']
 
         if category.startswith("BUY"):
+            # 順張り押し目（BUY2, BUY3）の補助エンジン加点（週足・RS）
+            if category in ["BUY2", "BUY2_PRE", "BUY3", "BUY3_PRE"]:
+                if is_weekly_up:
+                    score += 1
+                    score_reasons.append("📅 週足上昇同調(13週線上向き): +1")
+                    factor_keys.append("週足上昇同調")
+                if rs_60 >= 75.0 and rs_20 >= 65.0:
+                    score += 1
+                    score_reasons.append(f"👑 市場リーダー株(RS60:{rs_60:.0f}位/RS20:{rs_20:.0f}位): +1")
+                    factor_keys.append("市場リーダーRS上位")
+
+            if is_vap_vacuum:
+                score += 1
+                score_reasons.append(f"🚀 上値真空地帯(頭上出来高{above_vap_ratio:.0f}%): +1")
+                factor_keys.append("上値真空地帯")
+            elif has_vap_wall:
+                score_reasons.append(f"🧱 頭上シコリ注意(直上に過去出来高{wall_vap_ratio:.0f}%・減点なし)")
+                factor_keys.append("頭上シコリ注意")
+
             if category in ["BUY1", "BUY1_PRE", "BUY3", "BUY3_PRE"]:
                 if (diff_buy < 0 or is_multi_day_buy_decrease) and (is_yang_candle or is_price_up):
                     score += 1
@@ -940,9 +1046,9 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                     score_reasons.append("🔄 RSIゾーン反発: +1")
                     factor_keys.append("RSIゾーン反発")
 
-            if volume_today <= 10000:
+            if val_ma25 < 20_000_000:
                 score -= 1
-                score_reasons.append("⚠️ 流動性極低(1万株以下): -1")
+                score_reasons.append(f"⚠️ 流動性極低(平均売買代金{val_ma25/10000:,.0f}万円): -1")
                 factor_keys.append("流動性極低")
 
             if vol_ratio >= 1.5:
@@ -995,6 +1101,32 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                     score -= 1
                     score_reasons.append("🕯️ 反発実体極小: -1")
         else:
+            # 売り専用加点ロジック（BUYと対称な合理的評価）
+            if category in ["SELL6", "SELL7", "SELL7_PRE"] and is_weekly_down:
+                score += 1
+                score_reasons.append("📅 週足下降同調(13週線下向き): +1")
+                factor_keys.append("週足下降同調")
+
+            if has_vap_wall and is_yin_candle:
+                score += 1
+                score_reasons.append(f"🧱 頭上シコリ天井(戻り売り壁{wall_vap_ratio:.0f}%): +1")
+                factor_keys.append("頭上シコリ天井")
+
+            if candle_body_pct <= -1.5 or (upper_shadow_pct >= 40.0 and is_price_down):
+                score += 1
+                score_reasons.append("🕯️ 大陰線/上髭天井反落: +1")
+                factor_keys.append("大陰線・上髭天井")
+
+            if rs_20 <= 25.0:
+                score += 1
+                score_reasons.append(f"📉 市場劣後株(RS20下位{rs_20:.0f}%): +1")
+                factor_keys.append("市場劣後RS下位")
+
+            if is_rsi_sell_warning:
+                score += 1
+                score_reasons.append("🔥 RSI天井圏反落: +1")
+                factor_keys.append("RSI天井反落")
+
             if (jsf_ratio >= 5.0 or tse_buy_days >= 2.5) and is_yin_candle and is_price_down:
                 score += 1
                 score_reasons.append("📉 需給完全合致(買長＆シコり玉過多の投げ連鎖初動): +1")
@@ -1005,7 +1137,7 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score_reasons.append("⚠️ 下値に空売り買い戻し圧力(踏み上げ警戒): -1")
                 factor_keys.append("空売り買戻圧力")
 
-            if (yesterday_cat == "SELL7_PRE") and (category == "SELL7"):
+            if (yesterday_cat == "SELL7_PRE" and category == "SELL7") or (yesterday_cat == "SELL5_PRE" and category == "SELL5"):
                 score += 1
                 score_reasons.append("🚀 パワー充填からの本発射: +1")
                 factor_keys.append("Pre本発射")
@@ -1014,9 +1146,9 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score += 1
                 score_reasons.append("📊 陰線で出来高急増(売り圧力): +1")
                 factor_keys.append("陰線出来高急増")
-            if volume_today <= 10000:
+            if val_ma25 < 20_000_000:
                 score -= 1
-                score_reasons.append("⚠️ 流動性極低: -1")
+                score_reasons.append(f"⚠️ 流動性極低(平均売買代金{val_ma25/10000:,.0f}万円): -1")
                 factor_keys.append("流動性極低")
             if category in ["SELL7", "SELL7_PRE"] and abs(diff_rate) <= 1.0 and is_yin_candle:
                 score += 1
@@ -1036,6 +1168,11 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         "score": clean_val(int(score)),
         "stars": clean_val(make_stars(score)),
         "stop_loss_price": clean_val(int(stop_loss_price)),
+        "atr_pct": clean_val(atr_pct),
+        "atr_sl_buy": clean_val(int(atr_sl_buy)),
+        "vap_warning": bool(has_vap_wall),
+        "rs_20": clean_val(rs_20),
+        "rs_60": clean_val(rs_60),
         "rsi": clean_val(round(rsi_today, 1)),
         "rsi_sell_warning": bool(is_rsi_sell_warning),
         "rsi_buy_reversal": bool(is_rsi_buy_reversal),
@@ -1070,8 +1207,9 @@ for ticker, df_stock in bulk_data.items():
         change_rate = (change / price_yesterday) * 100 if price_yesterday > 0 else 0.0
 
         volume_today = float(today['Volume'])
-        is_low_volume = volume_today <= 10000
+        is_low_volume = (price_today * volume_today) < 20_000_000
         yesterday_low = float(yesterday['Low'])
+        yesterday_high = float(yesterday['High'])
 
         market_raw = ticker_to_market.get(ticker, "")
         if "プライム" in market_raw:
@@ -1097,8 +1235,11 @@ for ticker, df_stock in bulk_data.items():
         yes_cat_short = yesterday_data.get("short", {}).get("category", "NONE") if yesterday_data else "NONE"
         yes_cat_mid = yesterday_data.get("mid", {}).get("category", "NONE") if yesterday_data else "NONE"
 
-        short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable, yes_cat_short, tse_info, tse_ticker_hist)
-        mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable, yes_cat_mid, tse_info, tse_ticker_hist)
+        rs20_val = float(rs_20_rank.get(ticker, 50.0))
+        rs60_val = float(rs_60_rank.get(ticker, 50.0))
+
+        short_res = evaluate_logic(ticker, df_stock, 5, 25, market_short, is_shortable, yes_cat_short, tse_info, tse_ticker_hist, rs20_val, rs60_val)
+        mid_res = evaluate_logic(ticker, df_stock, 25, 75, market_short, is_shortable, yes_cat_mid, tse_info, tse_ticker_hist, rs20_val, rs60_val)
 
         if short_res["category"] == "NONE" and mid_res["category"] == "NONE":
             continue
@@ -1143,6 +1284,7 @@ for ticker, df_stock in bulk_data.items():
             "isStrongRelative": False,
             "isMarginTradable": bool(is_shortable),
             "yesterdayLow": clean_val(yesterday_low),
+            "yesterdayHigh": clean_val(yesterday_high),
             "short": short_res,
             "mid": mid_res
         }
@@ -1225,7 +1367,6 @@ for item in results_list:
     sector = item["sector"]
     is_hot = sector in hot_sector_names
     item["isHotSector"] = is_hot
-    # 追い風業種加点は BUY シグナルのみに適用
     if is_hot and (item.get("changeRate", 0) > 0):
         for sys_key in ["short", "mid"]:
             sys_data = item[sys_key]
@@ -1245,7 +1386,6 @@ for item in results_list:
     if all_market_median <= -0.5:
         is_strong_relative = item["changeRate"] >= (all_market_median + 1.5)
 
-    # 地合い強気（逆行高）加点も BUY シグナルのみに適用
     if is_strong_relative:
         item["isStrongRelative"] = True
         for sys_key in ["short", "mid"]:
@@ -1260,6 +1400,23 @@ for item in results_list:
                 if "factor_keys" not in sys_data or sys_data["factor_keys"] is None:
                     sys_data["factor_keys"] = []
                 sys_data["factor_keys"].append("地合い強気")
+
+# 逆行安（地合いプラスの日にマイナス引け）は売りシグナルの補強
+if all_market_median >= 0.4:
+    for item in results_list:
+        if item["changeRate"] <= (all_market_median - 1.5):
+            for sys_key in ["short", "mid"]:
+                sys_data = item[sys_key]
+                if sys_data["category"].startswith("SELL"):
+                    new_score = min(10, sys_data["score"] + 1)
+                    sys_data["score"] = new_score
+                    sys_data["stars"] = make_stars(new_score)
+                    if "score_reasons" not in sys_data or sys_data["score_reasons"] is None:
+                        sys_data["score_reasons"] = []
+                    sys_data["score_reasons"].append("🌩️ 地合い逆行安: +1")
+                    if "factor_keys" not in sys_data or sys_data["factor_keys"] is None:
+                        sys_data["factor_keys"] = []
+                    sys_data["factor_keys"].append("地合い逆行安")
 
 # 履歴データ分割出力 (100分割シャーディング)
 print("AI相談用の履歴データを分割出力しています...")
@@ -1302,8 +1459,8 @@ for shard_key, data_dict in shards.items():
         safe_json_dump(data_dict, file_path, ensure_ascii=True, separators=(',', ':'))
 print(" -> AI履歴データの出力を完了しました")
 
-# 保有銘柄ポートフォリオ判定
-print("保有銘柄ポートフォリオのエグジット判定を計算中...")
+# 保有銘柄ポートフォリオ判定（4フェーズ・エグジット＆ラチェットSL）
+print("保有銘柄ポートフォリオの4フェーズ・エグジット判定を計算中...")
 portfolio_records = []
 if os.path.exists(portfolio_path):
     try:
@@ -1312,10 +1469,12 @@ if os.path.exists(portfolio_path):
         p_cols = [c for c in df_port.columns if 'price' in str(c).lower() or '買値' in str(c) or '単価' in str(c)]
         s_cols = [c for c in df_port.columns if 'share' in str(c).lower() or '株数' in str(c) or '数量' in str(c)]
         sl_cols = [c for c in df_port.columns if 'sl' in str(c).lower() or '損切' in str(c) or 'stop' in str(c)]
-        d_cols = [c for c in df_port.columns if 'date' in str(c).lower() or '買付日' in str(c) or '登録日' in str(c)]  # ★追加
+        d_cols = [c for c in df_port.columns if 'date' in str(c).lower() or '買付日' in str(c) or '登録日' in str(c)]
+        ph_cols = [c for c in df_port.columns if 'phase' in str(c).lower() or '状態' in str(c)]
 
         sl_c = sl_cols[0] if sl_cols else None
-        d_c = d_cols[0] if d_cols else None  # ★追加
+        d_c = d_cols[0] if d_cols else None
+        ph_c = ph_cols[0] if ph_cols else None
 
         if c_cols and p_cols and s_cols:
             c_c, p_c, s_c = c_cols[0], p_cols[0], s_cols[0]
@@ -1338,7 +1497,7 @@ if os.path.exists(portfolio_path):
                         m_sl_val = safe_float(row[sl_c], 0.0)
                         if m_sl_val > 0:
                             manual_sl = m_sl_val
-                    
+
                     buy_date_str = ""
                     if d_c and pd.notna(row[d_c]):
                         raw_d = str(row[d_c]).strip()
@@ -1347,6 +1506,12 @@ if os.path.exists(portfolio_path):
                                 buy_date_str = pd.to_datetime(raw_d).strftime("%Y-%m-%d")
                             except Exception:
                                 buy_date_str = raw_d
+
+                    phase_str = "TRIAL"
+                    if ph_c and pd.notna(row[ph_c]):
+                        raw_ph = str(row[ph_c]).strip().upper()
+                        if raw_ph in ["TRIAL", "FULL", "HALF_TP"]:
+                            phase_str = raw_ph
 
                     if t_key in bulk_data and not bulk_data[t_key].empty and len(bulk_data[t_key]) >= 2:
                         df_p = bulk_data[t_key]
@@ -1361,7 +1526,6 @@ if os.path.exists(portfolio_path):
                         pl_rate = round(((current_price - buy_price) / buy_price) * 100, 2)
 
                         ma_short_today = float(df_p['Close'].tail(short_window).mean())
-                        ma_short_yesterday = float(df_p['Close'].iloc[-short_window-1:-1].mean()) if len(df_p) >= short_window + 1 else ma_short_today
                         ma_long_today = float(df_p['Close'].tail(long_window).mean()) if len(df_p) >= long_window else ma_short_today
                         ma_long_yesterday = float(df_p['Close'].iloc[-long_window-1:-1].mean()) if len(df_p) >= long_window + 1 else ma_long_today
 
@@ -1373,6 +1537,20 @@ if os.path.exists(portfolio_path):
                         recent_low20 = float(df_p['Low'].tail(20).min())
                         recent_low10 = float(df_p['Low'].tail(10).min())
                         recent_low5 = float(df_p['Low'].tail(5).min())
+
+                        high_40d = float(df_p['High'].iloc[-min(len(df_p), 41):-1].max()) if len(df_p) >= 2 else current_price
+                        high_20d = float(df_p['High'].iloc[-min(len(df_p), 21):-1].max()) if len(df_p) >= 2 else current_price
+                        high_5d = float(df_p['High'].iloc[-min(len(df_p), 6):-1].max()) if len(df_p) >= 2 else current_price
+
+                        vol_5d_avg = float(df_p['Volume'].tail(5).mean())
+                        vol_25d_avg = float(df_p['Volume'].tail(25).mean())
+
+                        days_held = 0
+                        if buy_date_str:
+                            try:
+                                days_held = int((df_p.index > pd.to_datetime(buy_date_str)).sum())
+                            except Exception:
+                                days_held = 0
 
                         prev_info = prev_portfolio_by_code.get(c_str, {})
                         prev_sl = prev_info.get("stopLossPrice", 0)
@@ -1412,23 +1590,34 @@ if os.path.exists(portfolio_path):
                                 break
 
                         current_sell_cat = active_sys_res.get("category", "NONE") if active_sys_res else "NONE"
-                        is_system_sell = current_sell_cat.startswith("SELL")
+                        is_system_sell_confirmed = current_sell_cat in ["SELL5", "SELL6", "SELL7", "SELL7_PRE", "SELL8"]
+                        is_sell5_pre = (current_sell_cat == "SELL5_PRE")
 
                         is_crossed_below_long_ma = (yesterday_price >= ma_long_yesterday) and (current_price < ma_long_today)
                         is_yin = current_price < open_p
 
+                        # 標準500万/16%(80万)基準での打診判定（投資額<=48万 かつ 買値<=4000円で分割余地あり）
+                        invest_amount = buy_price * shares
+                        is_trial_size = (phase_str == "TRIAL") and (invest_amount <= 480000) and (buy_price <= 4000)
+
+                        # 半分利確ライン（相場環境別）
+                        tp_target = 12.0 if regime_status == "BUY_AGGRESSIVE" else (7.0 if regime_status == "RISK_OFF" else 10.0)
+
                         status_label = "🟢 ホールド"
-                        action_label = f"推奨逆指値: {base_sl:,} 円"
-                        badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
                         active_sl = base_sl
+                        action_label = f"推奨逆指値: {active_sl:,} 円"
+                        badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
 
                         is_zombie_loss = was_stop_loss_triggered and (current_price < buy_price)
+
+                        # 優先1: 損切り執行
                         if current_price <= base_sl or pl_rate <= -7.5 or is_zombie_loss:
                             status_label = "🛑 損切り執行"
                             action_label = "【現在値で即撤退】"
                             badge_class = "bg-rose-950/80 text-rose-300 border border-rose-500 animate-pulse font-bold"
 
-                        elif is_system_sell:
+                        # 優先2: グランビル売り確定シグナル
+                        elif is_system_sell_confirmed:
                             if current_sell_cat == "SELL5":
                                 status_label = "🚨 売り5 (新規)"
                                 action_label = "【トレンド転換につき決済推奨】"
@@ -1446,43 +1635,90 @@ if os.path.exists(portfolio_path):
                                 action_label = "【大天井過熱につき全利確】"
                             badge_class = "bg-rose-950/80 text-rose-300 border border-rose-500 font-bold"
 
+                        # 優先3: 大天井利確
                         elif diff_ma_long >= 14.0 and is_yin and pl_rate >= 8.0:
                             status_label = "🏆 大天井利確"
                             action_label = "【全利確推奨】"
                             badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
 
+                        # 優先4: 長期線割れトレンド終了
                         elif pl_rate >= 2.0 and is_crossed_below_long_ma and buy_price >= ma_long_yesterday:
                             status_label = "🏁 トレンド終了"
                             action_label = "【長期線割れ・全決済】"
                             badge_class = "bg-purple-950/80 text-purple-300 border border-purple-500 font-bold"
 
-                        elif pl_rate >= 8.0:
-                            if current_price < ma_short_today and yesterday_price >= ma_short_yesterday:
-                                status_label = "✨ 先行利確"
-                                action_label = "【短期線割れ成行決済】"
-                                badge_class = "bg-indigo-950/80 text-indigo-300 border border-indigo-500 font-bold"
-                            else:
-                                active_sl = math.floor(max(buy_price * 1.04, recent_low5 * 0.995, base_sl))
-                                status_label = "🏆 利益確保"
-                                action_label = f"【逆指値を {active_sl:,} 円へ引上】"
-                                badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
+                        # 優先5 (フェーズ3): HALF_TP (半分利確済み・最大化トレーリング)
+                        elif phase_str == "HALF_TP":
+                            active_sl = max(
+                                math.floor(buy_price * 1.02),
+                                math.floor(recent_low10 * 0.99),
+                                math.floor(ma_long_today * 0.99),
+                                base_sl
+                            )
+                            if prev_sl > 0:
+                                active_sl = max(active_sl, int(prev_sl))
+                            status_label = "💎 利益最大化中"
+                            action_label = f"トレーリングSL: {active_sl:,} 円 (75日線割れ迄保持)"
+                            badge_class = "bg-cyan-950/80 text-cyan-300 border border-cyan-500 font-bold"
 
+                        # 優先6 (フェーズ2): 半分利確推奨
+                        elif (pl_rate >= tp_target) or (pl_rate >= 6.0 and current_price >= high_40d * 0.995 and regime_status != "BUY_AGGRESSIVE") or (pl_rate >= 5.0 and current_price >= high_20d * 0.98 and is_yin):
+                            active_sl = max(math.floor(buy_price * 1.02), math.floor(recent_low5 * 0.995), base_sl)
+                            if prev_sl > 0:
+                                active_sl = max(active_sl, int(prev_sl))
+                            status_label = "✂️ 半分利確推奨"
+                            action_label = f"【半分利確＆SLを {active_sl:,} 円へ引上】"
+                            badge_class = "bg-amber-950/80 text-amber-300 border border-amber-500 font-bold"
+
+                        # 優先7 (フェーズ1): 追撃買い増し推奨（打診サイズのみ・初動+3.5〜+7.5%ブレイク）
+                        elif is_trial_size and (regime_status != "RISK_OFF") and (3.5 <= pl_rate <= 7.5) and (not is_yin) and (current_price > high_5d):
+                            active_sl = max(math.floor(buy_price * 1.005), math.floor(recent_low5 * 0.995), base_sl)
+                            if prev_sl > 0:
+                                active_sl = max(active_sl, int(prev_sl))
+                            est_avg = (buy_price + current_price) / 2.0
+                            post_add_sl = max(math.floor(est_avg * 0.98), math.floor(recent_low5 * 0.99), active_sl)
+                            status_label = "🚀 追撃買い増し可"
+                            action_label = f"【本玉追加可 / 買増後SL: {post_add_sl:,} 円 (現SL: {active_sl:,} 円)】"
+                            badge_class = "bg-indigo-950/80 text-indigo-300 border border-indigo-400 font-bold"
+
+                        # 優先8 (フェーズ0+): 安全圏 / 停滞警告 / 巡航 / ホールド
                         elif pl_rate >= 5.0 and recent_low5 >= buy_price:
-                            active_sl = math.floor(max(buy_price * 1.005, recent_low5 * 0.995, base_sl))
+                            active_sl = max(math.floor(buy_price * 1.005), math.floor(recent_low5 * 0.995), base_sl)
+                            if prev_sl > 0:
+                                active_sl = max(active_sl, int(prev_sl))
                             status_label = "🛡️ 安全圏"
                             action_label = f"【逆指値を {active_sl:,} 円に変更】"
                             badge_class = "bg-sky-950/80 text-sky-300 border border-sky-500 font-bold"
 
+                        elif days_held >= 10 and pl_rate < 1.5 and current_price < ma_short_today and (vol_25d_avg > 0 and vol_5d_avg < vol_25d_avg * 0.7):
+                            if prev_sl > 0:
+                                active_sl = max(active_sl, int(prev_sl))
+                            status_label = "⏳ 停滞・入替検討"
+                            action_label = f"({days_held}営業日停滞) 推奨逆指値: {active_sl:,} 円"
+                            badge_class = "bg-orange-950/80 text-orange-300 border border-orange-500/50"
+
                         elif pl_rate >= 3.0:
-                            active_sl = math.floor(max(base_sl, recent_low10 * 0.995))
+                            active_sl = max(base_sl, math.floor(recent_low10 * 0.995))
+                            if prev_sl > 0:
+                                active_sl = max(active_sl, int(prev_sl))
                             status_label = "🌱 巡航ホールド"
                             action_label = f"推奨逆指値: {active_sl:,} 円"
                             badge_class = "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
 
                         elif pl_rate < 0 and current_price > base_sl:
+                            if prev_sl > 0:
+                                active_sl = max(active_sl, int(prev_sl))
                             status_label = "⏳ 押し目許容"
-                            action_label = f"SL守り待機: {base_sl:,} 円"
+                            action_label = f"SL守り待機: {active_sl:,} 円"
                             badge_class = "bg-slate-800 text-slate-400 border border-slate-700"
+
+                        else:
+                            if prev_sl > 0:
+                                active_sl = max(active_sl, int(prev_sl))
+                            action_label = f"推奨逆指値: {active_sl:,} 円"
+
+                        if is_sell5_pre and "ホールド" in status_label:
+                            status_label = "⚠️ 割込前夜警戒"
 
                         if earnings_badge:
                             status_label = f"{status_label} {earnings_badge}"
@@ -1494,7 +1730,9 @@ if os.path.exists(portfolio_path):
                             "name": clean_val(ticker_to_name.get(t_key, "不明")),
                             "shares": shares,
                             "buyPrice": clean_val(buy_price),
-                            "buyDate": clean_val(buy_date_str),  # ★追加
+                            "buyDate": clean_val(buy_date_str),
+                            "phase": phase_str,
+                            "daysHeld": days_held,
                             "currentPrice": clean_val(current_price),
                             "plAmount": clean_val(pl_amount),
                             "plRate": clean_val(pl_rate),
@@ -1577,8 +1815,8 @@ if notes_updated or not os.path.exists(trade_notes_json_path):
     safe_json_dump(trade_notes, trade_notes_json_path, ensure_ascii=False, indent=2)
 print(f" -> 電子株ノート: 累計 {len(trade_notes)} 件のカルテを同期完了")
 
-# 実績検証 Shadow Tracker 処理
-print("スクリーナーシグナルの実績追跡およびスコア精度検証エンジンを実行中...")
+# 実績検証 Shadow Tracker 処理（BUY ＆ SELL 両対応）
+print("スクリーナーシグナルの実績追跡（買い・売り両方向）を実行中...")
 shadow_trades = []
 if os.path.exists(shadow_trades_json_path):
     try:
@@ -1595,6 +1833,7 @@ for trade in shadow_trades:
         if sig_date_str and sig_date_str < cutoff_date_str:
             continue
 
+        direction = trade.get("direction", "BUY")
         t_code = trade.get("ticker", "")
         t_key = f"{t_code}.T"
         if t_key not in bulk_data or bulk_data[t_key].empty:
@@ -1610,18 +1849,27 @@ for trade in shadow_trades:
             entry_open = float(first_day['Open'])
             sig_close = float(trade.get("signalClose", entry_open))
             yesterday_low = float(trade.get("yesterdayLow") or (entry_open * 0.98))
+            yesterday_high = float(trade.get("yesterdayHigh") or (entry_open * 1.02))
 
             gap_rate = ((entry_open - sig_close) / sig_close) * 100 if sig_close > 0 else 0.0
             trade["entryOpen"] = entry_open
             trade["gapRate"] = round(gap_rate, 2)
             trade["entryDate"] = df_after.index[0].strftime("%Y-%m-%d")
 
-            if gap_rate > 2.0:
-                trade["entryStatus"] = "SKIPPED_GAP_HIGH"
-            elif entry_open < yesterday_low:
-                trade["entryStatus"] = "SKIPPED_GAP_LOW"
+            if direction == "SELL":
+                if gap_rate < -2.0:
+                    trade["entryStatus"] = "SKIPPED_GAP_DOWN"
+                elif entry_open > yesterday_high:
+                    trade["entryStatus"] = "SKIPPED_GAP_HIGH"
+                else:
+                    trade["entryStatus"] = "ENTERED"
             else:
-                trade["entryStatus"] = "ENTERED"
+                if gap_rate > 2.0:
+                    trade["entryStatus"] = "SKIPPED_GAP_HIGH"
+                elif entry_open < yesterday_low:
+                    trade["entryStatus"] = "SKIPPED_GAP_LOW"
+                else:
+                    trade["entryStatus"] = "ENTERED"
 
         if trade.get("entryStatus") == "ENTERED" and days_count >= 1:
             entry_p = float(trade.get("entryOpen") or 1.0)
@@ -1631,17 +1879,19 @@ for trade in shadow_trades:
                 trade["highestPrice"] = float(df_eval['High'].max())
                 trade["lowestPrice"] = float(df_eval['Low'].min())
 
+                mult = -1.0 if direction == "SELL" else 1.0
+
                 if len(df_eval) >= 3 and "return_T3" not in trade:
                     c3 = float(df_eval.iloc[2]['Close'])
-                    trade["return_T3"] = round(((c3 - entry_p) / entry_p) * 100, 2)
+                    trade["return_T3"] = round(((c3 - entry_p) / entry_p) * 100 * mult, 2)
 
                 if len(df_eval) >= 5 and "return_T5" not in trade:
                     c5 = float(df_eval.iloc[4]['Close'])
-                    trade["return_T5"] = round(((c5 - entry_p) / entry_p) * 100, 2)
+                    trade["return_T5"] = round(((c5 - entry_p) / entry_p) * 100 * mult, 2)
 
                 if len(df_eval) >= 10 and "return_T10" not in trade:
                     c10 = float(df_eval.iloc[9]['Close'])
-                    trade["return_T10"] = round(((c10 - entry_p) / entry_p) * 100, 2)
+                    trade["return_T10"] = round(((c10 - entry_p) / entry_p) * 100 * mult, 2)
                     trade["isCompleted"] = True
 
         if str(trade.get("entryStatus", "")).startswith("SKIPPED_") and days_count > 7:
@@ -1655,15 +1905,19 @@ existing_ids = {t.get("id") for t in updated_trades}
 for item in results_list:
     sys_data = item.get(SYSTEM_TYPE, {})
     cat = sys_data.get("category", "NONE")
-    if cat != "NONE" and cat.startswith("BUY"):
-        trade_id = f"{today_str}_{item['ticker']}"
-        if trade_id not in existing_ids:
+    if cat != "NONE" and (cat.startswith("BUY") or cat.startswith("SELL")):
+        direction = "SELL" if cat.startswith("SELL") else "BUY"
+        trade_id = f"{today_str}_{direction}_{item['ticker']}"
+        legacy_id = f"{today_str}_{item['ticker']}"
+        if trade_id not in existing_ids and legacy_id not in existing_ids:
             p_val = float(item["price"])
             y_low = item.get("yesterdayLow")
+            y_high = item.get("yesterdayHigh")
             sl_val = sys_data.get("stop_loss_price")
             new_trade = {
                 "id": trade_id,
                 "signalDate": today_str,
+                "direction": direction,
                 "ticker": item["ticker"],
                 "name": item["name"],
                 "system": SYSTEM_TYPE,
@@ -1671,15 +1925,16 @@ for item in results_list:
                 "score": int(sys_data.get("score", 5)),
                 "signalClose": p_val,
                 "yesterdayLow": float(y_low) if y_low is not None else round(p_val * 0.98, 2),
-                "stopLossPrice": float(sl_val) if sl_val else round(p_val * 0.95, 2),
+                "yesterdayHigh": float(y_high) if y_high is not None else round(p_val * 1.02, 2),
+                "stopLossPrice": float(sl_val) if sl_val else round(p_val * (1.05 if direction == "SELL" else 0.95), 2),
                 "regime": regime_status,
                 "factor_keys": sys_data.get("factor_keys", []),
                 "entryStatus": "PENDING_ENTRY"
             }
             updated_trades.append(new_trade)
 
-updated_trades = updated_trades[-5000:]
-safe_json_dump(updated_trades, shadow_trades_json_path, ensure_ascii=False, indent=2)
+updated_trades = updated_trades[-10000:]
+safe_json_dump(updated_trades, shadow_trades_json_path, ensure_ascii=False, separators=(',', ':'))
 
 
 def build_score_table(trades_pool, return_key):
@@ -1724,41 +1979,91 @@ def build_score_table(trades_pool, return_key):
     return table_rows
 
 
-valid_trades = [t for t in updated_trades if t.get("entryStatus") == "ENTERED"]
+def build_tracker_block(valid_pool, target_factors_list):
+    trades_with_t5 = [t for t in valid_pool if "return_T5" in t]
+    base_win_rate = round(len([t for t in trades_with_t5 if float(t["return_T5"]) > 0]) / len(trades_with_t5) * 100, 1) if trades_with_t5 else 50.0
 
-tracker_summary = {
-    "totalTracked": len(valid_trades),
-    "regimes": {
-        "ALL": {
-            "label": "🌐 全地合い通算",
-            "T5": build_score_table(valid_trades, "return_T5"),
-            "T10": build_score_table(valid_trades, "return_T10")
-        },
-        "BUY_AGGRESSIVE": {
-            "label": "🟢 買い向かい時",
-            "T5": build_score_table([t for t in valid_trades if t.get("regime") == "BUY_AGGRESSIVE"], "return_T5"),
-            "T10": build_score_table([t for t in valid_trades if t.get("regime") == "BUY_AGGRESSIVE"], "return_T10")
-        },
-        "SELECTIVE": {
-            "label": "🟡 選別時",
-            "T5": build_score_table([t for t in valid_trades if t.get("regime") == "SELECTIVE"], "return_T5"),
-            "T10": build_score_table([t for t in valid_trades if t.get("regime") == "SELECTIVE"], "return_T10")
-        },
-        "DIVERGENT": {
-            "label": "⚡ 局地戦",
-            "T5": build_score_table([t for t in valid_trades if t.get("regime") == "DIVERGENT"], "return_T5"),
-            "T10": build_score_table([t for t in valid_trades if t.get("regime") == "DIVERGENT"], "return_T10")
-        },
-        "RISK_OFF": {
-            "label": "🛑 買い控え時",
-            "T5": build_score_table([t for t in valid_trades if t.get("regime") == "RISK_OFF"], "return_T5"),
-            "T10": build_score_table([t for t in valid_trades if t.get("regime") == "RISK_OFF"], "return_T10")
-        }
-    },
-    "factors": []
-}
+    factor_rows = []
+    for f_key, f_name in target_factors_list:
+        active_pool = [t for t in trades_with_t5 if f_key in t.get("factor_keys", [])]
+        inactive_pool = [t for t in trades_with_t5 if f_key not in t.get("factor_keys", [])]
 
-target_factors = [
+        act_count = len(active_pool)
+        if act_count >= 1:
+            act_wins = len([t for t in active_pool if float(t["return_T5"]) > 0])
+            act_rate = round((act_wins / act_count) * 100, 1)
+
+            inact_wins = len([t for t in inactive_pool if float(t["return_T5"]) > 0])
+            inact_rate = round((inact_wins / len(inactive_pool)) * 100, 1) if inactive_pool else base_win_rate
+
+            contrib = round(act_rate - inact_rate, 1)
+
+            if contrib >= 15.0:
+                eval_badge = "◎ 極めて優秀"
+                advice = f"勝率寄与 +{contrib}% と極めて強力です。現在の配点を維持、または増点を推奨します。"
+            elif contrib >= 5.0:
+                eval_badge = "◯ 有効"
+                advice = f"勝率寄与 +{contrib}% で良好です。現状維持を推奨します。"
+            elif contrib >= -5.0:
+                eval_badge = "△ 寄与小"
+                advice = f"勝率寄与 {contrib:+}% で中立です。条件の厳格化や参考指標化を検討してください。"
+            else:
+                eval_badge = "✕ 悪化要因"
+                advice = f"勝率寄与 {contrib:+}% と全体平均を下回っています。条件の見直しまたは除外を推奨します。"
+
+            factor_rows.append({
+                "key": f_key, "name": f_name, "count": act_count,
+                "activeWinRate": act_rate, "inactiveWinRate": inact_rate,
+                "contribution": contrib, "evaluation": eval_badge, "actionAdvice": advice
+            })
+        else:
+            factor_rows.append({
+                "key": f_key, "name": f_name, "count": 0,
+                "activeWinRate": 0.0, "inactiveWinRate": base_win_rate,
+                "contribution": 0.0, "evaluation": "－ 蓄積中", "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+            })
+
+    return {
+        "totalTracked": len(valid_pool),
+        "regimes": {
+            "ALL": {
+                "label": "🌐 全地合い通算",
+                "T5": build_score_table(valid_pool, "return_T5"),
+                "T10": build_score_table(valid_pool, "return_T10")
+            },
+            "BUY_AGGRESSIVE": {
+                "label": "🟢 買い向かい時",
+                "T5": build_score_table([t for t in valid_pool if t.get("regime") == "BUY_AGGRESSIVE"], "return_T5"),
+                "T10": build_score_table([t for t in valid_pool if t.get("regime") == "BUY_AGGRESSIVE"], "return_T10")
+            },
+            "SELECTIVE": {
+                "label": "🟡 選別時",
+                "T5": build_score_table([t for t in valid_pool if t.get("regime") == "SELECTIVE"], "return_T5"),
+                "T10": build_score_table([t for t in valid_pool if t.get("regime") == "SELECTIVE"], "return_T10")
+            },
+            "DIVERGENT": {
+                "label": "⚡ 局地戦",
+                "T5": build_score_table([t for t in valid_pool if t.get("regime") == "DIVERGENT"], "return_T5"),
+                "T10": build_score_table([t for t in valid_pool if t.get("regime") == "DIVERGENT"], "return_T10")
+            },
+            "RISK_OFF": {
+                "label": "🛑 買い控え時",
+                "T5": build_score_table([t for t in valid_pool if t.get("regime") == "RISK_OFF"], "return_T5"),
+                "T10": build_score_table([t for t in valid_pool if t.get("regime") == "RISK_OFF"], "return_T10")
+            }
+        },
+        "factors": factor_rows
+    }
+
+
+valid_buy_trades = [t for t in updated_trades if t.get("entryStatus") == "ENTERED" and t.get("direction", "BUY") == "BUY"]
+valid_sell_trades = [t for t in updated_trades if t.get("entryStatus") == "ENTERED" and t.get("direction") == "SELL"]
+
+buy_target_factors = [
+    ("週足上昇同調", "週足上昇同調(13週線上向き)"),
+    ("市場リーダーRS上位", "市場リーダー株(RS上位)"),
+    ("上値真空地帯", "上値真空地帯(頭上出来高<25%)"),
+    ("頭上シコリ注意", "頭上シコリ注意(参考計測)"),
     ("特級踏み上げ", "特級ショートスクイーズ"),
     ("通常踏み上げ", "ショートスクイーズ初動"),
     ("アク抜け完了", "アク抜け完了(買残減少)"),
@@ -1768,59 +2073,37 @@ target_factors = [
     ("RSIゾーン反発", "RSIゾーン反発"),
     ("RSIダイバージェンス", "強気ダイバージェンス"),
     ("Pre本発射", "Preからの本発射"),
-    ("長期線加速", "長期線トレンド加速"),
-    ("大陽線反発", "大陽線反発"),
     ("追い風業種", "追い風HOT業種"),
-    ("地合い強気", "地合い強気(逆行高)")
+    ("地合い強気", "地合い強気(逆行高)"),
+    ("ATR低(<1.5%)", "ボラ帯: ATR低(<1.5%)"),
+    ("ATR中(1.5-4.0%)", "ボラ帯: ATR中(1.5-4.0%)"),
+    ("ATR高(>4.0%)", "ボラ帯: ATR高(>4.0%)"),
+    ("代金1億未満", "売買代金: 1億円未満"),
+    ("代金1-5億", "売買代金: 1〜5億円"),
+    ("代金5-30億", "売買代金: 5〜30億円"),
+    ("代金30億以上", "売買代金: 30億円以上")
 ]
 
-trades_with_t5 = [t for t in valid_trades if "return_T5" in t]
-base_win_rate = round(len([t for t in trades_with_t5 if float(t["return_T5"]) > 0]) / len(trades_with_t5) * 100, 1) if trades_with_t5 else 50.0
+sell_target_factors = [
+    ("週足下降同調", "週足下降同調(13週線下向き)"),
+    ("頭上シコリ天井", "頭上シコリ天井(戻り壁)"),
+    ("大陰線・上髭天井", "大陰線/上髭天井反落"),
+    ("市場劣後RS下位", "市場劣後株(RS下位25%)"),
+    ("RSI天井反落", "RSI天井圏反落"),
+    ("買長投げ連鎖", "買長＆シコり投げ連鎖"),
+    ("陰線出来高急増", "陰線で出来高急増(1.5倍)"),
+    ("抵抗線極近", "抵抗線極近の戻り売り"),
+    ("Pre本発射", "Preからの本発射"),
+    ("地合い逆行安", "地合い逆行安"),
+    ("ATR中(1.5-4.0%)", "ボラ帯: ATR中(1.5-4.0%)"),
+    ("ATR高(>4.0%)", "ボラ帯: ATR高(>4.0%)")
+]
 
-factor_analysis_rows = []
-for f_key, f_name in target_factors:
-    active_pool = [t for t in trades_with_t5 if f_key in t.get("factor_keys", [])]
-    inactive_pool = [t for t in trades_with_t5 if f_key not in t.get("factor_keys", [])]
-
-    act_count = len(active_pool)
-    if act_count >= 1:
-        act_wins = len([t for t in active_pool if float(t["return_T5"]) > 0])
-        act_rate = round((act_wins / act_count) * 100, 1)
-
-        inact_wins = len([t for t in inactive_pool if float(t["return_T5"]) > 0])
-        inact_rate = round((inact_wins / len(inactive_pool)) * 100, 1) if inactive_pool else base_win_rate
-
-        contrib = round(act_rate - inact_rate, 1)
-
-        if contrib >= 15.0:
-            eval_badge = "◎ 極めて優秀"
-            advice = f"勝率寄与 +{contrib}% と極めて強力です。現在の配点を維持、または増点を推奨します。"
-        elif contrib >= 5.0:
-            eval_badge = "◯ 有効"
-            advice = f"勝率寄与 +{contrib}% で良好です。現状維持を推奨します。"
-        elif contrib >= -5.0:
-            eval_badge = "△ 寄与小"
-            advice = f"勝率寄与 {contrib:+}% で中立です。条件の厳格化（実体の大きさ等）を検討してください。"
-        else:
-            eval_badge = "✕ 悪化要因"
-            advice = f"勝率寄与 {contrib:+}% と全体平均を下回っています。app.py の加点をコメントアウトして無効化を推奨します。"
-
-        factor_analysis_rows.append({
-            "key": f_key, "name": f_name, "count": act_count,
-            "activeWinRate": act_rate, "inactiveWinRate": inact_rate,
-            "contribution": contrib, "evaluation": eval_badge, "actionAdvice": advice
-        })
-    else:
-        factor_analysis_rows.append({
-            "key": f_key, "name": f_name, "count": 0,
-            "activeWinRate": 0.0, "inactiveWinRate": base_win_rate,
-            "contribution": 0.0, "evaluation": "－ 蓄積中", "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
-        })
-
-tracker_summary["factors"] = factor_analysis_rows
+tracker_summary = build_tracker_block(valid_buy_trades, buy_target_factors)
+tracker_summary["sell"] = build_tracker_block(valid_sell_trades, sell_target_factors)
 
 safe_json_dump(tracker_summary, tracker_summary_json_path, ensure_ascii=False, indent=2)
-print(f" -> スクリーナー実績追跡完了: 累積 {len(valid_trades)} 件を評価 (summary: {tracker_summary_json_path})")
+print(f" -> スクリーナー実績追跡完了: 買い {len(valid_buy_trades)} 件 / 売り {len(valid_sell_trades)} 件を評価")
 
 # データ出力
 print("最新データを data/ フォルダに出力中...")
@@ -1847,7 +2130,6 @@ meta_info = {
     }
 }
 safe_json_dump(meta_info, os.path.join(data_dir, "meta.json"), ensure_ascii=False)
-
 
 print(f"\n--- データ更新およびファイル出力が完了しました ---")
 print(f"👉 出力フォルダ: {data_dir}/ (自動更新時刻：{current_time_str})")
