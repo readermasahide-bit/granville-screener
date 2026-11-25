@@ -1,5 +1,5 @@
 {
-  "totalTracked": 1026,
+  "totalTracked": 1612,
   "regimes": {
     "ALL": {
       "label": "🌐 全地合い通算",
@@ -7,62 +7,62 @@
         {
           "score": 10,
           "label": "★10",
-          "count": 0,
-          "winRate": 0.0,
-          "avgGain": 0.0,
+          "count": 1,
+          "winRate": 100.0,
+          "avgGain": 29.4,
           "avgLoss": 0.0,
-          "profitFactor": 0.0,
-          "expectedValue": 0.0
+          "profitFactor": 99.0,
+          "expectedValue": 29.4
         },
         {
           "score": 9,
           "label": "★9",
-          "count": 1,
-          "winRate": 100.0,
-          "avgGain": 1.7,
-          "avgLoss": 0.0,
-          "profitFactor": 99.0,
-          "expectedValue": 1.7
+          "count": 5,
+          "winRate": 60.0,
+          "avgGain": 10.7,
+          "avgLoss": -12.9,
+          "profitFactor": 0.83,
+          "expectedValue": 1.3
         },
         {
           "score": 8,
           "label": "★8",
-          "count": 2,
-          "winRate": 50.0,
-          "avgGain": 10.1,
-          "avgLoss": -3.4,
-          "profitFactor": 2.97,
-          "expectedValue": 3.3
+          "count": 11,
+          "winRate": 18.2,
+          "avgGain": 6.3,
+          "avgLoss": -7.6,
+          "profitFactor": 0.83,
+          "expectedValue": -5.1
         },
         {
           "score": 7,
           "label": "★7",
-          "count": 21,
-          "winRate": 19.0,
-          "avgGain": 1.9,
-          "avgLoss": -4.3,
-          "profitFactor": 0.44,
-          "expectedValue": -3.1
+          "count": 37,
+          "winRate": 18.9,
+          "avgGain": 2.6,
+          "avgLoss": -5.2,
+          "profitFactor": 0.5,
+          "expectedValue": -3.8
         },
         {
           "score": 6,
           "label": "★6",
-          "count": 44,
-          "winRate": 11.4,
-          "avgGain": 34.2,
-          "avgLoss": -5.3,
-          "profitFactor": 6.45,
-          "expectedValue": -0.8
+          "count": 64,
+          "winRate": 14.1,
+          "avgGain": 30.4,
+          "avgLoss": -6.4,
+          "profitFactor": 4.75,
+          "expectedValue": -1.2
         },
         {
           "score": 5,
           "label": "★5以下",
-          "count": 178,
-          "winRate": 15.2,
-          "avgGain": 3.0,
-          "avgLoss": -3.8,
-          "profitFactor": 0.79,
-          "expectedValue": -2.7
+          "count": 277,
+          "winRate": 14.4,
+          "avgGain": 2.3,
+          "avgLoss": -4.2,
+          "profitFactor": 0.55,
+          "expectedValue": -3.2
         }
       ],
       "T10": [
@@ -311,12 +311,12 @@
         {
           "score": 5,
           "label": "★5以下",
-          "count": 142,
-          "winRate": 14.8,
+          "count": 144,
+          "winRate": 14.6,
           "avgGain": 3.4,
           "avgLoss": -3.7,
           "profitFactor": 0.92,
-          "expectedValue": -2.7
+          "expectedValue": -2.6
         }
       ],
       "T10": [
@@ -515,62 +515,62 @@
         {
           "score": 10,
           "label": "★10",
-          "count": 0,
-          "winRate": 0.0,
-          "avgGain": 0.0,
+          "count": 1,
+          "winRate": 100.0,
+          "avgGain": 29.4,
           "avgLoss": 0.0,
-          "profitFactor": 0.0,
-          "expectedValue": 0.0
+          "profitFactor": 99.0,
+          "expectedValue": 29.4
         },
         {
           "score": 9,
           "label": "★9",
-          "count": 0,
-          "winRate": 0.0,
-          "avgGain": 0.0,
-          "avgLoss": 0.0,
-          "profitFactor": 0.0,
-          "expectedValue": 0.0
+          "count": 4,
+          "winRate": 50.0,
+          "avgGain": 15.2,
+          "avgLoss": -12.9,
+          "profitFactor": 1.18,
+          "expectedValue": 1.1
         },
         {
           "score": 8,
           "label": "★8",
-          "count": 2,
-          "winRate": 50.0,
-          "avgGain": 10.1,
-          "avgLoss": -3.4,
-          "profitFactor": 2.97,
-          "expectedValue": 3.3
+          "count": 11,
+          "winRate": 18.2,
+          "avgGain": 6.3,
+          "avgLoss": -7.6,
+          "profitFactor": 0.83,
+          "expectedValue": -5.1
         },
         {
           "score": 7,
           "label": "★7",
-          "count": 9,
-          "winRate": 22.2,
-          "avgGain": 2.7,
-          "avgLoss": -5.8,
-          "profitFactor": 0.47,
-          "expectedValue": -3.9
+          "count": 25,
+          "winRate": 20.0,
+          "avgGain": 3.1,
+          "avgLoss": -6.2,
+          "profitFactor": 0.5,
+          "expectedValue": -4.4
         },
         {
           "score": 6,
           "label": "★6",
-          "count": 17,
-          "winRate": 23.5,
-          "avgGain": 42.4,
-          "avgLoss": -5.5,
-          "profitFactor": 7.71,
-          "expectedValue": 5.8
+          "count": 37,
+          "winRate": 21.6,
+          "avgGain": 34.0,
+          "avgLoss": -7.4,
+          "profitFactor": 4.59,
+          "expectedValue": 1.6
         },
         {
           "score": 5,
           "label": "★5以下",
-          "count": 36,
-          "winRate": 16.7,
-          "avgGain": 1.4,
-          "avgLoss": -3.9,
-          "profitFactor": 0.36,
-          "expectedValue": -3.0
+          "count": 133,
+          "winRate": 14.3,
+          "avgGain": 1.0,
+          "avgLoss": -4.7,
+          "profitFactor": 0.21,
+          "expectedValue": -3.9
         }
       ],
       "T10": [
@@ -643,7 +643,7 @@
       "name": "週足上昇同調(13週線上向き)",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -653,7 +653,7 @@
       "name": "市場リーダー株(RS上位)",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -663,7 +663,7 @@
       "name": "上値真空地帯(頭上出来高<25%)",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -673,7 +673,7 @@
       "name": "頭上シコリ注意(参考計測)",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -681,119 +681,119 @@
     {
       "key": "特級踏み上げ",
       "name": "特級ショートスクイーズ",
-      "count": 6,
-      "activeWinRate": 16.7,
-      "inactiveWinRate": 15.4,
-      "contribution": 1.3,
+      "count": 7,
+      "activeWinRate": 14.3,
+      "inactiveWinRate": 15.7,
+      "contribution": -1.4,
       "evaluation": "△ 寄与小",
-      "actionAdvice": "勝率寄与 +1.3% で中立です。条件の厳格化や参考指標化を検討してください。"
+      "actionAdvice": "勝率寄与 -1.4% で中立です。条件の厳格化や参考指標化を検討してください。"
     },
     {
       "key": "通常踏み上げ",
       "name": "ショートスクイーズ初動",
-      "count": 1,
-      "activeWinRate": 100.0,
-      "inactiveWinRate": 15.1,
-      "contribution": 84.9,
+      "count": 2,
+      "activeWinRate": 50.0,
+      "inactiveWinRate": 15.5,
+      "contribution": 34.5,
       "evaluation": "◎ 極めて優秀",
-      "actionAdvice": "勝率寄与 +84.9% と極めて強力です。現在の配点を維持、または増点を推奨します。"
+      "actionAdvice": "勝率寄与 +34.5% と極めて強力です。現在の配点を維持、または増点を推奨します。"
     },
     {
       "key": "アク抜け完了",
       "name": "アク抜け完了(買残減少)",
-      "count": 58,
-      "activeWinRate": 20.7,
-      "inactiveWinRate": 13.8,
-      "contribution": 6.9,
+      "count": 77,
+      "activeWinRate": 20.8,
+      "inactiveWinRate": 14.5,
+      "contribution": 6.3,
       "evaluation": "◯ 有効",
-      "actionAdvice": "勝率寄与 +6.9% で良好です。現状維持を推奨します。"
+      "actionAdvice": "勝率寄与 +6.3% で良好です。現状維持を推奨します。"
     },
     {
       "key": "機関アキュムレーション",
       "name": "機関アキュムレーション",
-      "count": 9,
-      "activeWinRate": 11.1,
-      "inactiveWinRate": 15.6,
-      "contribution": -4.5,
-      "evaluation": "△ 寄与小",
-      "actionAdvice": "勝率寄与 -4.5% で中立です。条件の厳格化や参考指標化を検討してください。"
+      "count": 14,
+      "activeWinRate": 7.1,
+      "inactiveWinRate": 16.0,
+      "contribution": -8.9,
+      "evaluation": "✕ 悪化要因",
+      "actionAdvice": "勝率寄与 -8.9% と全体平均を下回っています。条件の見直しまたは除外を推奨します。"
     },
     {
       "key": "陽線出来高急増",
       "name": "陽線で出来高急増(1.5倍)",
-      "count": 26,
-      "activeWinRate": 26.9,
-      "inactiveWinRate": 14.1,
-      "contribution": 12.8,
-      "evaluation": "◯ 有効",
-      "actionAdvice": "勝率寄与 +12.8% で良好です。現状維持を推奨します。"
+      "count": 43,
+      "activeWinRate": 32.6,
+      "inactiveWinRate": 13.6,
+      "contribution": 19.0,
+      "evaluation": "◎ 極めて優秀",
+      "actionAdvice": "勝率寄与 +19.0% と極めて強力です。現在の配点を維持、または増点を推奨します。"
     },
     {
       "key": "支持線極近",
       "name": "支持線極近(1.0%実体反発)",
-      "count": 0,
-      "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
-      "contribution": 0.0,
-      "evaluation": "－ 蓄積中",
-      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+      "count": 3,
+      "activeWinRate": 33.3,
+      "inactiveWinRate": 15.6,
+      "contribution": 17.7,
+      "evaluation": "◎ 極めて優秀",
+      "actionAdvice": "勝率寄与 +17.7% と極めて強力です。現在の配点を維持、または増点を推奨します。"
     },
     {
       "key": "RSIゾーン反発",
       "name": "RSIゾーン反発",
-      "count": 51,
-      "activeWinRate": 17.6,
-      "inactiveWinRate": 14.9,
-      "contribution": 2.7,
+      "count": 87,
+      "activeWinRate": 19.5,
+      "inactiveWinRate": 14.6,
+      "contribution": 4.9,
       "evaluation": "△ 寄与小",
-      "actionAdvice": "勝率寄与 +2.7% で中立です。条件の厳格化や参考指標化を検討してください。"
+      "actionAdvice": "勝率寄与 +4.9% で中立です。条件の厳格化や参考指標化を検討してください。"
     },
     {
       "key": "RSIダイバージェンス",
       "name": "強気ダイバージェンス",
-      "count": 6,
+      "count": 14,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.8,
-      "contribution": -15.8,
+      "inactiveWinRate": 16.3,
+      "contribution": -16.3,
       "evaluation": "✕ 悪化要因",
-      "actionAdvice": "勝率寄与 -15.8% と全体平均を下回っています。条件の見直しまたは除外を推奨します。"
+      "actionAdvice": "勝率寄与 -16.3% と全体平均を下回っています。条件の見直しまたは除外を推奨します。"
     },
     {
       "key": "Pre本発射",
       "name": "Preからの本発射",
-      "count": 0,
-      "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
-      "contribution": 0.0,
-      "evaluation": "－ 蓄積中",
-      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+      "count": 2,
+      "activeWinRate": 50.0,
+      "inactiveWinRate": 15.5,
+      "contribution": 34.5,
+      "evaluation": "◎ 極めて優秀",
+      "actionAdvice": "勝率寄与 +34.5% と極めて強力です。現在の配点を維持、または増点を推奨します。"
     },
     {
       "key": "追い風業種",
       "name": "追い風HOT業種",
-      "count": 23,
-      "activeWinRate": 21.7,
-      "inactiveWinRate": 14.8,
-      "contribution": 6.9,
+      "count": 49,
+      "activeWinRate": 22.4,
+      "inactiveWinRate": 14.7,
+      "contribution": 7.7,
       "evaluation": "◯ 有効",
-      "actionAdvice": "勝率寄与 +6.9% で良好です。現状維持を推奨します。"
+      "actionAdvice": "勝率寄与 +7.7% で良好です。現状維持を推奨します。"
     },
     {
       "key": "地合い強気",
       "name": "地合い強気(逆行高)",
-      "count": 0,
-      "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
-      "contribution": 0.0,
-      "evaluation": "－ 蓄積中",
-      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+      "count": 53,
+      "activeWinRate": 22.6,
+      "inactiveWinRate": 14.6,
+      "contribution": 8.0,
+      "evaluation": "◯ 有効",
+      "actionAdvice": "勝率寄与 +8.0% で良好です。現状維持を推奨します。"
     },
     {
       "key": "ATR低(<1.5%)",
       "name": "ボラ帯: ATR低(<1.5%)",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -803,7 +803,7 @@
       "name": "ボラ帯: ATR中(1.5-4.0%)",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -813,7 +813,7 @@
       "name": "ボラ帯: ATR高(>4.0%)",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -823,7 +823,7 @@
       "name": "売買代金: 1億円未満",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -833,7 +833,7 @@
       "name": "売買代金: 1〜5億円",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -843,7 +843,7 @@
       "name": "売買代金: 5〜30億円",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
@@ -853,14 +853,14 @@
       "name": "売買代金: 30億円以上",
       "count": 0,
       "activeWinRate": 0.0,
-      "inactiveWinRate": 15.4,
+      "inactiveWinRate": 15.7,
       "contribution": 0.0,
       "evaluation": "－ 蓄積中",
       "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
     }
   ],
   "sell": {
-    "totalTracked": 245,
+    "totalTracked": 314,
     "regimes": {
       "ALL": {
         "label": "🌐 全地合い通算",
