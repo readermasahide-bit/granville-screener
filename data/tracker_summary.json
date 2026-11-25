@@ -789,6 +789,16 @@
       "actionAdvice": "勝率寄与 +7.7% で良好です。現状維持を推奨します。"
     },
     {
+      "key": "権利落ち直前",
+      "name": "権利落ち直前(要回避)",
+      "count": 0,
+      "activeWinRate": 0.0,
+      "inactiveWinRate": 15.9,
+      "contribution": 0.0,
+      "evaluation": "－ 蓄積中",
+      "actionAdvice": "現在データを蓄積中です（サンプル不足）。"
+    },
+    {
       "key": "ATR低(<1.5%)",
       "name": "ボラ帯: ATR低(<1.5%)",
       "count": 0,
