@@ -194,7 +194,7 @@
           <div class="flex items-baseline justify-between mt-1" id="statSell5"><span class="text-base font-bold text-rose-400">0</span></div>
         </div>
         <div data-tab="SELL6" class="tab-card cursor-pointer bg-slate-900/80 border border-orange-500/30 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-orange-400">
-          <span class="text-[9px] font-bold text-orange-400 uppercase tracking-wider">売り6 (再割)</span>
+          <span class="text-[9px] font-bold text-orange-400 uppercase tracking-wider">売り6 (再割/Pre)</span>
           <div class="flex items-baseline justify-between mt-1" id="statSell6"><span class="text-base font-bold text-orange-400">0</span></div>
         </div>
         <div data-tab="SELL7" class="tab-card cursor-pointer bg-slate-900/80 border border-red-600/30 rounded-xl p-2.5 flex flex-col justify-between shadow transition duration-200 hover:border-red-400">
@@ -449,9 +449,9 @@
             <div class="bg-slate-900/60 border border-amber-500/20 rounded-xl p-3.5"><span class="font-bold text-amber-300 block mb-1">買い3 / 3-Pre (待ち伏せ)</span><p class="text-slate-400 text-[11px] leading-relaxed">上昇トレンド中、支持線反発(3)または極近待ち伏せ(3-Pre)。<br>損切: 長期線✕0.98</p></div>
             <div class="bg-slate-900/60 border border-purple-500/20 rounded-xl p-3.5"><span class="font-bold text-purple-300 block mb-1">買い4：逆張りリバ</span><p class="text-slate-400 text-[11px] leading-relaxed">長期線から大きく下方に下方乖離して本日反発。<br>損切: 当日安値✕0.98</p></div>
             <div class="bg-slate-900/60 border border-rose-500/20 rounded-xl p-3.5"><span class="font-bold text-rose-300 block mb-1">売り5 / 5-Pre (新規売り初動)</span><p class="text-slate-400 text-[11px] leading-relaxed">高値圏後に長期線を本日下抜け(5)または直上失速(5-Pre)。<br>損切: 20日高値✕1.02</p></div>
-            <div class="bg-slate-900/60 border border-orange-500/20 rounded-xl p-3.5"><span class="font-bold text-orange-300 block mb-1">売り6：再下抜け</span><p class="text-slate-400 text-[11px] leading-relaxed">ダマシ上昇(1〜5日)後に再び割り込んで下落復帰。<br>損切: 5日高値✕1.02</p></div>
+            <div class="bg-slate-900/60 border border-orange-500/20 rounded-xl p-3.5"><span class="font-bold text-orange-300 block mb-1">売り6 / 6-Pre (再下抜け)</span><p class="text-slate-400 text-[11px] leading-relaxed">下降中、一時上抜け後に再び割り込み(6)または直前(6-Pre)。<br>損切: 5日高値✕1.02</p></div>
             <div class="bg-slate-900/60 border border-red-600/20 rounded-xl p-3.5"><span class="font-bold text-red-400 block mb-1">売り7 / 7-Pre (戻り待ち伏せ)</span><p class="text-slate-400 text-[11px] leading-relaxed">下降長期線に頭を押さえられて戻り反落(7)または接近(7-Pre)。<br>損切: 長期線✕1.02</p></div>
-            <div class="bg-slate-900/60 border border-fuchsia-500/20 rounded-xl p-3.5"><span class="font-bold text-fuchsia-300 block mb-1">売り8：逆張り過熱売り</span><p class="text-slate-400 text-[11px] leading-relaxed">上に急騰乖離後、本日天井反落を確認。<br>損切: 当日高値✕1.02</p></div>
+            <div class="bg-slate-900/60 border border-fuchsia-500/20 rounded-xl p-3.5"><span class="font-bold text-fuchsia-300 block mb-1">売り8：逆張り過熱売り</span><p class="text-slate-400 text-[11px] leading-relaxed">上に異常急騰乖離後、本日天井反落を確認。<br>損切: 当日高値✕1.02</p></div>
           </div>
         </div>
       </section>
@@ -533,7 +533,6 @@
           <button onclick="closeTradeCloseDialog()" class="text-slate-400 hover:text-white font-bold text-lg select-none cursor-pointer focus:outline-none">✕</button>
         </div>
 
-        <!-- 操作モード切り替えバー -->
         <div class="grid grid-cols-3 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px] mb-4">
           <button type="button" id="btnModeFullClose" class="py-1.5 px-2 rounded-lg font-bold bg-emerald-600 text-white cursor-pointer transition">💰 全株決済</button>
           <button type="button" id="btnModeHalfTP" class="py-1.5 px-2 rounded-lg font-bold text-slate-400 hover:text-white cursor-pointer transition">✂️ 半分利確</button>
@@ -553,7 +552,6 @@
             <div><span class="text-slate-400 text-[10px]">1R初期SL:</span> <strong id="closeDisplaySL" class="text-amber-400"></strong></div>
           </div>
 
-          <!-- モード1 & 2用：売却入力セクション -->
           <div id="sellFieldsGroup" class="space-y-3">
             <div id="halfTpInfoBox" class="hidden p-2.5 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-200 text-[11px]">
               ✂️ 売却株数分を確定ノートへ記録し、残りの株数で「💎 利益最大化中 (`HALF_TP`)」モードへ移行します。
@@ -603,7 +601,6 @@
             </div>
           </div>
 
-          <!-- モード3用：買い増し反映セクション -->
           <div id="addBuyFieldsGroup" class="hidden space-y-3">
             <div class="p-2.5 bg-indigo-950/40 border border-indigo-500/30 rounded-xl text-indigo-200 text-[11px]">
               🚀 追加買い増し分を合算し、平均取得単価を自動計算して「本玉 (`FULL`)」状態へ統合します。
@@ -658,6 +655,24 @@
         </div>
       </dialog>
 
+      <!-- AI抽出データ・スマホ対応コピー用モーダル -->
+      <dialog id="aiCopyDialog" class="bg-slate-900 border border-indigo-500/40 text-slate-100 p-5 rounded-2xl shadow-2xl max-w-lg w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
+        <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-3">
+          <h3 id="aiCopyTitle" class="text-sm font-bold text-white tracking-tight">⚡ AI相談用データ</h3>
+          <button type="button" onclick="document.getElementById('aiCopyDialog').close()" class="text-slate-400 hover:text-white font-bold text-lg select-none cursor-pointer focus:outline-none">✕</button>
+        </div>
+        <div class="space-y-3">
+          <p id="aiCopyStatus" class="text-xs text-indigo-300 font-bold">下の「📋 コピーする」ボタンを押してください</p>
+          <textarea id="aiCopyTextarea" readonly rows="8" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base sm:text-xs text-slate-200 font-mono leading-relaxed focus:outline-none"></textarea>
+          <div class="flex justify-end gap-2">
+            <button type="button" onclick="document.getElementById('aiCopyDialog').close()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">閉じる</button>
+            <button type="button" id="btnExecuteSyncCopy" onclick="executeSyncCopyFromModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/20 cursor-pointer">
+              📋 コピーする
+            </button>
+          </div>
+        </div>
+      </dialog>
+
     </main>
 
     <script>
@@ -673,6 +688,7 @@
         trackerRegime: 'ALL',
         trackerHorizon: 'T5',
         tradeNotes: [],
+        historyCache: {},
         currentSystem: 'mid',
         activeTab: 'BUY1',
         activeMarket: 'ALL',
@@ -764,7 +780,6 @@
         document.getElementById('btnOpenAddPortfolio').addEventListener('click', openPortfolioEntryDialog);
         document.getElementById('btnTriggerActions').addEventListener('click', handleTriggerActions);
 
-        // 決済・ポジション管理モーダルのモード切替
         document.getElementById('btnModeFullClose').addEventListener('click', () => switchTradeModalMode('FULL_CLOSE'));
         document.getElementById('btnModeHalfTP').addEventListener('click', () => switchTradeModalMode('HALF_TP'));
         document.getElementById('btnModeAddBuy').addEventListener('click', () => switchTradeModalMode('ADD_BUY'));
@@ -845,6 +860,8 @@
         if (closeDiag) { closeDiag.addEventListener('click', (e) => { if (e.target === closeDiag) closeDiag.close(); }); }
         const noteDiag = document.getElementById('tradeNoteDetailDialog');
         if (noteDiag) { noteDiag.addEventListener('click', (e) => { if (e.target === noteDiag) noteDiag.close(); }); }
+        const aiCopyDiag = document.getElementById('aiCopyDialog');
+        if (aiCopyDiag) { aiCopyDiag.addEventListener('click', (e) => { if (e.target === aiCopyDiag) aiCopyDiag.close(); }); }
 
         document.querySelectorAll('.tab-card').forEach(card => {
           card.addEventListener('click', () => {
@@ -1224,6 +1241,7 @@
         if (ownerEl) ownerEl.value = owner;
         if (repoEl) repoEl.value = repo;
         if (tokenEl) tokenEl.value = token;
+
         const detailsEl = document.getElementById('ghConfigDetails');
         if (detailsEl) {
           detailsEl.open = !(owner && repo && token);
@@ -1336,7 +1354,6 @@
         document.getElementById('closeMemoExit').value = '';
         document.getElementById('closeNotesLog').value = '';
 
-        // 状態に応じて最適な初期モードを自動選択
         if (item.statusLabel && item.statusLabel.includes('半分利確')) {
           switchTradeModalMode(item.shares >= 200 ? 'HALF_TP' : 'FULL_CLOSE');
         } else if (item.statusLabel && item.statusLabel.includes('買い増し')) {
@@ -1352,7 +1369,6 @@
         document.getElementById('tradeCloseDialog').close();
       }
 
-      // portfolio.csv の構造化パース・更新ヘルパー（code,price,shares,date,phase 列整合保証）
       function parseAndEnsureCsvColumns(csvText) {
         const rawLines = csvText.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
         if (rawLines.length === 0 || !rawLines[0].toLowerCase().includes('code')) {
@@ -1482,7 +1498,6 @@
             return;
           }
 
-          // 全株決済 または 半分利確
           const sellPrice = parseFloat(document.getElementById('closeInputSellPrice').value);
           if (!sellPrice || sellPrice <= 0) throw new Error("売却約定単価を入力してください。");
 
@@ -1540,7 +1555,6 @@
             chartSnapshot: []
           };
 
-          // 1. trade_notes.json に追記
           const noteApiBase = `https://api.github.com/repos/${owner}/${repo}/contents/data/trade_notes.json`;
           const getNoteRes = await fetch(`${noteApiBase}?t=${ts}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
@@ -1568,7 +1582,6 @@
             throw new Error(`trade_notes.json更新失敗 (${putNoteRes.status}): ${errTxt}`);
           }
 
-          // 2. portfolio.csv 更新（半分利確は株数減＆HALF_TP化、全決済は行削除）
           const getPortRes = await fetch(`${portApiBase}?t=${ts}`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
           });
@@ -1901,6 +1914,8 @@
         const token = document.getElementById('ghTokenInput').value.trim();
 
         if (!owner || !repo || !token) {
+          const detailsEl = document.getElementById('ghConfigDetails');
+          if (detailsEl) detailsEl.open = true;
           alert("GitHub連携設定（ユーザー名、リポジトリ名、Token）を入力してください。");
           return;
         }
@@ -2153,7 +2168,11 @@
           const shardKey = getShardKey(tickerClean);
           if (shardKey) {
             try {
-              const histData = await safeFetchJson(`history_data/data_${shardKey}.json?t=${Date.now()}`, {});
+              let histData = state.historyCache && state.historyCache[shardKey];
+              if (!histData) {
+                histData = await safeFetchJson(`history_data/data_${shardKey}.json?t=${Date.now()}`, {});
+                if (histData && Object.keys(histData).length > 0) state.historyCache[shardKey] = histData;
+              }
               const hist = histData[tickerClean];
               if (hist && hist.length > 0) {
                 const lastRow = hist[hist.length - 1];
@@ -2242,34 +2261,106 @@
         dialog.showModal();
       }
 
-      async function copyAiData(ticker, name) {
-        if (!ticker) return;
+      async function fetchAiMarkdown(ticker, name) {
+        if (!ticker) throw new Error("銘柄コードが指定されていません。");
         const tickerClean = normalizeTickerCode(ticker).padStart(4, '0');
         const shardKey = getShardKey(tickerClean);
-        if (!shardKey) {
-          alert(`銘柄コード [${tickerClean}] の形式が不正です。`);
-          return;
-        }
-        const url = `history_data/data_${shardKey}.json?t=${Date.now()}`;
+        if (!shardKey) throw new Error(`銘柄コード [${tickerClean}] の形式が不正です。`);
 
-        try {
+        if (!state.historyCache) state.historyCache = {};
+        let data = state.historyCache[shardKey];
+        if (!data) {
+          const url = `history_data/data_${shardKey}.json?t=${Date.now()}`;
           const response = await fetch(url);
           if (!response.ok) throw new Error("データの取得に失敗しました。");
-          const data = await response.json();
-          const history = data[tickerClean] || data[ticker];
-          if (!history || history.length === 0) { alert("履歴データがありません。"); return; }
-
-          let md = `【対象銘柄: ${tickerClean} ${name || ""}】\n\n| 日付 | 終値 | 5日線 | 25日線 | 75日線 | 25日線乖離率 | RSI(14) |\n|---|---|---|---|---|---|---|\n`;
-          history.forEach(row => {
-            const [dt, close, ma5, ma25, ma75, diff, rsi] = row;
-            md += `| ${dt} | ${close ?? '-'} | ${ma5 ?? '-'} | ${ma25 ?? '-'} | ${ma75 ?? '-'} | ${diff !== null && diff !== undefined ? diff + '%' : '-'} | ${rsi ?? '-'} |\n`;
-          });
-
-          await navigator.clipboard.writeText(md);
-          alert(`✅ [${tickerClean}] のAI相談用データをコピーしました！`);
-        } catch (err) {
-          alert(`エラー: ${err.message}`);
+          data = await response.json();
+          state.historyCache[shardKey] = data;
         }
+
+        const history = data[tickerClean] || data[ticker];
+        if (!history || history.length === 0) throw new Error("履歴データがありません。");
+
+        let md = `【対象銘柄: ${tickerClean} ${name || ""}】\n\n| 日付 | 終値 | 5日線 | 25日線 | 75日線 | 25日線乖離率 | RSI(14) |\n|---|---|---|---|---|---|---|\n`;
+        history.forEach(row => {
+          const [dt, close, ma5, ma25, ma75, diff, rsi] = row;
+          md += `| ${dt} | ${close ?? '-'} | ${ma5 ?? '-'} | ${ma25 ?? '-'} | ${ma75 ?? '-'} | ${diff !== null && diff !== undefined ? diff + '%' : '-'} | ${rsi ?? '-'} |\n`;
+        });
+        return { tickerClean, md };
+      }
+
+      function openAiCopyDialog(tickerClean, name, md) {
+        const dialog = document.getElementById('aiCopyDialog');
+        const title = document.getElementById('aiCopyTitle');
+        const ta = document.getElementById('aiCopyTextarea');
+        const status = document.getElementById('aiCopyStatus');
+        if (!dialog || !ta) return;
+
+        title.textContent = `⚡ AI相談用データ: [${tickerClean}] ${name || ''}`;
+        ta.value = md;
+        if (status) status.textContent = '下の「📋 コピーする」ボタンを押してください（長押し選択も可）';
+        dialog.showModal();
+      }
+
+      function executeSyncCopyFromModal() {
+        const ta = document.getElementById('aiCopyTextarea');
+        const status = document.getElementById('aiCopyStatus');
+        if (!ta) return;
+
+        const text = ta.value;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            if (status) status.textContent = '✅ クリップボードにコピーしました！このままAIへ貼り付けできます。';
+          }).catch(() => {
+            fallbackExecCommandCopy(ta, status);
+          });
+        } else {
+          fallbackExecCommandCopy(ta, status);
+        }
+      }
+
+      function fallbackExecCommandCopy(ta, status) {
+        try {
+          ta.focus();
+          ta.select();
+          ta.setSelectionRange(0, 999999);
+          const ok = document.execCommand('copy');
+          if (status) {
+            status.textContent = ok
+              ? '✅ クリップボードにコピーしました！このままAIへ貼り付けできます。'
+              : '⚠️ 自動コピーできない環境です。上の枠内を長押し→「すべて選択」→「コピー」してください。';
+          }
+        } catch (e) {
+          if (status) status.textContent = '⚠️ 上の枠内を長押し→「すべて選択」→「コピー」してください。';
+        }
+      }
+
+      function copyAiData(ticker, name) {
+        if (!ticker) return;
+        const resultPromise = fetchAiMarkdown(ticker, name);
+
+        if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
+          try {
+            const blobPromise = resultPromise.then(({ md }) => new Blob([md], { type: 'text/plain' }));
+            const item = new ClipboardItem({ 'text/plain': blobPromise });
+            navigator.clipboard.write([item])
+              .then(() => resultPromise)
+              .then(({ tickerClean }) => {
+                alert(`✅ [${tickerClean}] のAI相談用データをコピーしました！`);
+              })
+              .catch(() => {
+                resultPromise
+                  .then(({ tickerClean, md }) => openAiCopyDialog(tickerClean, name, md))
+                  .catch(err => alert(`エラー: ${err.message}`));
+              });
+            return;
+          } catch (e) {
+            // ClipboardItem(Promise)非対応ブラウザは下へフォールバック
+          }
+        }
+
+        resultPromise
+          .then(({ tickerClean, md }) => openAiCopyDialog(tickerClean, name, md))
+          .catch(err => alert(`エラー: ${err.message}`));
       }
 
       function toggleExplanation() {
@@ -2338,7 +2429,7 @@
       }
 
       function updateStats() {
-        const counts = { BUY1: 0, BUY1_PRE: 0, BUY2: 0, BUY2_PRE: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0, SELL5: 0, SELL5_PRE: 0, SELL6: 0, SELL7: 0, SELL7_PRE: 0, SELL8: 0 };
+        const counts = { BUY1: 0, BUY1_PRE: 0, BUY2: 0, BUY2_PRE: 0, BUY3: 0, BUY3_PRE: 0, BUY4: 0, SELL5: 0, SELL5_PRE: 0, SELL6: 0, SELL6_PRE: 0, SELL7: 0, SELL7_PRE: 0, SELL8: 0 };
         const sys = state.currentSystem;
         state.results.forEach(r => { if (r[sys] && counts[r[sys].category] !== undefined) counts[r[sys].category]++; });
 
@@ -2353,7 +2444,7 @@
         updateEl('statBuy3', counts.BUY3 + counts.BUY3_PRE, (prevSys.BUY3||0) + (prevSys.BUY3_PRE||0));
         updateEl('statBuy4', counts.BUY4, prevSys.BUY4);
         updateEl('statSell5', counts.SELL5 + counts.SELL5_PRE, (prevSys.SELL5||0) + (prevSys.SELL5_PRE||0));
-        updateEl('statSell6', counts.SELL6, prevSys.SELL6);
+        updateEl('statSell6', counts.SELL6 + counts.SELL6_PRE, (prevSys.SELL6||0) + (prevSys.SELL6_PRE||0));
         updateEl('statSell7', counts.SELL7 + counts.SELL7_PRE, (prevSys.SELL7||0) + (prevSys.SELL7_PRE||0));
         updateEl('statSell8', counts.SELL8, prevSys.SELL8);
 
@@ -2378,7 +2469,7 @@
           else if (state.activeTab === 'BUY3') allCategoryItems = allCategoryItems.filter(r => r[sys].category.startsWith('BUY3'));
           else if (state.activeTab === 'BUY4') allCategoryItems = allCategoryItems.filter(r => r[sys].category === 'BUY4');
           else if (state.activeTab === 'SELL5') allCategoryItems = allCategoryItems.filter(r => r[sys].category.startsWith('SELL5'));
-          else if (state.activeTab === 'SELL6') allCategoryItems = allCategoryItems.filter(r => r[sys].category === 'SELL6');
+          else if (state.activeTab === 'SELL6') allCategoryItems = allCategoryItems.filter(r => r[sys].category.startsWith('SELL6'));
           else if (state.activeTab === 'SELL7') allCategoryItems = allCategoryItems.filter(r => r[sys].category.startsWith('SELL7'));
           else if (state.activeTab === 'SELL8') allCategoryItems = allCategoryItems.filter(r => r[sys].category === 'SELL8');
         }
@@ -2424,9 +2515,6 @@
             ? `<div class="font-bold text-emerald-400 font-mono text-[13px]">${pos.initialShares}株 / ${pos.maxShares}株</div>` 
             : `<span class="px-2 py-0.5 rounded bg-rose-950/60 text-rose-400 text-[10px]">${escapeHtml(pos.rejectReason)}</span>`;
 
-          const consecBadge = (sysData.consecutiveDays && sysData.consecutiveDays >= 2)
-            ? `<span class="block text-[9px] text-slate-400 mt-0.5 font-mono">${sysData.consecutiveDays}日連続</span>`
-            : '';
           const marginBadge = item.isMarginTradable
             ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-500/30">貸借</span>`
             : `<span class="px-1.5 py-0.5 rounded text-[9px] text-slate-500 bg-slate-950 border border-slate-800">現/信</span>`;
