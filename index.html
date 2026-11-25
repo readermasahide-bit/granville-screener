@@ -2427,17 +2427,15 @@
           const consecBadge = (sysData.consecutiveDays && sysData.consecutiveDays >= 2)
             ? `<span class="block text-[9px] text-slate-400 mt-0.5 font-mono">${sysData.consecutiveDays}日連続</span>`
             : '';
-          const hotBadge = item.isHotSector ? `<span title="追い風HOT業種" class="ml-1">🔥</span>` : '';
-          const vapBadge = (sysData.vap_warning && sysData.category.startsWith('BUY')) ? `<span title="頭上シコリ注意(参考)" class="ml-1">🧱</span>` : '';
           const marginBadge = item.isMarginTradable
             ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-500/30">貸借</span>`
             : `<span class="px-1.5 py-0.5 rounded text-[9px] text-slate-500 bg-slate-950 border border-slate-800">現/信</span>`;
 
           tr.innerHTML = `
-            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${escapeHtml(sysData.categoryName.split('：')[0])}</span>${consecBadge}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${sysData.badgeClass}">${escapeHtml(sysData.categoryName.split('：')[0])}</span></td>
             <td class="p-3 text-center text-amber-400 font-mono text-[14px] font-extrabold">${sysData.score}</td>
             <td class="p-3 font-mono font-bold text-white">${escapeHtml(item.ticker)}</td>
-            <td class="p-3"><div class="font-bold text-slate-100 text-sm">${escapeHtml(item.name)}${hotBadge}${vapBadge}</div><div class="text-[10px] text-slate-400">${escapeHtml(item.sector)}</div></td>
+            <td class="p-3"><div class="font-bold text-slate-100 text-sm">${escapeHtml(item.name)}</div><div class="text-[10px] text-slate-400">${escapeHtml(item.sector)}</div></td>
             <td class="p-3 text-right font-mono font-bold">${item.price.toLocaleString()}</td>
             <td class="p-3 text-right font-mono ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${item.change.toLocaleString()} (${isPlus ? '+' : ''}${item.changeRate}%)</td>
             <td class="p-3 text-right font-mono">${posDisplayHtml}</td>
