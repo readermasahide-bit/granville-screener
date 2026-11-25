@@ -237,41 +237,41 @@ try:
     if ex_excel_url:
         res_exexcel = requests.get(ex_excel_url, headers=headers, timeout=15)
         if res_exexcel.status_code == 200:
-            df_ex_raw = pd.read_excel(io.BytesIO(res_exexcel.content), header=None)
-            header_idx = None
-            for idx_r, row_r in df_ex_raw.head(10).iterrows():
-                row_strs = [str(v) for v in row_r.values if pd.notna(v)]
-                if any('コード' in s for s in row_strs) and any('権利落日' in s for s in row_strs):
-                    header_idx = idx_r
-                    break
+            sheets_dict = pd.read_excel(io.BytesIO(res_exexcel.content), sheet_name=None, header=None)
+            for s_name, df_ex_raw in sheets_dict.items():
+                header_idx = None
+                for idx_r, row_r in df_ex_raw.head(15).iterrows():
+                    row_strs = [str(v) for v in row_r.values if pd.notna(v)]
+                    if any('コード' in s for s in row_strs) and any(('権利落ち' in s or '権利落' in s or '配当落' in s) for s in row_strs):
+                        header_idx = idx_r
+                        break
 
-            if header_idx is not None:
-                df_ex = df_ex_raw.iloc[header_idx + 1:].copy()
-                df_ex.columns = [str(v).strip() for v in df_ex_raw.iloc[header_idx].values]
-                code_cols = [c for c in df_ex.columns if 'コード' in c]
-                ex_cols = [c for c in df_ex.columns if '権利落日' in c and '普通' in c]
-                if not ex_cols:
-                    ex_cols = [c for c in df_ex.columns if '権利落日' in c]
-                note_cols = [c for c in df_ex.columns if '備考' in c]
+                if header_idx is not None:
+                    df_ex = df_ex_raw.iloc[header_idx + 1:].copy()
+                    df_ex.columns = [str(v).strip() for v in df_ex_raw.iloc[header_idx].values]
+                    code_cols = [c for c in df_ex.columns if 'コード' in c]
+                    ex_cols = [c for c in df_ex.columns if ('権利落ち' in c or '権利落' in c or '配当落' in c)]
+                    note_cols = [c for c in df_ex.columns if '備考' in c or '内容' in c]
 
-                if code_cols and ex_cols:
-                    c_col, e_col = code_cols[0], ex_cols[0]
-                    n_col = note_cols[0] if note_cols else None
-                    for _, row in df_ex.dropna(subset=[c_col, e_col]).iterrows():
-                        c_str = str(row[c_col]).strip().upper().split('.')[0].zfill(4)
-                        note_str = str(row[n_col]).strip() if n_col and pd.notna(row[n_col]) else "配当等"
-                        # 株主総会のみの権利落ちは価格・クロス影響が薄いため配当・分割・新株等に絞る
-                        if not any(k in note_str for k in ["配当", "分割", "株式", "新株", "無償", "分配", "権利"]):
-                            continue
-                        try:
-                            d_val = pd.to_datetime(row[e_col]).date()
-                            t_key = f"{c_str}.T"
-                            existing_ex = ex_rights_dates.get(t_key)
-                            if existing_ex is None or ("配当" in note_str or "分割" in note_str):
-                                ex_rights_dates[t_key] = {"date": d_val, "note": note_str}
-                        except Exception:
-                            pass
-                    print(f" -> 配当・権利落ち予定日: {len(ex_rights_dates)} 銘柄を登録完了")
+                    if code_cols and ex_cols:
+                        c_col, e_col = code_cols[0], ex_cols[0]
+                        n_col = note_cols[0] if note_cols else None
+                        for _, row in df_ex.dropna(subset=[c_col, e_col]).iterrows():
+                            c_str = str(row[c_col]).strip().upper().split('.')[0].zfill(4)
+                            if not c_str or len(c_str) > 5:
+                                continue
+                            note_str = str(row[n_col]).strip() if n_col and pd.notna(row[n_col]) else "配当等"
+                            if ("議決権" in note_str or "総会" in note_str) and not any(k in note_str for k in ["配当", "分割", "新株", "無償"]):
+                                continue
+                            try:
+                                d_val = pd.to_datetime(row[e_col]).date()
+                                t_key = f"{c_str}.T"
+                                existing_ex = ex_rights_dates.get(t_key)
+                                if existing_ex is None or ("配当" in note_str or "分割" in note_str):
+                                    ex_rights_dates[t_key] = {"date": d_val, "note": note_str or "配当等"}
+                            except Exception:
+                                pass
+            print(f" -> 配当・権利落ち予定日(JPX公式): {len(ex_rights_dates)} 銘柄を登録完了")
 except Exception as e:
     print(f"⚠️ 権利落ち予定日データの取得スキップ: {e}")
 
@@ -401,7 +401,7 @@ def extract_chunk_to_bulk(data, chunk_list, target_dict):
             target_dict[ticker] = cleaned
 
 
-# 3. 2段階ダウンロードパイプライン
+# 3. 2段階ダウンロードパイプライン（actions=True で過去配当落ち履歴も同時取得）
 bulk_data = {}
 chunk_size = 100
 
@@ -419,6 +419,7 @@ for i in range(0, len(tickers), chunk_size):
             interval="1d",
             group_by="ticker",
             auto_adjust=False,
+            actions=True,
             progress=False,
             threads=True
         )
@@ -436,6 +437,7 @@ for i in range(0, len(tickers), chunk_size):
                 interval="1d",
                 group_by="ticker",
                 auto_adjust=False,
+                actions=True,
                 progress=False,
                 threads=False
             )
@@ -450,7 +452,7 @@ for i in range(0, len(tickers), chunk_size):
             if consecutive_fails >= 5:
                 break
             try:
-                df_single = yf.Ticker(ticker).history(period="2y", interval="1d", auto_adjust=False)
+                df_single = yf.Ticker(ticker).history(period="2y", interval="1d", auto_adjust=False, actions=True)
                 cleaned = clean_stock_df(df_single)
                 if cleaned is not None:
                     bulk_data[ticker] = cleaned
@@ -506,6 +508,36 @@ for ticker, df_st in bulk_data.items():
 
 rs_20_rank = (pd.Series(ret_20_raw).rank(pct=True) * 100).round(1).to_dict() if ret_20_raw else {}
 rs_60_rank = (pd.Series(ret_60_raw).rank(pct=True) * 100).round(1).to_dict() if ret_60_raw else {}
+
+
+# 過去配当実績に基づく月末権利落ち日の自動バックアップ計算
+def estimate_month_end_ex_date(ref_date):
+    next_m = (ref_date.replace(day=28) + timedelta(days=4)).replace(day=1)
+    last_d = next_m - timedelta(days=1)
+    biz_days = []
+    cur = last_d
+    while cur.month == ref_date.month and len(biz_days) < 3:
+        if cur.weekday() < 5 and not (cur.month == 12 and cur.day == 31):
+            biz_days.append(cur)
+        cur -= timedelta(days=1)
+    return biz_days[1] if len(biz_days) >= 2 else last_d
+
+
+est_month_ex_date = estimate_month_end_ex_date(today_date)
+historical_div_months = {}
+for t_k, df_st_d in bulk_data.items():
+    if df_st_d is not None and 'Dividends' in df_st_d.columns:
+        try:
+            div_rows = df_st_d[df_st_d['Dividends'] > 0]
+            if not div_rows.empty:
+                already_ex_this_month = ((div_rows.index.year == today_date.year) & (div_rows.index.month == today_date.month)).any()
+                if not already_ex_this_month:
+                    month_end_divs = div_rows[div_rows.index.day >= 24]
+                    if not month_end_divs.empty:
+                        historical_div_months[t_k] = set(month_end_divs.index.month.tolist())
+        except Exception:
+            pass
+print(f" -> 過去配当実績月マップ(月末権利): {len(historical_div_months)} 銘柄を抽出完了 (今月末想定権利落日: {est_month_ex_date})")
 
 total_valid_stocks = len(all_market_changes)
 all_market_median = float(pd.Series(all_market_changes).median()) if all_market_changes else 0.0
@@ -1005,9 +1037,11 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score_reasons.append(f"⚠️ 決算発表直前({e_date.strftime('%m/%d')}): -5")
                 factor_keys.append("決算直前")
 
-        # 権利落ち日の2段階ガード（クロス取引の偽スクイーズ＆配当落ち急落防止）
+        # 権利落ち日の2段階ガード（JPX公式優先 ＋ 過去配当月実績バックアップ）
         is_near_ex_rights = False
         ex_info = ex_rights_dates.get(ticker)
+        if not ex_info and (today_date.month in historical_div_months.get(ticker, set())):
+            ex_info = {"date": est_month_ex_date, "note": "配当(前年実績)"}
         if ex_info:
             ex_date = ex_info["date"]
             ex_note = ex_info["note"]
@@ -1666,6 +1700,8 @@ if os.path.exists(portfolio_path):
 
                         ex_badge = ""
                         ex_info_p = ex_rights_dates.get(t_key)
+                        if not ex_info_p and (today_date.month in historical_div_months.get(t_key, set())):
+                            ex_info_p = {"date": est_month_ex_date, "note": "配当(前年実績)"}
                         if ex_info_p:
                             ex_d_p = ex_info_p["date"]
                             delta_ex_p = (ex_d_p - today_date).days
