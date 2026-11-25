@@ -219,6 +219,62 @@ try:
 except Exception as e:
     print(f"⚠️ 決算予定日データの取得スキップ: {e}")
 
+# JPX公式 配当落・権利落等情報（直近2週間分の権利落日一覧）
+print("JPXから配当落・権利落予定日一覧を動的取得中...")
+ex_rights_dates = {}
+try:
+    ex_page_url = "https://www.jpx.co.jp/listing/others/ex-rights/index.html"
+    res_expage = requests.get(ex_page_url, headers=headers, timeout=10)
+    ex_excel_url = None
+    if res_expage.status_code == 200:
+        match = re.search(r'href=["\']([^"\']*(?:ex-rights|tvdivq)[^"\']*\.xlsx?)["\']', res_expage.text, re.IGNORECASE)
+        if not match:
+            match = re.search(r'href=["\']([^"\']+\.xlsx?)["\']', res_expage.text, re.IGNORECASE)
+        if match:
+            link = match.group(1)
+            ex_excel_url = link if link.startswith('http') else requests.compat.urljoin(ex_page_url, link)
+
+    if ex_excel_url:
+        res_exexcel = requests.get(ex_excel_url, headers=headers, timeout=15)
+        if res_exexcel.status_code == 200:
+            df_ex_raw = pd.read_excel(io.BytesIO(res_exexcel.content), header=None)
+            header_idx = None
+            for idx_r, row_r in df_ex_raw.head(10).iterrows():
+                row_strs = [str(v) for v in row_r.values if pd.notna(v)]
+                if any('コード' in s for s in row_strs) and any('権利落日' in s for s in row_strs):
+                    header_idx = idx_r
+                    break
+
+            if header_idx is not None:
+                df_ex = df_ex_raw.iloc[header_idx + 1:].copy()
+                df_ex.columns = [str(v).strip() for v in df_ex_raw.iloc[header_idx].values]
+                code_cols = [c for c in df_ex.columns if 'コード' in c]
+                ex_cols = [c for c in df_ex.columns if '権利落日' in c and '普通' in c]
+                if not ex_cols:
+                    ex_cols = [c for c in df_ex.columns if '権利落日' in c]
+                note_cols = [c for c in df_ex.columns if '備考' in c]
+
+                if code_cols and ex_cols:
+                    c_col, e_col = code_cols[0], ex_cols[0]
+                    n_col = note_cols[0] if note_cols else None
+                    for _, row in df_ex.dropna(subset=[c_col, e_col]).iterrows():
+                        c_str = str(row[c_col]).strip().upper().split('.')[0].zfill(4)
+                        note_str = str(row[n_col]).strip() if n_col and pd.notna(row[n_col]) else "配当等"
+                        # 株主総会のみの権利落ちは価格・クロス影響が薄いため配当・分割・新株等に絞る
+                        if not any(k in note_str for k in ["配当", "分割", "株式", "新株", "無償", "分配", "権利"]):
+                            continue
+                        try:
+                            d_val = pd.to_datetime(row[e_col]).date()
+                            t_key = f"{c_str}.T"
+                            existing_ex = ex_rights_dates.get(t_key)
+                            if existing_ex is None or ("配当" in note_str or "分割" in note_str):
+                                ex_rights_dates[t_key] = {"date": d_val, "note": note_str}
+                        except Exception:
+                            pass
+                    print(f" -> 配当・権利落ち予定日: {len(ex_rights_dates)} 銘柄を登録完了")
+except Exception as e:
+    print(f"⚠️ 権利落ち予定日データの取得スキップ: {e}")
+
 # 日証金公式 貸借銘柄＆日次残高
 print("日証金から貸借取引対象銘柄（空売り可能銘柄）を取得中...")
 margin_shortable_tickers = set()
@@ -518,7 +574,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
     if isinstance(df_temp.columns, pd.MultiIndex):
         df_temp.columns = df_temp.columns.get_level_values(0)
 
-    # 週足トレンド（MTF）算出（リセット前のDatetimeIndex上で計算）
     is_weekly_up = False
     is_weekly_down = False
     if isinstance(df_temp.index, pd.DatetimeIndex) and len(df_temp) >= 75:
@@ -535,7 +590,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
         except Exception:
             pass
 
-    # ATR(14) 算出
     high_low = df_temp['High'] - df_temp['Low']
     high_close = (df_temp['High'] - df_temp['Close'].shift(1)).abs()
     low_close = (df_temp['Low'] - df_temp['Close'].shift(1)).abs()
@@ -588,7 +642,6 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
 
     diff_rate = ((price_today - long_ma_today) / long_ma_today) * 100
 
-    # ATR% & 売買代金 & 価格帯別出来高(VAP)
     atr14_val = float(today['atr14']) if pd.notna(today['atr14']) else (price_today * 0.025)
     atr_pct = round((atr14_val / price_today) * 100, 2) if price_today > 0 else 0.0
     atr_sl_buy = math.floor(max(1.0, price_today - atr14_val * 1.5))
@@ -952,6 +1005,23 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
                 score_reasons.append(f"⚠️ 決算発表直前({e_date.strftime('%m/%d')}): -5")
                 factor_keys.append("決算直前")
 
+        # 権利落ち日の2段階ガード（クロス取引の偽スクイーズ＆配当落ち急落防止）
+        is_near_ex_rights = False
+        ex_info = ex_rights_dates.get(ticker)
+        if ex_info:
+            ex_date = ex_info["date"]
+            ex_note = ex_info["note"]
+            delta_ex = (ex_date - today_date).days
+            if 0 <= delta_ex <= 7:
+                is_near_ex_rights = True
+            if 0 <= delta_ex <= 3:
+                if category.startswith("BUY"):
+                    score -= 5
+                    score_reasons.append(f"⚠️ 権利落ち直前({ex_date.strftime('%m/%d')} {ex_note}): -5")
+                    factor_keys.append("権利落ち直前")
+                else:
+                    score_reasons.append(f"⚠️ 権利落ち跨ぎ注意({ex_date.strftime('%m/%d')} {ex_note}・配当落調整金注意)")
+
         tse_buy_balance = tse_info.get("buy_balance", 0) if tse_info else 0
         diff_buy = tse_info.get("diff_buy", 0) if tse_info else 0
         diff_sell = tse_info.get("diff_sell", 0) if tse_info else 0
@@ -1009,18 +1079,26 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
 
             has_short_squeeze_fuel = (diff_sell > (vol_ma25 * 0.03)) or (is_margin_tradable and jsf_ratio <= 0.7 and jsf_short_days >= 0.5) or is_multi_day_sell_increase
 
-            if has_short_squeeze_fuel and is_yang_candle and is_price_up:
+            if is_near_ex_rights:
+                if has_short_squeeze_fuel:
+                    score_reasons.append("⚠️ 権利落ち接近につきスクイーズ加点無効(クロス取引警戒)")
+            elif has_short_squeeze_fuel and is_yang_candle and is_price_up:
                 if tse_ratio <= 2.0:
-                    score += 2
-                    score_reasons.append(f"🔥 特級ショートスクイーズ(東証倍率{tse_ratio:.1f}倍＆売残急増・本物の踏み上げ): +2")
-                    factor_keys.append("特級踏み上げ")
+                    if category in ["BUY2", "BUY2_PRE", "BUY3", "BUY3_PRE"]:
+                        score += 2
+                        score_reasons.append(f"🔥 特級ショートスクイーズ(東証倍率{tse_ratio:.1f}倍＆売残急増・上昇中踏み上げ): +2")
+                        factor_keys.append("特級踏み上げ")
+                    else:
+                        score += 1
+                        score_reasons.append(f"🔥 ショートスクイーズ期待(東証倍率{tse_ratio:.1f}倍＆売残急増): +1")
+                        factor_keys.append("通常踏み上げ")
                 elif tse_ratio <= 4.0:
                     score += 1
                     score_reasons.append(f"🔥 ショートスクイーズ初動(東証倍率{tse_ratio:.1f}倍＆空売り燃料チャージ): +1")
                     factor_keys.append("通常踏み上げ")
 
             if tse_buy_days >= 3.0:
-                if vol_ratio >= 2.0 and is_yang_candle:
+                if (not is_near_ex_rights) and vol_ratio >= 2.0 and is_yang_candle:
                     score_reasons.append(f"🌊 出来高急増によるシコり消化(出来高{vol_ratio:.1f}倍で買残{tse_buy_days:.1f}日分を突破・減点免除)")
                     factor_keys.append("シコり消化")
                 else:
@@ -1054,9 +1132,12 @@ def evaluate_logic(ticker, df_temp, short_window, long_window, market_type, is_m
 
             if vol_ratio >= 1.5:
                 if is_yang_candle:
-                    score += 1
-                    score_reasons.append("📊 陽線で出来高急増(大口買い集め): +1")
-                    factor_keys.append("陽線出来高急増")
+                    if is_near_ex_rights:
+                        score_reasons.append("⚠️ 権利落ち接近につき出来高急増加点無効(権利売買警戒)")
+                    else:
+                        score += 1
+                        score_reasons.append("📊 陽線で出来高急増(大口買い集め): +1")
+                        factor_keys.append("陽線出来高急増")
                 else:
                     score -= 1
                     score_reasons.append("⚠️ 陰線で出来高急増(売り抜け警戒): -1")
@@ -1583,6 +1664,14 @@ if os.path.exists(portfolio_path):
                                 earnings_badge = f"📢 {e_date.strftime('%m/%d')}(あと{delta_days}日)"
                                 is_earnings_urgent = True
 
+                        ex_badge = ""
+                        ex_info_p = ex_rights_dates.get(t_key)
+                        if ex_info_p:
+                            ex_d_p = ex_info_p["date"]
+                            delta_ex_p = (ex_d_p - today_date).days
+                            if 0 <= delta_ex_p <= 3:
+                                ex_badge = f"💸 {ex_d_p.strftime('%m/%d')}権利落"
+
                         active_sys_res = None
                         for s_item in results_list:
                             if s_item["ticker"] == c_str:
@@ -1714,6 +1803,9 @@ if os.path.exists(portfolio_path):
                             status_label = f"{status_label} {earnings_badge}"
                             if is_earnings_urgent and "即撤退" not in action_label and "全利確" not in action_label:
                                 action_label = f"【跨ぎ注意】{action_label}"
+
+                        if ex_badge:
+                            status_label = f"{status_label} {ex_badge}"
 
                         portfolio_records.append({
                             "code": c_str,
@@ -2065,6 +2157,7 @@ buy_target_factors = [
     ("Pre本発射", "Preからの本発射"),
     ("追い風業種", "追い風HOT業種"),
     ("地合い強気", "地合い強気(逆行高)"),
+    ("権利落ち直前", "権利落ち直前(要回避)"),
     ("ATR低(<1.5%)", "ボラ帯: ATR低(<1.5%)"),
     ("ATR中(1.5-4.0%)", "ボラ帯: ATR中(1.5-4.0%)"),
     ("ATR高(>4.0%)", "ボラ帯: ATR高(>4.0%)"),
