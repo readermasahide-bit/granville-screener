@@ -86,7 +86,7 @@
       <!-- ================================================================ -->
       <div id="viewScreener" class="space-y-5">
         <!-- マイ保有ポートフォリオ専用セクション -->
-        <section id="portfolioSection" class="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl flex flex-col space-y-4">
+        <section id="portfolioSection" class="bg-slate-900 border border-indigo-500/30 rounded-2xl p-5 shadow-2xl flex flex-col space-y-3.5">
           
           <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
             <div class="flex items-center gap-2">
@@ -100,19 +100,48 @@
             </div>
             
             <div class="flex items-center gap-2 flex-wrap">
-              <div class="flex items-center gap-3 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono">
-                <div><span class="text-slate-400 text-[10px]">保有:</span> <span id="portTotalCount" class="font-bold text-white">0</span> 銘柄</div>
-                <div class="text-slate-700">|</div>
-                <div><span class="text-slate-400 text-[10px]">総額:</span> <span id="portTotalInvest" class="font-bold text-slate-200">0</span> 円</div>
-                <div class="text-slate-700">|</div>
-                <div><span class="text-slate-400 text-[10px]">損益:</span> <strong id="portTotalPL" class="font-bold text-emerald-400">0 円</strong></div>
-              </div>
               <button id="btnOpenAddPortfolio" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-md shadow-indigo-600/20 shrink-0">
                 <span>➕</span> 保有登録
+              </button>
+              <button id="btnOpenPosSettings" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 hover:border-emerald-400/50 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-sm shrink-0" title="総資産・許容リスク率・1銘柄枠上限を設定">
+                <span>⚙️</span> 資金設定
               </button>
               <button id="btnTriggerActions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer flex items-center gap-1 shadow-sm shrink-0" title="GitHub Actions を起動して最新データで全体更新">
                 <span>🔄</span> スクリーナー更新
               </button>
+            </div>
+          </div>
+
+          <!-- 資金稼働率・買付余力・含み損益ステータスバー -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 bg-slate-950/90 p-3 rounded-xl border border-slate-800 font-mono text-xs">
+            <div class="flex flex-col justify-between">
+              <span class="text-slate-400 text-[10px] font-sans">保有状況（買付元本）</span>
+              <div class="mt-0.5 flex items-baseline gap-2">
+                <strong id="portTotalCount" class="text-white text-sm">0</strong><span class="text-slate-400 text-[10px]">銘柄</span>
+                <span class="text-slate-700">/</span>
+                <strong id="portTotalInvest" class="text-slate-200 text-sm">0</strong><span class="text-slate-400 text-[10px]">円</span>
+              </div>
+            </div>
+            <div class="flex flex-col justify-between">
+              <span class="text-slate-400 text-[10px] font-sans">資金稼働率 <span id="portTotalAssetsLabel" class="text-slate-500">(総資産 500万円)</span></span>
+              <div class="mt-0.5 flex items-center gap-2">
+                <strong id="portUtilizationRate" class="text-cyan-400 text-sm">0.0%</strong>
+                <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden max-w-[100px]">
+                  <div id="portUtilizationBar" class="h-full bg-cyan-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+            <div class="flex flex-col justify-between">
+              <span class="text-slate-400 text-[10px] font-sans">買付余力（総資産枠内）</span>
+              <div class="mt-0.5">
+                <strong id="portRemainingPower" class="text-emerald-400 text-sm">5,000,000 円</strong>
+              </div>
+            </div>
+            <div class="flex flex-col justify-between">
+              <span class="text-slate-400 text-[10px] font-sans">評価含み損益</span>
+              <div class="mt-0.5">
+                <strong id="portTotalPL" class="text-emerald-400 text-sm">0 円</strong>
+              </div>
             </div>
           </div>
 
@@ -292,63 +321,6 @@
             </div>
           </div>
         </section>
-
-        <!-- ボタンエリア -->
-        <div class="flex justify-center items-center gap-3 mt-6 flex-wrap">
-          <button id="btnToggleExplanation" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md">
-            📖 解説を表示
-          </button>
-          <button id="btnToggleSettings" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 px-6 py-2.5 rounded-xl text-xs font-bold transition duration-200 cursor-pointer shadow-md flex items-center gap-1.5">
-            <span>⚙️</span> 資金設定
-          </button>
-        </div>
-
-        <!-- 資金管理設定アコーディオンエリア -->
-        <section id="settingsSection" class="pt-4 hidden">
-          <div class="max-w-3xl mx-auto bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 flex-wrap gap-2">
-              <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
-                <span>⚙️</span> ポジションサイジング設定（500万推奨: リスク1.5% / 上限枠16%）
-              </h3>
-              <button id="btnResetPosDefault" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold cursor-pointer">
-                500万推奨値にリセット
-              </button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label class="block text-slate-400 font-medium mb-1">総資産額 [円]</label>
-                <input type="number" id="settingTotalAssets" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="100000" min="100000">
-              </div>
-              <div>
-                <label class="block text-slate-400 font-medium mb-1">許容リスク率 [%]</label>
-                <input type="number" id="settingRiskTolerance" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="0.5" min="0.5" max="20">
-              </div>
-              <div>
-                <label class="block text-slate-400 font-medium mb-1">1銘柄枠上限 [%]</label>
-                <input type="number" id="settingMaxPosition" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="1" min="5" max="100">
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 解説セクション -->
-        <section id="explanationSection" class="pt-6 border-t border-slate-800/60 hidden space-y-6">
-          <div class="space-y-4">
-            <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
-              <span>📖</span> グランビル法則詳細判定要件
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-              <div class="bg-slate-900/60 border border-emerald-500/20 rounded-xl p-3.5"><span class="font-bold text-emerald-300 block mb-1">買い1 / 1-Pre (突破前夜)</span><p class="text-slate-400 text-[11px] leading-relaxed">底練りを経て、長期線に初上抜け(1)または直下肉薄(1-Pre)。<br>損切: 20日安値✕0.98</p></div>
-              <div class="bg-slate-900/60 border border-sky-500/20 rounded-xl p-3.5"><span class="font-bold text-sky-300 block mb-1">買い2 / 2-Pre (復帰前夜)</span><p class="text-slate-400 text-[11px] leading-relaxed">上昇中、下抜け後に素早く復帰(2)または復帰前夜(2-Pre)。<br>損切: 5日安値✕0.98</p></div>
-              <div class="bg-slate-900/60 border border-amber-500/20 rounded-xl p-3.5"><span class="font-bold text-amber-300 block mb-1">買い3 / 3-Pre (待ち伏せ)</span><p class="text-slate-400 text-[11px] leading-relaxed">上昇トレンド中、支持線反発(3)または極近待ち伏せ(3-Pre)。<br>損切: 長期線✕0.98</p></div>
-              <div class="bg-slate-900/60 border border-purple-500/20 rounded-xl p-3.5"><span class="font-bold text-purple-300 block mb-1">買い4：逆張りリバ</span><p class="text-slate-400 text-[11px] leading-relaxed">長期線から大きく下方に下方乖離して本日反発。<br>損切: 当日安値✕0.98</p></div>
-              <div class="bg-slate-900/60 border border-rose-500/20 rounded-xl p-3.5"><span class="font-bold text-rose-300 block mb-1">売り5 / 5-Pre (新規売り初動)</span><p class="text-slate-400 text-[11px] leading-relaxed">高値圏後に長期線を本日下抜け(5)または直上失速(5-Pre)。<br>損切: 20日高値✕1.02</p></div>
-              <div class="bg-slate-900/60 border border-orange-500/20 rounded-xl p-3.5"><span class="font-bold text-orange-300 block mb-1">売り6 / 6-Pre (再下抜け)</span><p class="text-slate-400 text-[11px] leading-relaxed">下降中、一時上抜け後に再び割り込み(6)または直前(6-Pre)。<br>損切: 5日高値✕1.02</p></div>
-              <div class="bg-slate-900/60 border border-red-600/20 rounded-xl p-3.5"><span class="font-bold text-red-400 block mb-1">売り7 / 7-Pre (戻り待ち伏せ)</span><p class="text-slate-400 text-[11px] leading-relaxed">下降長期線に頭を押さえられて戻り反落(7)または接近(7-Pre)。<br>損切: 長期線✕1.02</p></div>
-              <div class="bg-slate-900/60 border border-fuchsia-500/20 rounded-xl p-3.5"><span class="font-bold text-fuchsia-300 block mb-1">売り8：逆張り過熱売り</span><p class="text-slate-400 text-[11px] leading-relaxed">上に異常急騰乖離後、本日天井反落を確認。<br>損切: 当日高値✕1.02</p></div>
-            </div>
-          </div>
-        </section>
       </div>
 
       <!-- ================================================================ -->
@@ -449,16 +421,16 @@
       </div>
 
       <!-- ================================================================ -->
-      <!-- ビュー3：電子株ノート（遅延読み込み対応）                        -->
+      <!-- ビュー3：電子株ノート（月別成績サマリー ＋ カルテ一覧）           -->
       <!-- ================================================================ -->
       <div id="viewNotes" class="hidden space-y-5">
-        <section id="tradeNotesSection" class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
+        <section id="tradeNotesSection" class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-2xl space-y-5">
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
             <div class="flex items-center gap-2">
               <span class="w-7 h-7 rounded-lg bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-sm font-bold">📘</span>
               <div>
                 <h2 class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                  電子株ノート（確定トレードカルテ・反省日誌）
+                  電子株ノート（確定トレードカルテ・月次集計）
                 </h2>
                 <p class="text-[10px] text-slate-400">売買当時のチャート図・判断・心理ログを永久保存中（行クリックでカルテ展開）</p>
               </div>
@@ -471,26 +443,107 @@
             </div>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead>
-                <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
-                  <th class="p-2.5 w-20">コード</th>
-                  <th class="p-2.5 min-w-[140px]">銘柄名</th>
-                  <th class="p-2.5 text-center w-32">売買期間</th>
-                  <th class="p-2.5 text-right w-28">確定損益</th>
-                  <th class="p-2.5 text-right w-24">損益率</th>
-                  <th class="p-2.5 text-right w-24">獲得R</th>
-                  <th class="p-2.5 text-center w-36">自己評価 (IN/OUT)</th>
-                  <th class="p-2.5 text-center w-20">詳細</th>
-                </tr>
-              </thead>
-              <tbody id="tradeNotesTableBody" class="divide-y divide-slate-800/60 font-mono">
-              </tbody>
-            </table>
+          <!-- 月別トレード成績サマリー -->
+          <div class="space-y-2">
+            <span class="font-bold text-slate-300 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+              <span>📅</span> 月別トレード成績サマリー（決済日基準・R比率分析）
+            </span>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
+                    <th class="p-2.5 w-28">対象月</th>
+                    <th class="p-2.5 text-right w-32">決済数 (勝敗)</th>
+                    <th class="p-2.5 text-right w-20">勝率</th>
+                    <th class="p-2.5 text-right w-32">月間確定損益</th>
+                    <th class="p-2.5 text-right w-24">平均損益率</th>
+                    <th class="p-2.5 text-right w-36">獲得R合計 (平均R)</th>
+                    <th class="p-2.5 text-right w-32" title="平均勝ちR ÷ 平均負けR（ペイオフレシオ）">R比率 (勝R/負R)</th>
+                  </tr>
+                </thead>
+                <tbody id="monthlySummaryTableBody" class="divide-y divide-slate-800/60 font-mono">
+                </tbody>
+                <tfoot id="monthlySummaryTableFoot" class="border-t-2 border-slate-700 bg-slate-950/80 font-mono">
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- 個別カルテ一覧 -->
+          <div class="space-y-2 pt-3 border-t border-slate-800">
+            <span class="font-bold text-slate-300 text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+              <span>🗂️</span> 確定トレードカルテ一覧
+            </span>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase bg-slate-950/60 select-none">
+                    <th class="p-2.5 w-20">コード</th>
+                    <th class="p-2.5 min-w-[140px]">銘柄名</th>
+                    <th class="p-2.5 text-center w-32">売買期間</th>
+                    <th class="p-2.5 text-right w-28">確定損益</th>
+                    <th class="p-2.5 text-right w-24">損益率</th>
+                    <th class="p-2.5 text-right w-24">獲得R</th>
+                    <th class="p-2.5 text-center w-36">自己評価 (IN/OUT)</th>
+                    <th class="p-2.5 text-center w-20">詳細</th>
+                  </tr>
+                </thead>
+                <tbody id="tradeNotesTableBody" class="divide-y divide-slate-800/60 font-mono">
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       </div>
+
+      <!-- 資金設定モーダル（ポートフォリオ連携） -->
+      <dialog id="posSettingsDialog" class="bg-slate-900 border border-emerald-500/40 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-md w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
+        <div class="flex justify-between items-start border-b border-slate-800 pb-3 mb-4">
+          <h3 class="text-sm font-bold text-emerald-400 tracking-tight flex items-center gap-2">
+            <span>⚙️</span> 資金・ポジション設定
+          </h3>
+          <button type="button" onclick="closePosSettingsDialog()" class="text-slate-400 hover:text-white font-bold text-lg select-none cursor-pointer focus:outline-none">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            変更するとポートフォリオの「稼働率・買付余力」およびスクリーナーの「推奨目安株数」が即座に再計算されます。
+          </p>
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">総資産額 [円]</label>
+            <input type="number" id="settingTotalAssets" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="100000" min="100000">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">許容リスク率 [%]</label>
+              <input type="number" id="settingRiskTolerance" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="0.5" min="0.5" max="20">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">1銘柄枠上限 [%]</label>
+              <input type="number" id="settingMaxPosition" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-emerald-500 transition" step="1" min="1" max="100">
+            </div>
+          </div>
+
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5 font-mono text-[11px]">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400 font-sans">1トレード許容損失 (1R):</span>
+              <strong id="previewRiskAmount" class="text-rose-400">75,000 円</strong>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400 font-sans">1銘柄あたりの上限目安:</span>
+              <strong id="previewMaxSlotAmount" class="text-emerald-400">800,000 円</strong>
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-between items-center gap-2">
+            <button id="btnResetPosDefault" type="button" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-bold cursor-pointer">
+              初期値 (500万) に戻す
+            </button>
+            <button type="button" onclick="closePosSettingsDialog()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 cursor-pointer">
+              完了
+            </button>
+          </div>
+        </div>
+      </dialog>
 
       <!-- 診断カルテモーダル -->
       <dialog id="diagnosticDialog" class="bg-slate-900 border border-slate-800 text-slate-100 p-6 rounded-2xl shadow-2xl max-w-md w-full backdrop:bg-slate-950/80 focus:outline-none z-50">
@@ -882,7 +935,6 @@
       }
 
       document.addEventListener('DOMContentLoaded', async () => {
-        // ナビゲーションボタン・ハッシュ変更イベント登録
         document.querySelectorAll('.nav-view-btn').forEach(btn => {
           btn.addEventListener('click', () => switchView(btn.dataset.view, true));
         });
@@ -890,13 +942,11 @@
           switchView(getViewFromHash(), false);
         });
 
-        // 初期表示時のハッシュを確認（#tracker や #notes で直接開かれた場合にも対応）
         const initialView = getViewFromHash();
         if (initialView !== 'screener') {
           switchView(initialView, false);
         }
 
-        // 初期ロードはメイン画面に必要なJSONのみ取得（tracker_summary.json と trade_notes.json は遅延読み込み）
         const ts = Date.now();
         const [resResults, resPrev, resPort, resMeta, resHotSectors] = await Promise.all([
           safeFetchJson(`./data/results.json?t=${ts}`, []),
@@ -925,6 +975,7 @@
         renderMarketRegimeBanner();
 
         document.getElementById('btnOpenAddPortfolio').addEventListener('click', openPortfolioEntryDialog);
+        document.getElementById('btnOpenPosSettings').addEventListener('click', openPosSettingsDialog);
         document.getElementById('btnTriggerActions').addEventListener('click', handleTriggerActions);
 
         document.getElementById('btnReloadTracker').addEventListener('click', () => ensureTrackerLoaded(true));
@@ -994,14 +1045,14 @@
         document.getElementById('thPrice').addEventListener('click', togglePriceSort);
         document.getElementById('thScore').addEventListener('click', toggleScoreSort);
         document.getElementById('btnExportCSV').addEventListener('click', exportCSV);
-        document.getElementById('btnToggleExplanation').addEventListener('click', toggleExplanation);
-        document.getElementById('btnToggleSettings').addEventListener('click', toggleSettings);
         document.getElementById('btnResetPosDefault').addEventListener('click', resetPosConfigDefault);
 
         document.getElementById('settingTotalAssets').addEventListener('input', updatePosConfigFromUI);
         document.getElementById('settingRiskTolerance').addEventListener('input', updatePosConfigFromUI);
         document.getElementById('settingMaxPosition').addEventListener('input', updatePosConfigFromUI);
 
+        const posDiag = document.getElementById('posSettingsDialog');
+        if (posDiag) { posDiag.addEventListener('click', (e) => { if (e.target === posDiag) posDiag.close(); }); }
         const diag = document.getElementById('diagnosticDialog');
         if (diag) { diag.addEventListener('click', (e) => { if (e.target === diag) diag.close(); }); }
         const portDiag = document.getElementById('portfolioEntryDialog');
@@ -1256,12 +1307,141 @@
         });
       }
 
+      function renderMonthlyTradeSummary(notes) {
+        const tbody = document.getElementById('monthlySummaryTableBody');
+        const tfoot = document.getElementById('monthlySummaryTableFoot');
+        if (!tbody || !tfoot) return;
+
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        if (state.notesLoading) {
+          tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-emerald-300 font-sans animate-pulse">⏳ 集計中...</td></tr>`;
+          return;
+        }
+
+        if (!notes || notes.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-500 font-sans">決済データがありません。</td></tr>`;
+          return;
+        }
+
+        const groups = {};
+        notes.forEach(n => {
+          const rawDate = String(n.outDate || n.inDate || '');
+          const monthKey = /^\d{4}-\d{2}/.test(rawDate) ? rawDate.slice(0, 7) : '日付不明';
+          if (!groups[monthKey]) groups[monthKey] = [];
+          groups[monthKey].push(n);
+        });
+
+        const sortedMonths = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+        const calcStats = (list) => {
+          const count = list.length;
+          let wins = 0, losses = 0, totalPL = 0, sumRate = 0;
+          const winRs = [], lossRs = [], allRs = [];
+
+          list.forEach(item => {
+            const pl = Number(item.plAmount || 0);
+            const rate = Number(item.plRate || 0);
+            totalPL += pl;
+            sumRate += rate;
+            if (pl > 0) wins++;
+            else losses++;
+
+            if (item.rMultiple !== undefined && item.rMultiple !== null && !Number.isNaN(Number(item.rMultiple))) {
+              const r = Number(item.rMultiple);
+              allRs.push(r);
+              if (r > 0) winRs.push(r);
+              else if (r < 0) lossRs.push(Math.abs(r));
+            }
+          });
+
+          const winRate = count > 0 ? (wins / count) * 100 : 0;
+          const avgRate = count > 0 ? (sumRate / count) : 0;
+          const totalR = allRs.reduce((acc, v) => acc + v, 0);
+          const avgR = allRs.length > 0 ? (totalR / allRs.length) : 0;
+          const avgWinR = winRs.length > 0 ? (winRs.reduce((a, b) => a + b, 0) / winRs.length) : 0;
+          const avgLossR = lossRs.length > 0 ? (lossRs.reduce((a, b) => a + b, 0) / lossRs.length) : 0;
+
+          let rRatioText = '-';
+          let rRatioColor = 'text-slate-300';
+          if (allRs.length > 0) {
+            if (avgLossR > 0) {
+              const ratio = avgWinR / avgLossR;
+              rRatioText = `${ratio.toFixed(2)}`;
+              rRatioColor = ratio >= 1.5 ? 'text-emerald-400' : ratio >= 1.0 ? 'text-amber-300' : 'text-rose-400';
+            } else if (avgWinR > 0) {
+              rRatioText = 'MAX (無敗)';
+              rRatioColor = 'text-emerald-400';
+            }
+          }
+
+          return {
+            count, wins, losses, winRate, totalPL, avgRate,
+            hasR: allRs.length > 0, totalR, avgR, avgWinR, avgLossR,
+            rRatioText, rRatioColor
+          };
+        };
+
+        sortedMonths.forEach(mKey => {
+          const st = calcStats(groups[mKey]);
+          const isPlus = st.totalPL >= 0;
+          const plSign = isPlus ? '+' : '';
+          const plColor = isPlus ? 'text-emerald-400' : 'text-rose-400';
+          const badge20 = st.totalPL >= 200000
+            ? `<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-sans">🏆 20万達成</span>`
+            : '';
+
+          const rSign = st.totalR >= 0 ? '+' : '';
+          const avgRSign = st.avgR >= 0 ? '+' : '';
+          const rColor = st.totalR >= 0 ? 'text-amber-300' : 'text-rose-400';
+          const rateSign = st.avgRate >= 0 ? '+' : '';
+
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/40 transition select-none';
+          tr.innerHTML = `
+            <td class="p-2.5 font-bold text-white">${escapeHtml(mKey)}</td>
+            <td class="p-2.5 text-right text-slate-300">${st.count}件 <span class="text-[10px] text-slate-400">(${st.wins}勝${st.losses}敗)</span></td>
+            <td class="p-2.5 text-right font-bold ${st.winRate >= 50 ? 'text-emerald-400' : 'text-slate-300'}">${st.winRate.toFixed(1)}%</td>
+            <td class="p-2.5 text-right font-bold ${plColor}">${plSign}${Math.round(st.totalPL).toLocaleString()} 円${badge20}</td>
+            <td class="p-2.5 text-right ${st.avgRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${rateSign}${st.avgRate.toFixed(2)}%</td>
+            <td class="p-2.5 text-right font-bold ${rColor}">${st.hasR ? `${rSign}${st.totalR.toFixed(2)}R <span class="text-[10px] text-slate-400 font-normal">(${avgRSign}${st.avgR.toFixed(2)}R)</span>` : '-'}</td>
+            <td class="p-2.5 text-right font-bold ${st.rRatioColor}" title="平均勝ち: +${st.avgWinR.toFixed(2)}R / 平均負け: -${st.avgLossR.toFixed(2)}R">
+              ${st.rRatioText}
+              ${st.hasR && st.avgLossR > 0 ? `<span class="text-[10px] text-slate-500 font-normal ml-1">(${st.avgWinR.toFixed(1)}/${st.avgLossR.toFixed(1)})</span>` : ''}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // 通算合計行
+        const totalSt = calcStats(notes);
+        const isTotPlus = totalSt.totalPL >= 0;
+        const totPlSign = isTotPlus ? '+' : '';
+        const totRSign = totalSt.totalR >= 0 ? '+' : '';
+        const totAvgRSign = totalSt.avgR >= 0 ? '+' : '';
+        const totRateSign = totalSt.avgRate >= 0 ? '+' : '';
+
+        tfoot.innerHTML = `
+          <tr class="text-slate-200">
+            <td class="p-2.5 font-bold text-cyan-300 font-sans">通算合計</td>
+            <td class="p-2.5 text-right">${totalSt.count}件 <span class="text-[10px] text-slate-400">(${totalSt.wins}勝${totalSt.losses}敗)</span></td>
+            <td class="p-2.5 text-right font-bold ${totalSt.winRate >= 50 ? 'text-emerald-400' : 'text-slate-300'}">${totalSt.winRate.toFixed(1)}%</td>
+            <td class="p-2.5 text-right font-bold ${isTotPlus ? 'text-emerald-400' : 'text-rose-400'}">${totPlSign}${Math.round(totalSt.totalPL).toLocaleString()} 円</td>
+            <td class="p-2.5 text-right ${totalSt.avgRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${totRateSign}${totalSt.avgRate.toFixed(2)}%</td>
+            <td class="p-2.5 text-right font-bold ${totalSt.totalR >= 0 ? 'text-amber-300' : 'text-rose-400'}">${totalSt.hasR ? `${totRSign}${totalSt.totalR.toFixed(2)}R <span class="text-[10px] text-slate-400 font-normal">(${totAvgRSign}${totalSt.avgR.toFixed(2)}R)</span>` : '-'}</td>
+            <td class="p-2.5 text-right font-bold ${totalSt.rRatioColor}">${totalSt.rRatioText}</td>
+          </tr>
+        `;
+      }
+
       function renderTradeNotesSection() {
         const tbody = document.getElementById('tradeNotesTableBody');
         const countLabel = document.getElementById('tradeNotesCountLabel');
         const notes = state.tradeNotes || [];
         if (!tbody) return;
 
+        renderMonthlyTradeSummary(notes);
         tbody.innerHTML = '';
 
         if (state.notesLoading) {
@@ -1313,78 +1493,105 @@
         const portList = state.portfolio || [];
         tbody.innerHTML = '';
 
-        if (portList.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500 font-sans">現在登録されている保有銘柄はありません。右上の「➕ 保有登録」から登録できます。</td></tr>`;
-          document.getElementById('portTotalCount').textContent = "0";
-          document.getElementById('portTotalInvest').textContent = "0";
-          document.getElementById('portTotalPL').textContent = "0 円";
-          document.getElementById('portTotalPL').className = "font-bold text-slate-300";
-          document.getElementById('badgeActionTP').textContent = `✂️/🏆 利確: 0件`;
-          document.getElementById('badgeActionAdd').textContent = `🚀 買増可: 0件`;
-          document.getElementById('badgeActionSL').textContent = `🛑 損切: 0件`;
-          document.getElementById('badgeActionTrail').textContent = `🛡️ 逆指値変更: 0件`;
-          document.getElementById('badgeActionHold').textContent = `🟢 ホールド: 0件`;
-          return;
-        }
-
         let totalInvest = 0, totalCurrent = 0, countTP = 0, countAdd = 0, countSL = 0, countTrail = 0, countHold = 0;
 
-        portList.forEach(item => {
-          const invest = item.buyPrice * item.shares;
-          const currentVal = item.currentPrice * item.shares;
-          totalInvest += invest;
-          totalCurrent += currentVal;
+        if (portList.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-slate-500 font-sans">現在登録されている保有銘柄はありません。右上の「➕ 保有登録」から登録できます。</td></tr>`;
+        } else {
+          portList.forEach(item => {
+            const invest = item.buyPrice * item.shares;
+            const currentVal = item.currentPrice * item.shares;
+            totalInvest += invest;
+            totalCurrent += currentVal;
 
-          if (item.statusLabel.includes('利確') || item.statusLabel.includes('トレンド終了')) countTP++;
-          else if (item.statusLabel.includes('買い増し')) countAdd++;
-          else if (item.statusLabel.includes('損切り') || item.statusLabel.includes('撤退')) countSL++;
-          else if (item.statusLabel.includes('逆指値') || item.statusLabel.includes('安全圏') || item.statusLabel.includes('利益最大化')) countTrail++;
-          else countHold++;
+            if (item.statusLabel.includes('利確') || item.statusLabel.includes('トレンド終了')) countTP++;
+            else if (item.statusLabel.includes('買い増し')) countAdd++;
+            else if (item.statusLabel.includes('損切り') || item.statusLabel.includes('撤退')) countSL++;
+            else if (item.statusLabel.includes('逆指値') || item.statusLabel.includes('安全圏') || item.statusLabel.includes('利益最大化')) countTrail++;
+            else countHold++;
 
-          const isPlus = item.plAmount >= 0;
-          const colorClass = isPlus ? "text-emerald-400" : "text-rose-400";
-          const sign = isPlus ? "+" : "";
+            const isPlus = item.plAmount >= 0;
+            const colorClass = isPlus ? "text-emerald-400" : "text-rose-400";
+            const sign = isPlus ? "+" : "";
 
-          const phaseTag = item.phase === 'HALF_TP'
-            ? `<span class="text-[9px] px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 ml-1">半利済</span>`
-            : (item.phase === 'FULL' ? `<span class="text-[9px] px-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/30 ml-1">本玉</span>` : '');
+            const phaseTag = item.phase === 'HALF_TP'
+              ? `<span class="text-[9px] px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 ml-1">半利済</span>`
+              : (item.phase === 'FULL' ? `<span class="text-[9px] px-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/30 ml-1">本玉</span>` : '');
 
-          const tr = document.createElement('tr');
-          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/60 cursor-pointer transition select-none';
-          tr.dataset.code = String(item.code || '');
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/60 cursor-pointer transition select-none';
+            tr.dataset.code = String(item.code || '');
 
-          tr.innerHTML = `
-            <td class="p-2.5 font-mono font-bold text-white">${escapeHtml(item.code)}</td>
-            <td class="p-2.5 font-bold text-slate-100 hover:text-cyan-400 transition">${escapeHtml(item.name)}${phaseTag}</td>
-            <td class="p-2.5 text-right font-mono text-slate-300">${item.shares.toLocaleString()} 株</td>
-            <td class="p-2.5 text-right font-mono text-slate-400">${item.buyPrice.toLocaleString()} 円</td>
-            <td class="p-2.5 text-right font-mono font-bold text-white">${item.currentPrice.toLocaleString()} 円</td>
-            <td class="p-2.5 text-right font-mono font-bold ${colorClass}">${sign}${item.plAmount.toLocaleString()} 円</td>
-            <td class="p-2.5 text-right font-mono font-bold ${colorClass}">${sign}${item.plRate.toFixed(2)}%</td>
-            <td class="p-2.5 text-left">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <span class="px-2 py-0.5 rounded text-[10px] ${item.badgeClass}">${escapeHtml(item.statusLabel)}</span>
-                <span class="text-[11px] font-bold text-slate-200 font-mono">${escapeHtml(item.actionLabel)}</span>
-              </div>
-            </td>
-            <td class="p-2.5 text-center">
-              <button data-code="${escapeHtml(item.code)}" data-buy="${item.buyPrice}" data-shares="${item.shares}" class="btn-close-trade px-2.5 py-1 rounded bg-amber-950/80 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-800/50 text-[10px] font-bold transition cursor-pointer" title="決済・半分利確・買い増し反映">
-                💰 管理
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
+            tr.innerHTML = `
+              <td class="p-2.5 font-mono font-bold text-white">${escapeHtml(item.code)}</td>
+              <td class="p-2.5 font-bold text-slate-100 hover:text-cyan-400 transition">${escapeHtml(item.name)}${phaseTag}</td>
+              <td class="p-2.5 text-right font-mono text-slate-300">${item.shares.toLocaleString()} 株</td>
+              <td class="p-2.5 text-right font-mono text-slate-400">${item.buyPrice.toLocaleString()} 円</td>
+              <td class="p-2.5 text-right font-mono font-bold text-white">${item.currentPrice.toLocaleString()} 円</td>
+              <td class="p-2.5 text-right font-mono font-bold ${colorClass}">${sign}${item.plAmount.toLocaleString()} 円</td>
+              <td class="p-2.5 text-right font-mono font-bold ${colorClass}">${sign}${item.plRate.toFixed(2)}%</td>
+              <td class="p-2.5 text-left">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="px-2 py-0.5 rounded text-[10px] ${item.badgeClass}">${escapeHtml(item.statusLabel)}</span>
+                  <span class="text-[11px] font-bold text-slate-200 font-mono">${escapeHtml(item.actionLabel)}</span>
+                </div>
+              </td>
+              <td class="p-2.5 text-center">
+                <button data-code="${escapeHtml(item.code)}" data-buy="${item.buyPrice}" data-shares="${item.shares}" class="btn-close-trade px-2.5 py-1 rounded bg-amber-950/80 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-800/50 text-[10px] font-bold transition cursor-pointer" title="決済・半分利確・買い増し反映">
+                  💰 管理
+                </button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
 
-        const totalPL = totalCurrent - totalInvest;
-        const totalPLRate = totalInvest > 0 ? ((totalPL / totalInvest) * 100) : 0;
-        const isTotalPlus = totalPL >= 0;
+        // 資金設定と連動した稼働率・買付余力・損益の更新
+        const totalAssets = posConfig.totalAssets > 0 ? posConfig.totalAssets : 5000000;
+        const utilizationRate = (totalInvest / totalAssets) * 100;
+        const remainingPower = totalAssets - totalInvest;
 
         document.getElementById('portTotalCount').textContent = portList.length.toString();
         document.getElementById('portTotalInvest').textContent = Math.round(totalInvest).toLocaleString();
+        document.getElementById('portTotalAssetsLabel').textContent = `(総資産 ${(totalAssets / 10000).toLocaleString()}万円)`;
+
+        const utilEl = document.getElementById('portUtilizationRate');
+        const utilBar = document.getElementById('portUtilizationBar');
+        utilEl.textContent = `${utilizationRate.toFixed(1)}%`;
+        if (utilizationRate > 100) {
+          utilEl.className = "text-amber-400 text-sm";
+          if (utilBar) {
+            utilBar.style.width = "100%";
+            utilBar.className = "h-full bg-amber-500 rounded-full transition-all duration-300";
+          }
+        } else {
+          utilEl.className = "text-cyan-400 text-sm";
+          if (utilBar) {
+            utilBar.style.width = `${Math.max(0, Math.min(100, utilizationRate))}%`;
+            utilBar.className = "h-full bg-cyan-500 rounded-full transition-all duration-300";
+          }
+        }
+
+        const remEl = document.getElementById('portRemainingPower');
+        if (remainingPower >= 0) {
+          remEl.textContent = `${Math.round(remainingPower).toLocaleString()} 円`;
+          remEl.className = "text-emerald-400 text-sm";
+        } else {
+          remEl.textContent = `総資産超過 (${Math.round(remainingPower).toLocaleString()} 円)`;
+          remEl.className = "text-amber-400 text-sm";
+        }
+
         const plEl = document.getElementById('portTotalPL');
-        plEl.textContent = `${isTotalPlus ? '+' : ''}${Math.round(totalPL).toLocaleString()} 円 (${isTotalPlus ? '+' : ''}${totalPLRate.toFixed(2)}%)`;
-        plEl.className = `font-bold ${isTotalPlus ? 'text-emerald-400' : 'text-rose-400'}`;
+        if (portList.length === 0) {
+          plEl.textContent = "0 円";
+          plEl.className = "text-slate-300 text-sm";
+        } else {
+          const totalPL = totalCurrent - totalInvest;
+          const totalPLRate = totalInvest > 0 ? ((totalPL / totalInvest) * 100) : 0;
+          const isTotalPlus = totalPL >= 0;
+          plEl.textContent = `${isTotalPlus ? '+' : ''}${Math.round(totalPL).toLocaleString()} 円 (${isTotalPlus ? '+' : ''}${totalPLRate.toFixed(2)}%)`;
+          plEl.className = `${isTotalPlus ? 'text-emerald-400' : 'text-rose-400'} text-sm`;
+        }
 
         document.getElementById('badgeActionTP').textContent = `✂️/🏆 利確: ${countTP}件`;
         document.getElementById('badgeActionAdd').textContent = `🚀 買増可: ${countAdd}件`;
@@ -1422,6 +1629,15 @@
 
       function closePortfolioEntryDialog() {
         document.getElementById('portfolioEntryDialog').close();
+      }
+
+      function openPosSettingsDialog() {
+        syncPosConfigToUI();
+        document.getElementById('posSettingsDialog').showModal();
+      }
+
+      function closePosSettingsDialog() {
+        document.getElementById('posSettingsDialog').close();
       }
 
       function switchTradeModalMode(mode) {
@@ -2258,6 +2474,16 @@
         document.getElementById('settingTotalAssets').value = posConfig.totalAssets;
         document.getElementById('settingRiskTolerance').value = posConfig.riskToleranceRate;
         document.getElementById('settingMaxPosition').value = posConfig.maxPositionRate;
+
+        const previewRisk = document.getElementById('previewRiskAmount');
+        const previewSlot = document.getElementById('previewMaxSlotAmount');
+        if (previewRisk) {
+          previewRisk.textContent = `${Math.round(posConfig.totalAssets * (posConfig.riskToleranceRate / 100)).toLocaleString()} 円`;
+        }
+        if (previewSlot) {
+          previewSlot.textContent = `${Math.round(posConfig.totalAssets * (posConfig.maxPositionRate / 100)).toLocaleString()} 円`;
+        }
+
         const footerBase = document.getElementById('footerBase');
         if (footerBase) {
           footerBase.textContent = `ポジションサイズ: Wブレーキ(許容リスク${posConfig.riskToleranceRate}%✕売買枠${posConfig.maxPositionRate}%)`;
@@ -2270,6 +2496,7 @@
         posConfig.maxPositionRate = DEFAULT_POS_CONFIG.maxPositionRate;
         try { localStorage.setItem('granville_pos_config', JSON.stringify(posConfig)); } catch(e) {}
         syncPosConfigToUI();
+        renderPortfolioSection();
         renderTable();
       }
 
@@ -2284,12 +2511,8 @@
 
         try { localStorage.setItem('granville_pos_config', JSON.stringify(posConfig)); } catch(e) {}
         syncPosConfigToUI();
+        renderPortfolioSection();
         renderTable();
-      }
-
-      function toggleSettings() {
-        const sec = document.getElementById('settingsSection');
-        sec.classList.toggle('hidden');
       }
 
       async function handleCalcIndividualShares() {
@@ -2524,13 +2747,6 @@
         resultPromise
           .then(({ tickerClean, md }) => openAiCopyDialog(tickerClean, name, md))
           .catch(err => alert(`エラー: ${err.message}`));
-      }
-
-      function toggleExplanation() {
-        const expSec = document.getElementById('explanationSection');
-        const btn = document.getElementById('btnToggleExplanation');
-        expSec.classList.toggle('hidden');
-        btn.textContent = expSec.classList.contains('hidden') ? '📖 解説を表示' : '📖 解説を隠す';
       }
 
       function togglePriceSort() {
